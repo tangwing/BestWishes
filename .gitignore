@@ -1,0 +1,17 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Secrets — never commit
+.env
+*.env
+.env.*
+
+# Populated once the tech stack is chosen (node_modules/, build/, Pods/, DerivedData/, etc.)
