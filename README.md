@@ -1,5 +1,7 @@
 # BestWishes
 
+Best wishes for you and for the world.
+
 > 项目名暂定，待定案。
 
 一个让人们互相发布、悬赏、赠送「祝福」的多端平台。
