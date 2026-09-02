@@ -9,16 +9,18 @@
 ```bash
 cd prototype
 npm install
-npm test          # 101 个测试：领域逻辑 + store 集成 + 页面冒烟
+npm test          # 领域逻辑 + store 集成 + 页面冒烟 + 架构测试
+npm run test:arch # 只跑架构测试：dependency-cruiser + *.arch.test.ts
+npm run verify    # typecheck + test:arch + test + build，一条龙
 npm run dev       # 打开 http://localhost:5173
-npm run build     # tsc + vite build
 ```
 
 ## 里面有什么
 
 | 目录 | 内容 | 会不会进真实实现 |
 |---|---|---|
-| `src/domain/` | 纯函数领域模块：祝福状态机、可见性投影、坚持记录、审核判定映射、`ModerationProvider` 接口 + 规则实现 | **会**——这些模块设计成可直接迁往 `server/` 与跨端共享 |
+| `src/domain/` | 纯函数领域模块：祝福状态机、可见性投影、坚持记录、审核判定映射、`ModerationProvider` 接口 + 规则实现 | **会**——这些模块设计成可直接迁往 `packages/domain` 与跨端共享 |
+| `src/arch/` | 架构测试：守住"领域层不依赖框架 / 存储"。`.dependency-cruiser.cjs` + `*.arch.test.ts` | 会——规则随代码库演进扩展 |
 | `src/store/repo.ts` | 应用服务层：把领域模块 + 内存/localStorage 存储 + 规则审核编排起来，对标后端 API | 参考实现，真实版是 Node + PostgreSQL |
 | `src/store/seed.ts` | 范本库种子 + 护栏词校验 | 内容会复用，形式换成运营后台 |
 | `src/app/` | React 前端：作者流程、访客落地页、审核台 | 交互参考；视觉稿见 Claude Design 画布 |

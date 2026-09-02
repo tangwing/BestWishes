@@ -74,6 +74,21 @@ interface ──▶ application ──▶ domain
 
 **为什么这样分**：让「业务规则」可以脱离数据库和 HTTP 单独测试与演进；让「换 Fastify 为别的」「换 Postgres 为别的」是改一层的事。呼应 ADR 0003 的灵活性目标。
 
+### 3.1 架构测试（fitness functions）
+
+分层规则不能只靠评审盯——要有测试守住。用 **dependency-cruiser**（TypeScript 生态里对标 Java ArchUnit 的工具）+ 少量断言式测试。
+
+- **独立的测试套件**：架构测试单独成套，单独的命令（`pnpm test:arch`），在 CI 里作为独立一步跑，**先于**功能测试。它红了直接挡合并，和某个功能测试失败不混在一起。
+- **dependency-cruiser** 配置（`.dependency-cruiser.cjs`）至少覆盖：
+  - `packages/domain` 不得依赖 `server/`、`client/`、任何框架 / ORM / `node:*` 之外的运行时库；
+  - `application` 不得依赖 `infrastructure` / `interface`；
+  - `infrastructure` / `interface` 不得被 `domain` / `application` 依赖；
+  - 无循环依赖；
+  - 无孤儿模块（写了没人用的文件）。
+- **断言式架构测试**（`*.arch.test.ts`，跑在测试框架里）：覆盖 dependency-cruiser 不好表达的，例如"`domain` 里的导出函数都是纯函数（不 import `Date`/`Math.random`/`fs`）""每个 `application` 用例文件都有对应测试"。
+- 每条规则要有一句话说明它防的是什么，规则本身也是文档。
+- 新增一层 / 一个包时，同步加它的架构规则——架构规则的 diff 和代码的 diff 一起评审。
+
 ## 4. 命名
 
 - 文件：`kebab-case.ts`；React 组件文件 `PascalCase.tsx`。
@@ -114,6 +129,17 @@ interface ──▶ application ──▶ domain
 - 关键决策链接回 ADR / spec：`// 见 ADR 0003 §D6`。
 - TODO 必须带负责人与条件：`// TODO(beta): 接入真实审核 API 后删除这个 stub 分支`。裸 `// TODO` 评审打回。
 - 文档字符串和注释用中文或英文都可以，一个文件内保持一致；面向外部贡献者的包用英文。
+
+### 7.1 注释的语言（硬性）
+
+注释是写给同事看的，就用**同事之间会说的话**：简洁、准确、直白。想象你在白板前跟人讲这段代码，把那句话写下来。
+
+- **要**：短句、主动语态、具体。"先查缓存，命中率大概九成，省一次 DB 往返。" "这里必须是 UTC，因为对账系统按 UTC 切天。"
+- **不要**：营销腔和"AI 味"的空话——`leverage` / `utilize`（就说 use / 用）、`delve into` / `in the realm of` / `it is worth noting that` / `elegant solution` / `robust and scalable` / `seamlessly` / `facilitate` / `comprehensive`。不要用一堆形容词堆砌，不要为普通代码写宏大的开场白。
+- 不写正确的废话："This function returns a value."
+- 不用 emoji、不用感叹号刷存在感、不用装饰性分隔线。
+- 中文注释就写正常中文，别翻译腔。
+- **评审会因为注释读起来不像人话而打回。** 架构 / 依赖规则的说明文字同样适用。
 
 ## 8. 后端 / API
 
@@ -194,12 +220,14 @@ interface ──▶ application ──▶ domain
 ## 14. 测试
 
 - **TDD**：改 bug 先写会失败的测试（AGENTS.md §4.3）。新功能优先测试先行。
-- **分层测试策略**：
+- **分层测试策略**（每层一套，彼此独立，可单独跑）：
+  - **架构测试**（`test:arch`）：dependency-cruiser + `*.arch.test.ts`，见 §3.1。独立命令、CI 独立一步、最先跑。
   - `domain`：纯单元测试，覆盖每条 spec scenario（一个 scenario ≈ 一个 test）。要求高覆盖（分支 ≥ 90%）。
   - `application`：用例测试，port 用测试替身（in-memory fake，不用 mock 框架堆断言）。
   - `infrastructure`：集成测试，打真实 PG（testcontainers / 本地测试库），覆盖幂等、唯一约束、事务、N+1。
   - `interface`：少量 API 层测试（校验、错误映射、鉴权）。
   - E2E：Playwright，覆盖关键用户旅程（登录→撰写→送达→撤回…），数量克制。
+- 各套用独立的 vitest project / 配置，命令分开（`test:arch` / `test:unit` / `test:integration` / `test:e2e`），CI 分步跑，`test` 聚合全部。
 - 测试名描述行为，不描述实现：`it('撤回后访客看到已被收回，坚持记录回撤')`。
 - **不允许 flaky 测试**：时间用可注入的 `Clock`，随机用可注入的种子，不 `sleep`。
 - 测试数据用 builder / factory，不用共享可变 fixture。

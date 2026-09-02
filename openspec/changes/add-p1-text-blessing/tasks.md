@@ -1,9 +1,12 @@
 ## 1. 项目脚手架与依赖
 
-- [ ] 1.1 建立 `server/`（Node + TS）与 `client/`（React + TS + Vite）目录骨架；`npm install` 在两侧均成功，`npm run build` 均通过
-- [ ] 1.2 配置 Vitest 于两侧；`npm test` 可运行（先允许 0 测试）
-- [ ] 1.3 更新 AGENTS.md §5 目录表加入 `client/` `server/`；更新 README「Repo layout」与「Getting started」（构建 / 运行步骤）
-- [ ] 1.4 加入配置模块（`featuredDefaultOn` / `bodyMinLen` / `bodyMaxLen` / `linkTtlDays` / `holdTimeoutHours` / `spotCheckRatio`），含默认值与单测
+- [ ] 1.1 建立 pnpm monorepo：`packages/domain` `packages/shared` `packages/config` + `server/`（Node + TS + Fastify）+ `client/`（React + TS + Vite）；`pnpm install` 成功，各包 `build` 通过
+- [ ] 1.2 配置 ESLint（`typescript-eslint` strict-type-checked）+ Prettier 于仓库根；`pnpm lint` 通过
+- [ ] 1.3 配置分层测试命令：`test:arch` / `test:unit` / `test:integration` / `test:e2e` + 聚合 `test`；各自可独立运行
+- [ ] 1.4 **架构测试**：dependency-cruiser 配置落地 coding-standards §3.1 的规则（domain 纯净、依赖方向、无循环、无孤儿）+ `*.arch.test.ts` 断言；`pnpm test:arch` 通过并在 CI 独立成步
+- [ ] 1.5 更新 AGENTS.md §5 目录表加入 `client/` `server/` `packages/`；更新 README「Repo layout」与「Getting started」
+- [ ] 1.6 配置模块（`featuredDefaultOn` / `bodyMinLen` / `bodyMaxLen` / `linkTtlDays` / `holdTimeoutHours` / `spotCheckRatio`），Zod 解析、默认值、单测
+- [ ] 1.7 从 [prototype/](../../../prototype/) 迁移领域模块（`lifecycle` / `visibility` / `streak` / `moderation`）到 `packages/domain`，连同其测试；`test:arch` 保证迁移后仍纯净
 
 ## 2. 领域逻辑（纯函数，先写测试）
 

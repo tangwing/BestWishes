@@ -78,4 +78,15 @@
 **结果**：
 1. **技术栈决策项拍板**（用选择器）：D1 = Web-first PWA、D4 = Node.js+TS、D6 = PostgreSQL、D10 = P1 用规则审核 / 真实 API 放收尾或 P2（用户选 B，非我倾向的 A）。D9 由 D1 锁定为微信网页授权。D2/D3/D5/D7/D8/D11 按 ★倾向执行（React / CSS Modules / Fastify / Drizzle / pnpm monorepo / 审核后台内嵌），用户未反对。ADR 0003 转 **Accepted（核心项）**，加「决策记录」表 + 「长期适配性核验」节（规模、P2 AI 拆独立服务、P3 一致性、并发模型、灵活性保留点、唯一取舍）。AGENTS.md §1 / §6 更新（技术栈未定状态解除）。
 2. **工程规范**：新建 [docs/engineering/coding-standards.md](docs/engineering/coding-standards.md) v1——17 节：总则、仓库结构（Hexagonal 分层 `packages/domain` 零 IO）、依赖规则（机制化强制）、命名、TypeScript（禁 any/!、判别联合穷尽、Result vs throw）、校验边界（Zod 前后端共享）、注释（写「为什么」）、API（Fastify + schema、幂等、游标分页）、数据库（约束落库 / 业务不落库、事务边界在 application、N+1 零容忍）、前端（服务端状态分层、a11y、i18n）、**并发与性能**（Node 事件循环、绝不阻塞、worker_threads / 独立服务、连接池、缓存纪律、先测再优化）、可观测性、安全与隐私（PIPL）、测试（分层 + TDD + 无 flaky）、依赖管理、提交与分支、评审清单。AGENTS.md §5 加 `docs/engineering/`。
-3. **自动同步 hook**：`.claude/hooks/auto-commit-push.sh`（Stop hook，`.claude/settings.json`）——有改动则 add -A + Conventional Commits fallback message（顶层 scope + UTC 时间戳 + Co-Authored-By），领先远端则 push（`GIT_SSH_COMMAND` BatchMode + ConnectTimeout + 40s 自限时，超时/失败给 systemMessage）。AGENTS.md 新增 §7 Git 工作流。**注意**：settings.json 是本会话新建的，hook 要等用户打开 `/hooks` 或重启后才生效。本会话已手动验证脚本可提交并推送成功（origin/main 已更新）。
+3. **自动同步 hook**：`.claude/hooks/auto-commit-push.sh`（Stop hook，`.claude/settings.json`）——有改动则 add -A + Conventional Commits fallback message（顶层 scope + UTC 时间戳 + Co-Authored-By），领先远端则 push（SSH BatchMode + ConnectTimeout + `ssh.github.com:443` 回退 + 45s 自限时，超时/失败给 systemMessage）。AGENTS.md 新增 §7 Git 工作流。**注意**：settings.json 是本会话新建的，hook 要等用户打开 `/hooks` 或重启后才生效。本会话已手动验证脚本可提交并推送成功（origin/main 已更新）。
+
+### 注释语言规范 + 架构测试
+
+> 注释用简洁准确易懂的人类语言，不要 AI 的晦涩语言。涉及架构分层要有 ArchUnit 等测试保证架构整洁，配套独立的单测体系。弄完一起看设计稿。
+
+**结果**：
+1. **注释语言硬性规范**：coding-standards.md 加 §7.1——注释就用同事之间会说的话（白板讲解那句话），禁营销腔 / AI 味词（leverage、utilize、delve、seamlessly、robust and scalable、it is worth noting…），不写正确的废话，不用 emoji / 感叹号 / 装饰分隔线；评审会因注释不像人话打回。扫过 prototype 现有注释，无此类问题。
+2. **架构测试**：coding-standards.md 加 §3.1（fitness functions）——dependency-cruiser 作主检查（domain 纯净 / 依赖方向 / 无循环 / 无孤儿）+ `*.arch.test.ts` 断言，**独立成套**（`test:arch` 单独命令、CI 独立一步、最先跑）。§14 测试改为分层各自独立命令。prototype 落地：`.dependency-cruiser.cjs` + `src/arch/architecture.arch.test.ts`（5 条断言：不 import 前端 / 存储 / Node 内建、不用 Date.now/Math.random）+ `test:arch` / `verify` 脚本 + `@types/node`、`dependency-cruiser` 依赖。`npm run verify` 全绿（typecheck + depcruise 0 违规 + 108 测试 + build）。
+3. openspec `tasks.md` §1 重写为 pnpm monorepo + ESLint + 分层测试命令 + 架构测试落地 + 从 prototype 迁 `packages/domain` 的任务。
+
+**下一步**：一起看设计稿（Claude Design 画布已发布）。
