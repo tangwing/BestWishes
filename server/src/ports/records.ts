@@ -17,6 +17,8 @@ export interface UserRecord {
   wxUnionid: string | null;
   nickname: string;
   avatarUrl: string | null;
+  /** 作者所在地区的 UTC 偏移（分钟）。坚持记录按这个切自然日。P1 默认 +480，后续由地区推导。 */
+  utcOffsetMinutes: number;
   source: string;
   createdAt: string;
 }
@@ -59,8 +61,12 @@ export interface DraftRecord {
   updatedAt: string;
 }
 
-/** 祝福记录 = 领域聚合。events 单独存 blessing_events，这里内联方便内存实现。 */
-export type BlessingRecord = Blessing;
+/**
+ * 祝福记录 = 领域聚合 + 一个调度字段。
+ * `holdUntil`：自动通过后、正式对外可见前的等待截止时间（延迟送达）。到点由扫描任务发布。
+ * events 也单独存 blessing_events，这里内联方便内存实现。
+ */
+export type BlessingRecord = Blessing & { holdUntil: string | null };
 export type BlessingEventRecord = BlessingEvent & { id: string; blessingId: string };
 
 export interface ReportRecord {

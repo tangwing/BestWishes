@@ -32,18 +32,21 @@
 - [ ] 4.2c PG 实现（Drizzle）+ testcontainers 集成测试 —— B-24
 - [ ] 4.3 范本库 seed（每类≥3 条，从 prototype/seed.ts 迁）+ 运营侧护栏词校验；测试：含"代祷收费"的范本被拒
 
-## 5. 后端 API
+## 5. application 层用例 + 后端 API
 
-- [ ] 5.1 实现 auth：`GET /api/auth/wx/url`、`GET /api/auth/wx/callback`、会话中间件；用 stub auth 实现（同接口签名），集成测试覆盖"首次建号 / 再次复用 / 回调重试幂等"
-- [ ] 5.2 实现个人空间：`GET/PUT /api/profile/me`、`POST /api/account/deletion`；测试覆盖城市粒度限制、定位开关留痕、精选展示个人偏好读写
-- [ ] 5.3 实现协议：`GET /api/agreement/current`、`POST /api/consents`；精选展示默认值 = 个人偏好 > 系统默认；测试覆盖必选项拒绝、改版重新确认、默认值来源优先级
-- [ ] 5.4 实现范本与草稿：`GET /api/templates`（只作参考）、`GET/PUT /api/drafts/me`；测试覆盖草稿不触发审核 / 不生成链接、会话过期后可恢复
-- [ ] 5.5 实现祝福提交与管理：`POST /api/blessings`（受理即返回、内部同步校验落状态；写入时把个人空间默认值合并进发送者信息；服务端拒绝把粘贴大段文本当正文的启发式由前端主管、后端做基本长度 / 结构校验）、`GET /api/records/outbox`、`GET /api/records/inbox`（P1 恒空 + 说明）、`withdraw` / `republish` / `DELETE` / `renew`；集成测试覆盖 `blessing-delivery` + `blessing-records` 的每条 scenario
-- [ ] 5.6 实现落地页数据接口 `GET /p/:slug`：published 且未过期返回正文 + 来源；其它状态只返回占位类型枚举。测试：verifying / withdrawn / taken_down / expired 均不返回正文
-- [ ] 5.7 实现举报 `POST /api/p/:slug/report`：匿名可提交、防滥用记录、同源合并、高危即时临时下架。集成测试覆盖
-- [ ] 5.8 实现坚持记录 `GET /api/streak/me`：仅本人、与有效祝福集合一致。集成测试覆盖回撤即时反映
-- [ ] 5.9 实现审核后台接口 `GET /api/moderation/queue`、`POST /api/moderation/:reportId/resolve`：角色鉴权、优先级排序、结论留痕
-- [ ] 5.10 实现定时任务：到期祝福转 `expired`、hold 超时升级 + 通知。用可注入时钟的单测覆盖
+> iteration 3 完成了 application 层（`server/src/application/`）：auth / profile / consent / drafts / blessings / streak / scans + 12 个端到端流程测试。HTTP 路由是下一步。
+
+- [x] 5.1a `AuthService`（`loginWithStub` + `currentUser`，openid 幂等）；真实微信回调路由待接
+- [x] 5.2a `ProfileService`（view / update，城市粒度靠 Zod max、定位开关、精选偏好，个人偏好 > 系统默认）
+- [x] 5.3a `ConsentService`（`agreement` / `hasValidConsent` / `record`，必选项拒绝，默认值来源优先级）
+- [x] 5.4a `DraftService`（get / save，不触发审核 / 不生成链接）
+- [x] 5.5a `BlessingService`（`submit`：受理即返回、同步规则审核落状态、合并个人空间默认值、字数校验、consent 校验；`withdraw` / `republish` / `delete` / `renew`；`outbox`；`inbox` 空状态）
+- [x] 5.6a `BlessingService.getPublicPage`：仅 `published` 且未过期返回正文，其它只返回占位类型
+- [x] 5.8a `StreakService.view`：仅本人、与有效集合一致、跨时区
+- [x] 5.10a `Scans`（`publishReady` 延迟送达、`expire` 到期、`escalateStuck` hold 超时）+ 可注入 `FakeClock`
+- [ ] 5.1b…5.10b 把上面的用例包成 Fastify 路由（薄 handler + Zod schema + 会话中间件 + 错误映射），集成测试打 `app.inject`
+- [ ] 5.7 举报 `reportBlessing`（匿名、同源合并、高危即时临时下架）+ 路由
+- [ ] 5.9 审核队列 `listQueue` / `resolveReport`（优先级排序、结论驱动状态机、留痕）+ 路由
 
 ## 6. 前端
 

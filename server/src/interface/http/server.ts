@@ -3,7 +3,7 @@
 
 import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance } from 'fastify';
-import type { ErrorCode } from '@bestwishes/shared';
+import { isAppException } from '@bestwishes/shared';
 import { httpStatusFor } from './errors';
 import type { Clock } from '../../ports/clock';
 import type { Env } from '../../config/env';
@@ -19,14 +19,13 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
     genReqId: () => randomUUID(),
   });
 
-  // 统一错误处理：领域错误按错误码映射 status，其余按 500。
+  // 统一错误处理：application 层抛的 AppException 按错误码映射 status，其余按 500。
   app.setErrorHandler((error, request, reply) => {
-    const appErr = extractAppError(error);
-    if (appErr) {
-      request.log.info({ code: appErr.code, msg: appErr.message }, 'app error');
-      void reply.status(httpStatusFor(appErr.code)).send({
-        error: appErr.code,
-        message: appErr.userHint ?? appErr.message,
+    if (isAppException(error)) {
+      request.log.info({ code: error.code, msg: error.message }, 'app error');
+      void reply.status(httpStatusFor(error.code)).send({
+        error: error.code,
+        message: error.userHint ?? error.message,
       });
       return;
     }
@@ -37,23 +36,4 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
   app.get('/healthz', () => ({ ok: true, at: deps.clock.now().toISOString() }));
 
   return app;
-}
-
-interface AppErrorShape {
-  code: ErrorCode;
-  message: string;
-  userHint?: string;
-}
-
-function extractAppError(error: unknown): AppErrorShape | null {
-  if (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    typeof error.code === 'string' &&
-    'message' in error
-  ) {
-    return error as AppErrorShape;
-  }
-  return null;
 }

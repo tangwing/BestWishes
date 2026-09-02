@@ -4,6 +4,7 @@
 export * from './types';
 export * from './config';
 export * from './lifecycle';
+export * from './blessing-transition';
 export * from './visibility';
 export * from './streak';
 export * from './moderation/apply';

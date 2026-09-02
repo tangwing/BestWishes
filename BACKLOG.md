@@ -9,8 +9,9 @@
 ## 恢复点（先读这段）
 
 - **阶段**：P1「文本静心祝福」**实现中**。用户已批准开工（"就按这个走吧，开工"），按 `/loop` 自定步调迭代，直到初版 Demo 跑通。
-- **iteration 1-2 完成**：monorepo 骨架 + 领域层迁移（78 测试）+ 配置模块（§1.6）+ 数据层 ports（`ports/repositories.ts` / `records.ts` / `ids.ts`）+ 内存实现（`infrastructure/memory/`，openid 幂等 / slug 唯一 / 工单排序，93 测试全绿）。`pnpm verify` 绿。
-- **iteration 3（下一步）**：§5 的 application 层用例 —— 从 `submitBlessing`（发布即校验、延迟送达、把个人空间默认值合并进发送者信息、拦粘贴由前端主管）开始，逐个把用例编排出来，port 用内存替身测。然后 §5 的 HTTP 路由。范本 seed（§4.3）从 prototype 迁。
+- **iteration 1-3 完成**：monorepo 骨架 + 领域层迁移 + 配置模块 + 数据层 ports & 内存实现 + **application 层用例**（auth / profile / consent / drafts / blessings / streak / scans）。核心 P1 流程（登录 → 协议 → 提交 → 延迟送达 → 发布 → 访客看正文 → 撤回 → 占位 → 坚持记录回撤 → 过期 → 续期 → 审核三档）都有端到端测试。**111 测试全绿**，`pnpm verify` 绿。
+- **iteration 4（下一步）**：把 application 用例包成 Fastify 路由（薄 handler + Zod schema + 会话中间件 + 错误映射），`app.inject` 集成测试；补举报（§5.7）、审核队列（§5.9）；范本 seed（§4.3）从 prototype 迁。
+- **iteration 5-6**：client（从 prototype 迁 UI，接真实 API）+ 端到端 demo。
 - **实现计划**：[openspec/changes/add-p1-text-blessing/tasks.md](openspec/changes/add-p1-text-blessing/tasks.md)（7 组任务）。逐组做，每组 commit + 勾选。
 - **本机限制**：无 psql。数据层先做 `ports` + 内存 adapter（架构上就是可换的），Drizzle 迁移 + PG 集成测试作为需要 DB 的独立任务（B-24）。
 - **技术栈**（已定，ADR 0003）：Web-first PWA（React+TS+Vite / CSS Modules）+ Node+TS（Fastify）+ PostgreSQL（Drizzle）+ pnpm monorepo，领域逻辑在 `packages/domain`。

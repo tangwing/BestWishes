@@ -24,6 +24,7 @@ function blessing(over: Partial<BlessingRecord> = {}): BlessingRecord {
     moderation: null,
     renewCount: 0,
     countedInStreak: false,
+    holdUntil: null,
     events: [],
     ...over,
   };
@@ -36,6 +37,7 @@ describe('用户仓储：openid 幂等', () => {
       wxUnionid: null,
       nickname: '阿念',
       avatarUrl: null,
+      utcOffsetMinutes: 480,
       source: 'wx',
     });
     const a = await repos.users.findOrCreateByOpenid('openid-A', make);

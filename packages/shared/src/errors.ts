@@ -25,3 +25,19 @@ export interface AppError {
 export function appError(code: ErrorCode, message: string, userHint?: string): AppError {
   return userHint === undefined ? { code, message } : { code, message, userHint };
 }
+
+/** 需要 throw（而非返回 Result）时用这个：真正的 Error，带错误码。 */
+export class AppException extends Error {
+  readonly code: ErrorCode;
+  readonly userHint: string | undefined;
+  constructor(code: ErrorCode, message: string, userHint?: string) {
+    super(message);
+    this.name = 'AppException';
+    this.code = code;
+    this.userHint = userHint;
+  }
+}
+
+export function isAppException(e: unknown): e is AppException {
+  return e instanceof AppException;
+}

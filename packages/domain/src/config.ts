@@ -9,6 +9,8 @@ export interface P1Config {
   bodyMaxLen: number;
   /** 分享链接有效期（天） */
   linkTtlDays: number;
+  /** 自动通过后，接收方可见前的正常 hold 时长（秒）。演示环境会调很短。 */
+  holdSeconds: number;
   /** 校验 hold 上限（小时），超时升级 */
   holdTimeoutHours: number;
   /** 已通过内容的随机抽检比例 [0,1] */
@@ -22,6 +24,7 @@ export const DEFAULT_CONFIG: P1Config = {
   bodyMinLen: 15,
   bodyMaxLen: 500,
   linkTtlDays: 120,
+  holdSeconds: 180,
   holdTimeoutHours: 24,
   spotCheckRatio: 0.05,
   publicInvalidationSeconds: 60,

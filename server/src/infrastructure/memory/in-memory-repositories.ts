@@ -160,6 +160,7 @@ class InMemoryBlessingRepository implements BlessingRepository {
 
   save(record: BlessingRecord): Promise<void> {
     this.byId.set(record.id, clone(record));
+    this.idBySlug.set(record.slug, record.id);
     return Promise.resolve();
   }
 

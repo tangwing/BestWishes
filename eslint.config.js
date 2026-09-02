@@ -35,6 +35,11 @@ export default tseslint.config(
       ],
       '@typescript-eslint/no-non-null-assertion': 'error',
       '@typescript-eslint/consistent-type-imports': 'error',
+      // 允许对字符串用 || 兜底（"空字符串也算没填，往下取默认值" 是常见且正确的写法）
+      '@typescript-eslint/prefer-nullish-coalescing': [
+        'error',
+        { ignorePrimitives: { string: true } },
+      ],
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
@@ -44,6 +49,11 @@ export default tseslint.config(
   {
     // React 组件的返回类型是显然的，逐个标注是噪音
     files: ['client/**/*.tsx'],
+    rules: { '@typescript-eslint/explicit-function-return-type': 'off' },
+  },
+  {
+    // application 服务用工厂模式，导出类型 = ReturnType<typeof 工厂>，不会和实现脱节
+    files: ['server/src/application/**/*.ts'],
     rules: { '@typescript-eslint/explicit-function-return-type': 'off' },
   },
   {

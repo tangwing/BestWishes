@@ -63,7 +63,10 @@ describe('领域层保持纯净', () => {
 
 describe('server 分层：依赖只指向内层', () => {
   const serverSrc = join(REPO, 'server/src');
-  const serverFiles = walk(serverSrc, (n) => /\.tsx?$/.test(n) && !/\.test\.tsx?$/.test(n));
+  const serverFiles = walk(
+    serverSrc,
+    (n) => /\.tsx?$/.test(n) && !/\.test\.tsx?$/.test(n) && n !== 'test-harness.ts',
+  );
 
   it('application 不 import infrastructure / interface', () => {
     const bad: string[] = [];
