@@ -18,33 +18,34 @@ Best wishes for you and for the world.
 
 ## Status
 
-**P1 设计与拆分中。** 产品北极星、P1（文本静心祝福）用例、后端能力清单、P1 架构、openspec 需求拆分均已成文并待评审；技术方向见 [ADR 0003](docs/adr/0003-p1-tech-stack-web-first.md)（Web-first，Proposed）。`prototype/` 有一个可运行的走查原型（spike）。生产 `client/` `server/` 待评审通过后进入 apply 阶段。
+**P1（文本静心祝福）实现中。** 产品北极星、用例、架构、技术栈（[ADR 0003](docs/adr/0003-p1-tech-stack-web-first.md)：Web-first）、工程规范都已成文。正在把 P1 从走查原型（`prototype/`）迁到生产 monorepo，按 [BACKLOG.md](BACKLOG.md) 的循环推进直到初版 Demo。
 
 ## Repo layout
 
 ```
-README.md            本文件
-AGENTS.md             工程规范与 AI 协作约定（唯一事实来源）
-CLAUDE.md             桥接文件，指向 AGENTS.md
-CHANGELOG.md          版本变更记录
-PROMPT_LOG.md          驱动本项目演变的用户 prompt 完整记录
-docs/product/          产品概念、北极星、用例、能力清单
-docs/research/         调研报告（合规 / AI / 技术选型的决策输入）
-docs/architecture/     架构设计
-docs/adr/              架构决策记录（Architecture Decision Records）
-docs/design/           界面设计走查稿
-openspec/              需求生命周期（Spec/评审/任务），见 ADR 0002
-prototype/             P1 走查原型（spike，非生产代码）
-.claude/               Claude Code Skill / slash command
+README.md · AGENTS.md · CLAUDE.md · CHANGELOG.md · PROMPT_LOG.md · BACKLOG.md
+docs/product/     产品概念、北极星、用例、能力清单
+docs/research/    调研报告（合规 / AI / 技术选型）
+docs/architecture/ 架构设计
+docs/adr/         架构决策记录
+docs/design/      界面设计走查稿
+docs/engineering/ 工程规范（所有代码必须遵循）
+openspec/         需求生命周期（Spec / 评审 / 任务），见 ADR 0002
+packages/domain   纯领域逻辑（无 IO / 无框架）
+packages/shared   跨端类型 / Zod schema / 错误码
+server/           Node + Fastify（分层 interface/application/infrastructure/ports）
+client/           React + Vite（PWA）
+arch/             架构测试
+prototype/        P1 走查原型（spike，功能对齐后移除）
 ```
 
 ## Getting started
 
-生产代码尚未开始。走查原型：
-
 ```bash
-cd prototype
-npm install
-npm test        # 领域逻辑 + 集成 + 页面冒烟
-npm run dev     # http://localhost:5173
+corepack enable          # 启用 pnpm
+pnpm install
+pnpm verify              # typecheck + 架构测试 + 全部测试 + build
+pnpm dev                 # server + client 一起起
 ```
+
+走查原型（独立）：`cd prototype && npm install && npm run dev`

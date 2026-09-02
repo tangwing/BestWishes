@@ -8,8 +8,9 @@
 
 ## 恢复点（先读这段）
 
-- **阶段**：P1「文本静心祝福」——需求 / 用例 / 架构 / 技术栈 / 工程规范 / 走查原型 / 界面稿都已成文并入库。正在按用户点评快速迭代设计与 spec。第一轮点评（撰写页精简、范本不可复制、个人空间、收发记录、发心引导）已落地到 spec + 画布 + 原型（`npm run verify` 绿）；等用户第二轮评审。
-- **尚未开始写生产代码**：`client/` `server/` `packages/` 要等 openspec change `add-p1-text-blessing` 评审通过后 `/opsx:apply`。
+- **阶段**：P1「文本静心祝福」**实现中**。用户已批准开工（"就按这个走吧，开工"），按 `/loop` 自定步调迭代，直到初版 Demo 跑通。
+- **当前迭代**：iteration 1 —— 搭 pnpm monorepo 骨架（`packages/domain` 已从 prototype 迁入；`packages/shared` / `server`（Fastify 健康检查 + 分层骨架）/ `client`（Vite 外壳）/ `arch` 已建；root eslint / prettier / dependency-cruiser / vitest.workspace 已配）。**待办：`pnpm install` 跑完 → `pnpm verify` 修绿 → 勾掉 tasks.md §1**。
+- **实现计划**：[openspec/changes/add-p1-text-blessing/tasks.md](openspec/changes/add-p1-text-blessing/tasks.md)（7 组任务）。逐组做，每组做完 commit + 勾选。
 - **技术栈**（已定，ADR 0003）：Web-first PWA（React+TS+Vite / CSS Modules）+ Node+TS（Fastify）+ PostgreSQL（Drizzle）+ pnpm monorepo，领域逻辑在 `packages/domain`。
 - **关键文档**：[docs/product/vision.md](docs/product/vision.md) · [docs/product/use-cases.md](docs/product/use-cases.md) · [docs/architecture/p1-architecture.md](docs/architecture/p1-architecture.md) · [docs/engineering/coding-standards.md](docs/engineering/coding-standards.md) · [openspec/changes/add-p1-text-blessing/](openspec/changes/add-p1-text-blessing/) · 走查原型 [prototype/](prototype/)（`npm run verify`）· 界面画布见 PROMPT_LOG 最新条目的链接。
 - **工作方式**：用户按点评提改动 → 记进本文件 → 持续完成。条件允许时派多 Agent 并行。每轮结束自动 commit + push（`.claude/hooks/auto-commit-push.sh`）。
@@ -19,7 +20,7 @@
 
 ## 进行中
 
-（无）
+- [~] **P1 实现（loop）** — 按 openspec `tasks.md` 逐组推进。iteration 1：monorepo 骨架 + 迁 `packages/domain`（`pnpm install` / `pnpm verify` 待跑）。
 
 ## 待办
 

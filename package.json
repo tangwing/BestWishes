@@ -1,0 +1,35 @@
+{
+  "name": "bestwishes",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test:arch": "depcruise packages server client --config .dependency-cruiser.cjs && vitest run --project arch",
+    "test:unit": "vitest run --project domain --project shared",
+    "test:integration": "vitest run --project server",
+    "test:e2e": "echo 'e2e: 待 client/server 就绪后接入 Playwright' ",
+    "test": "vitest run",
+    "build": "pnpm -r build",
+    "dev": "pnpm --parallel -r dev",
+    "verify": "pnpm typecheck && pnpm test:arch && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.13.0",
+    "@types/node": "^22.7.5",
+    "dependency-cruiser": "^16.4.2",
+    "eslint": "^9.13.0",
+    "eslint-plugin-boundaries": "^5.0.0",
+    "globals": "^15.11.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.10.0",
+    "vitest": "^2.1.3"
+  }
+}

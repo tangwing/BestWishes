@@ -56,8 +56,8 @@ P2 及以后的技术决策（音视频管线、AI/ML 服务、多端原生）�
 | 需求生命周期（Spec/评审/任务，见 [ADR 0002](docs/adr/0002-openspec-for-requirement-lifecycle.md)） | `openspec/`，通过 `/opsx:propose` `/opsx:apply` `/opsx:archive` 等 slash command 操作 |
 | 工程规范（代码风格、架构、注释、性能） | `docs/engineering/`，所有代码必须遵循 |
 | Claude Code Skill/slash command | `.claude/` |
-| P1 走查原型（spike，非生产代码） | `prototype/`，见其 README |
-| 客户端/服务端代码 | 技术栈见 [ADR 0003](docs/adr/0003-p1-tech-stack-web-first.md)；`client/` `server/` `packages/domain/` 在 apply 阶段建立 |
+| P1 走查原型（spike，非生产代码，将在 monorepo 达到功能对齐后移除） | `prototype/`，见其 README |
+| 生产代码（pnpm monorepo） | `packages/domain`（纯领域逻辑）· `packages/shared`（跨端类型 / Zod schema / 错误码）· `server/`（Node + Fastify，分层 interface/application/infrastructure/ports）· `client/`（React + Vite）· `arch/`（架构测试）。跑 `pnpm verify` |
 
 ## 6. 尚未决定，需要与用户共同澄清
 
