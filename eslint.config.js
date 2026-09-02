@@ -35,7 +35,16 @@ export default tseslint.config(
       ],
       '@typescript-eslint/no-non-null-assertion': 'error',
       '@typescript-eslint/consistent-type-imports': 'error',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
     },
+  },
+  {
+    // React 组件的返回类型是显然的，逐个标注是噪音
+    files: ['client/**/*.tsx'],
+    rules: { '@typescript-eslint/explicit-function-return-type': 'off' },
   },
   {
     files: ['packages/domain/**/*.ts'],
@@ -63,11 +72,19 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/*.test.ts', '**/*.test.tsx', 'arch/**'],
+    files: ['**/*.test.ts', '**/*.test.tsx', 'arch/**/*.ts'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/prefer-string-starts-ends-with': 'off',
     },
+  },
+  {
+    // 配置文件不在任何 tsconfig 里，关掉需要类型信息的规则
+    files: ['**/*.config.{js,ts,cjs,mjs}', '**/.*.cjs', 'vitest.workspace.ts', 'eslint.config.js'],
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: { parserOptions: { projectService: false } },
   },
 );

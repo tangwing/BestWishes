@@ -9,8 +9,10 @@
 ## 恢复点（先读这段）
 
 - **阶段**：P1「文本静心祝福」**实现中**。用户已批准开工（"就按这个走吧，开工"），按 `/loop` 自定步调迭代，直到初版 Demo 跑通。
-- **当前迭代**：iteration 1 —— 搭 pnpm monorepo 骨架（`packages/domain` 已从 prototype 迁入；`packages/shared` / `server`（Fastify 健康检查 + 分层骨架）/ `client`（Vite 外壳）/ `arch` 已建；root eslint / prettier / dependency-cruiser / vitest.workspace 已配）。**待办：`pnpm install` 跑完 → `pnpm verify` 修绿 → 勾掉 tasks.md §1**。
-- **实现计划**：[openspec/changes/add-p1-text-blessing/tasks.md](openspec/changes/add-p1-text-blessing/tasks.md)（7 组任务）。逐组做，每组做完 commit + 勾选。
+- **iteration 1 完成**：pnpm monorepo 骨架 + 领域层迁移。`pnpm verify` 全绿（typecheck / depcruise 0 违规 / 84 测试 / build / eslint / prettier）。server `/healthz` 实测可起。tasks.md §1 除 1.6 全勾。
+- **iteration 2（下一步）**：tasks.md §2 —— 领域逻辑的失败测试先行（大部分已随迁移带过来，补齐 spec 新增的 scenario）+ §1.6 配置模块（把 `bodyMinLen` 等运营配置补进 server 的 Zod env / config）+ 开始 §4 数据层（先定义 ports 接口 + 内存实现，Drizzle/PG 迁移单列，因本机无 psql）。
+- **实现计划**：[openspec/changes/add-p1-text-blessing/tasks.md](openspec/changes/add-p1-text-blessing/tasks.md)（7 组任务）。逐组做，每组 commit + 勾选。
+- **本机限制**：无 psql。数据层先做 `ports` + 内存 adapter（架构上就是可换的），Drizzle 迁移 + PG 集成测试作为需要 DB 的独立任务（B-24）。
 - **技术栈**（已定，ADR 0003）：Web-first PWA（React+TS+Vite / CSS Modules）+ Node+TS（Fastify）+ PostgreSQL（Drizzle）+ pnpm monorepo，领域逻辑在 `packages/domain`。
 - **关键文档**：[docs/product/vision.md](docs/product/vision.md) · [docs/product/use-cases.md](docs/product/use-cases.md) · [docs/architecture/p1-architecture.md](docs/architecture/p1-architecture.md) · [docs/engineering/coding-standards.md](docs/engineering/coding-standards.md) · [openspec/changes/add-p1-text-blessing/](openspec/changes/add-p1-text-blessing/) · 走查原型 [prototype/](prototype/)（`npm run verify`）· 界面画布见 PROMPT_LOG 最新条目的链接。
 - **工作方式**：用户按点评提改动 → 记进本文件 → 持续完成。条件允许时派多 Agent 并行。每轮结束自动 commit + push（`.claude/hooks/auto-commit-push.sh`）。
@@ -36,7 +38,10 @@
 - [ ] **B-20 建 pnpm monorepo 骨架**（`packages/domain|shared|config` + `server/` + `client/`）。
 - [ ] **B-21 架构测试落地真实代码库**（dependency-cruiser 完整规则 + `*.arch.test.ts`），CI 独立步。
 - [ ] **B-22 从 `prototype/` 迁 `packages/domain`**（lifecycle / visibility / streak / moderation + 测试）。
-- [ ] **B-23 ESLint（typescript-eslint strict-type-checked）+ Prettier + 注释语言 lint**。
+- [x] **B-20/B-22/B-23（部分）** monorepo 骨架 + 迁 `packages/domain` + ESLint/Prettier —— iteration 1 完成。
+- [ ] **B-21 架构测试补全** — 依赖方向 / 无循环 / 无孤儿的规则已上；`eslint-plugin-boundaries` 的完整分层配置待补（现用 dependency-cruiser + no-restricted-imports）。
+- [ ] **B-24 数据层落 PostgreSQL** — Drizzle schema + 迁移脚本 + testcontainers 集成测试。需要能跑 psql 的环境；开发阶段先用内存 adapter。
+- [ ] **B-25 `packages/config`** — 共享 tsconfig / eslint 预设抽成包（现在直接放根目录）。
 
 ### 待澄清 / 需用户或法务
 

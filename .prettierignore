@@ -1,10 +1,19 @@
+# 生成物 / 依赖
 **/dist/
 **/build/
 **/node_modules/
-**/pnpm-lock.yaml
+pnpm-lock.yaml
 **/package-lock.json
+
+# 走查原型（独立管理）
 prototype/
-docs/design/
-*.dc.html
+
+# 文档、规范、设计稿——手写的，不交给 prettier 重排
+**/*.md
+docs/
+.claude/
 openspec/
-CHANGELOG.md
+*.dc.html
+
+# 配置里不想动的
+pnpm-workspace.yaml

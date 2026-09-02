@@ -1,12 +1,12 @@
 ## 1. 项目脚手架与依赖
 
-- [ ] 1.1 建立 pnpm monorepo：`packages/domain` `packages/shared` `packages/config` + `server/`（Node + TS + Fastify）+ `client/`（React + TS + Vite）；`pnpm install` 成功，各包 `build` 通过
-- [ ] 1.2 配置 ESLint（`typescript-eslint` strict-type-checked）+ Prettier 于仓库根；`pnpm lint` 通过
-- [ ] 1.3 配置分层测试命令：`test:arch` / `test:unit` / `test:integration` / `test:e2e` + 聚合 `test`；各自可独立运行
-- [ ] 1.4 **架构测试**：dependency-cruiser 配置落地 coding-standards §3.1 的规则（domain 纯净、依赖方向、无循环、无孤儿）+ `*.arch.test.ts` 断言；`pnpm test:arch` 通过并在 CI 独立成步
-- [ ] 1.5 更新 AGENTS.md §5 目录表加入 `client/` `server/` `packages/`；更新 README「Repo layout」与「Getting started」
-- [ ] 1.6 配置模块（`featuredDefaultOn` / `bodyMinLen` / `bodyMaxLen` / `linkTtlDays` / `holdTimeoutHours` / `spotCheckRatio`），Zod 解析、默认值、单测
-- [ ] 1.7 从 [prototype/](../../../prototype/) 迁移领域模块（`lifecycle` / `visibility` / `streak` / `moderation`）到 `packages/domain`，连同其测试；`test:arch` 保证迁移后仍纯净
+- [x] 1.1 建立 pnpm monorepo：`packages/domain` `packages/shared` + `server/`（Node + TS + Fastify）+ `client/`（React + TS + Vite）+ `arch/`；`pnpm install` 成功，各包 `build` 通过（`packages/config` 暂不建，配置放各处；见 BACKLOG）
+- [x] 1.2 配置 ESLint（`typescript-eslint` strict-type-checked + stylistic）+ Prettier 于仓库根；`pnpm lint` / `prettier --check` 通过
+- [x] 1.3 配置分层测试命令：`test:arch` / `test:unit` / `test:integration` / `test:e2e`(占位) + 聚合 `test`（vitest workspace，各 project 可独立跑）
+- [x] 1.4 **架构测试**：`.dependency-cruiser.cjs` 落地 domain 纯净 / 依赖方向 / 无循环 / 无孤儿 + `arch/architecture.test.ts` 断言；`pnpm test:arch` 通过、独立 project
+- [x] 1.5 更新 AGENTS.md §5 目录表 + README「Repo layout / Getting started」为 monorepo
+- [ ] 1.6 配置模块（`featuredDefaultOn` / `bodyMinLen` / `bodyMaxLen` / `linkTtlDays` / `holdTimeoutHours` / `spotCheckRatio`），Zod 解析、默认值、单测（`domain/config.ts` 已迁；server 侧 Zod env 解析待补齐这些运营配置）
+- [x] 1.7 从 `prototype/` 迁移领域模块（`lifecycle` / `visibility` / `streak` / `moderation`）到 `packages/domain` + 测试（78 个）；`test:arch` 绿。清理到 strict lint（去 dynamic-delete、码位计数等）
 
 ## 2. 领域逻辑（纯函数，先写测试）
 

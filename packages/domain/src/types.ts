@@ -27,9 +27,7 @@ export type LifecycleTrigger =
   | 'delete';
 
 export type LifecycleActor =
-  | { kind: 'system' }
-  | { kind: 'author'; userId: string }
-  | { kind: 'moderator'; userId: string };
+  { kind: 'system' } | { kind: 'author'; userId: string } | { kind: 'moderator'; userId: string };
 
 export interface Personalization {
   /** 给谁（称呼）——必填 */
@@ -41,12 +39,7 @@ export interface Personalization {
 }
 
 export type Occasion =
-  | 'birthday'
-  | 'festival'
-  | 'encouragement'
-  | 'recovery'
-  | 'remembrance'
-  | 'daily';
+  'birthday' | 'festival' | 'encouragement' | 'recovery' | 'remembrance' | 'daily';
 
 export interface BlessingEvent {
   from: BlessingState;
@@ -90,19 +83,10 @@ export interface ModerationProvider {
 export type ReportOrigin = 'report' | 'auto_suspect' | 'appeal';
 
 export type ReportState =
-  | 'open'
-  | 'in_review'
-  | 'resolved_pass'
-  | 'resolved_takedown'
-  | 'resolved_edit';
+  'open' | 'in_review' | 'resolved_pass' | 'resolved_takedown' | 'resolved_edit';
 
 export type ReportCategory =
-  | 'misinformation'
-  | 'offensive'
-  | 'harassment'
-  | 'illegal'
-  | 'other'
-  | ModerationCategory;
+  'misinformation' | 'offensive' | 'harassment' | 'illegal' | 'other' | ModerationCategory;
 
 export interface Blessing {
   id: string;

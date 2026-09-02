@@ -6,7 +6,7 @@ import { buildServer } from './interface/http/server';
 
 async function main(): Promise<void> {
   const env = loadEnv();
-  const app = buildServer({ clock: new SystemClock() });
+  const app = buildServer({ clock: new SystemClock(), env });
 
   await app.listen({ port: env.PORT, host: env.HOST });
 }

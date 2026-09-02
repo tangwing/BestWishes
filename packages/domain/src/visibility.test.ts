@@ -18,12 +18,17 @@ describe('isPubliclyVisible', () => {
     expect(isPubliclyVisible('published', past, now)).toBe(false);
   });
 
-  it.each(['verifying', 'rejected', 'taken_down', 'withdrawn', 'deleted', 'expired', 'draft'] as const)(
-    '%s → 不可见',
-    (s) => {
-      expect(isPubliclyVisible(s, future, now)).toBe(false);
-    },
-  );
+  it.each([
+    'verifying',
+    'rejected',
+    'taken_down',
+    'withdrawn',
+    'deleted',
+    'expired',
+    'draft',
+  ] as const)('%s → 不可见', (s) => {
+    expect(isPubliclyVisible(s, future, now)).toBe(false);
+  });
 });
 
 describe('placeholderType — 校验期访客访问不返回正文', () => {

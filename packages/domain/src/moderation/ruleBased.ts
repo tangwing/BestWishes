@@ -64,12 +64,14 @@ export class RuleBasedProvider implements ModerationProvider {
       suspectCats.push('contact_leak');
     }
 
-    const bodyLen = [...input.text.trim()].length;
+    // 按码位数，中文一个字算一个（不是 UTF-16 单元）
+    const bodyLen = Array.from(input.text.trim()).length;
     if (bodyLen < this.cfg.bodyMinLen || bodyLen > this.cfg.bodyMaxLen) {
       suspectCats.push('malformed');
     }
     // 疑似乱码：可打印字符里 CJK + 字母 + 常见标点占比过低
-    const meaningful = (input.text.match(/[\p{Script=Han}a-zA-Z，。！？、；：（）,.!?]/gu) ?? []).length;
+    const meaningful = (input.text.match(/[\p{Script=Han}a-zA-Z，。！？、；：（）,.!?]/gu) ?? [])
+      .length;
     if (bodyLen >= this.cfg.bodyMinLen && meaningful / bodyLen < 0.5) {
       suspectCats.push('malformed');
     }
@@ -90,7 +92,6 @@ export class RuleBasedProvider implements ModerationProvider {
 export class UnavailableProvider implements ModerationProvider {
   readonly name = 'unavailable';
   check(_input: ModerationInput): Promise<ModerationResult> {
-    void _input;
     return Promise.resolve({
       verdict: 'suspect',
       categories: [],

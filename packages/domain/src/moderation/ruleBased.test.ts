@@ -2,7 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { RuleBasedProvider, UnavailableProvider } from './ruleBased';
 import type { ModerationInput, ModerationProvider } from '../types';
 
-function input(text: string, over: Partial<ModerationInput['personalization']> = {}): ModerationInput {
+function input(
+  text: string,
+  over: Partial<ModerationInput['personalization']> = {},
+): ModerationInput {
   return { text, personalization: { toName: '小明', ...over } };
 }
 

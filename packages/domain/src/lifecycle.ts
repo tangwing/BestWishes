@@ -3,9 +3,7 @@
 
 import type { BlessingState, LifecycleTrigger } from './types';
 
-type TransitionTable = {
-  [S in BlessingState]: Partial<Record<LifecycleTrigger, BlessingState>>;
-};
+type TransitionTable = Record<BlessingState, Partial<Record<LifecycleTrigger, BlessingState>>>;
 
 const TRANSITIONS: TransitionTable = {
   draft: {
@@ -46,15 +44,10 @@ const TRANSITIONS: TransitionTable = {
   },
 };
 
-export type ApplyResult =
-  | { ok: true; next: BlessingState }
-  | { ok: false; reason: string };
+export type ApplyResult = { ok: true; next: BlessingState } | { ok: false; reason: string };
 
 /** 只判定转移是否合法并给出目标状态；不做 IO、不改对象。 */
-export function applyTrigger(
-  state: BlessingState,
-  trigger: LifecycleTrigger,
-): ApplyResult {
+export function applyTrigger(state: BlessingState, trigger: LifecycleTrigger): ApplyResult {
   const next = TRANSITIONS[state][trigger];
   if (next === undefined) {
     return {

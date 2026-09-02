@@ -19,16 +19,18 @@ export function recordPublish(data: StreakData, localDate: string): StreakData {
   return { ...data, [localDate]: (data[localDate] ?? 0) + 1 };
 }
 
-/** 祝福离开 published（撤回 / 删除 / 过期 / 下架）时回撤当日计数。 */
+/** 祝福因作者撤回 / 删除 / 平台下架离开 published 时回撤当日计数（链接过期不走这里）。 */
 export function recordUnpublish(data: StreakData, localDate: string): StreakData {
   const nextCount = (data[localDate] ?? 0) - 1;
-  const copy = { ...data };
-  if (nextCount <= 0) {
-    delete copy[localDate];
-  } else {
-    copy[localDate] = nextCount;
+  const next: StreakData = {};
+  for (const [date, count] of Object.entries(data)) {
+    if (date === localDate) {
+      if (nextCount > 0) next[date] = nextCount;
+    } else {
+      next[date] = count;
+    }
   }
-  return copy;
+  return next;
 }
 
 export function totalPublished(data: StreakData): number {

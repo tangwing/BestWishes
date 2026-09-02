@@ -7,12 +7,18 @@ export function App() {
 
   useEffect(() => {
     fetch('/healthz')
-      .then((r) => (r.ok ? setHealth('ok') : setHealth('连不上')))
-      .catch(() => setHealth('连不上'));
+      .then((r) => {
+        setHealth(r.ok ? 'ok' : '连不上');
+      })
+      .catch(() => {
+        setHealth('连不上');
+      });
   }, []);
 
   return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', padding: 24, maxWidth: 640, margin: '0 auto' }}>
+    <main
+      style={{ fontFamily: 'system-ui, sans-serif', padding: 24, maxWidth: 640, margin: '0 auto' }}
+    >
       <h1>BestWishes</h1>
       <p style={{ color: '#6b6862' }}>练习专注，传递善意。</p>
       <p style={{ color: '#6b6862', fontSize: 13 }}>后端连接：{health}</p>

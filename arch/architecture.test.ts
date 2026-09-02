@@ -30,10 +30,7 @@ function importSpecifiers(source: string): string[] {
 }
 
 const domainSrc = join(REPO, 'packages/domain/src');
-const domainFiles = walk(
-  domainSrc,
-  (n) => /\.ts$/.test(n) && !/\.test\.ts$/.test(n),
-);
+const domainFiles = walk(domainSrc, (n) => /\.ts$/.test(n) && !/\.test\.ts$/.test(n));
 
 describe('领域层保持纯净', () => {
   it('有领域文件可检查', () => {

@@ -1,16 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import {
-  applyTrigger,
-  canApply,
-  allowedTriggers,
-  isTerminal,
-} from './lifecycle';
+import { applyTrigger, canApply, allowedTriggers, isTerminal } from './lifecycle';
 import type { BlessingState, LifecycleTrigger } from './types';
 
 // 对应 specs/blessing-delivery「祝福状态机」的 scenario。
 
 describe('祝福状态机 — 合法转移', () => {
-  const legal: Array<[BlessingState, LifecycleTrigger, BlessingState]> = [
+  const legal: [BlessingState, LifecycleTrigger, BlessingState][] = [
     ['draft', 'submit', 'verifying'],
     ['verifying', 'auto_pass', 'published'],
     ['verifying', 'review_pass', 'published'],

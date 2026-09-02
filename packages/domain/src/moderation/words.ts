@@ -4,7 +4,10 @@
 import type { ModerationCategory } from '../types';
 
 /** 命中即 violation 的大类词表（示意，非穷举） */
-export const BANNED: Record<Exclude<ModerationCategory, 'religious_solicitation' | 'contact_leak' | 'malformed'>, string[]> = {
+export const BANNED: Record<
+  Exclude<ModerationCategory, 'religious_solicitation' | 'contact_leak' | 'malformed'>,
+  string[]
+> = {
   politics: ['颠覆国家', '反动标语'],
   sexual: ['色情内容', '裸聊'],
   hate: ['种族仇恨', '滚出这个国家'],
