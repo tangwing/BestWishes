@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --bg:#f6f4ef;--surface:#fffdf9;--ink:#2b2a27;--soft:#6b6862;--line:#e3ddd2;
+      --accent:#7c8a6a;--accent-ink:#46503a;--warn:#9a6b4b;
+      --serif:"Noto Serif SC",Georgia,"Songti SC",serif;
+      --sans:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.7}
+    a{color:var(--warn)}a:hover{color:#7c5238}
+    .screen{width:390px;min-height:844px;margin:0 auto;padding:0 24px 40px}
+    .status-space{height:44px}
+    .topnav{padding:14px 0 6px;color:var(--soft);font-size:13px}
+    h1{font-family:var(--serif);font-weight:600;font-size:20px;margin:18px 0 4px;display:flex;align-items:center;gap:8px}
+    h1 svg{width:20px;height:20px;color:var(--accent)}
+    .lead{color:var(--soft);font-size:13px;margin:0 0 14px}
+    .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
+    h2{font-size:12px;color:var(--soft);margin:0 0 8px;font-weight:600}
+    .tag{display:inline-block;font-size:11px;padding:2px 9px;border-radius:999px;background:#f3ead9;color:#8a6d3b}
+    .blessing{font-family:var(--serif);font-size:16px;line-height:2;white-space:pre-wrap;margin:10px 0 0}
+    .meta{color:var(--soft);font-size:12px;margin-top:12px}
+    .link-box{font-size:12px;color:var(--soft);word-break:break-all;background:#f1efe8;border-radius:8px;padding:8px 10px;margin:4px 0 10px}
+    .row{display:flex;gap:8px}
+    .btn{flex:1;text-align:center;font:inherit;font-size:13px;color:#fff;background:var(--accent);border:1px solid var(--accent);border-radius:10px;padding:10px 0}
+    .btn.ghost{background:transparent;color:var(--accent-ink)}
+    .hint{font-size:11px;color:var(--soft);margin-top:10px}
+    .prep{display:flex;gap:8px;align-items:flex-start;background:#f6f1e6;border:1px solid #eadfc9;border-radius:12px;padding:12px;font-size:12px;color:#7a6746}
+    .prep svg{width:16px;height:16px;flex-shrink:0;margin-top:1px}
+  </style>
+</helmet>
+<div class="screen">
+  <div class="status-space"></div>
+  <div class="topnav">写祝福 · 完成</div>
+
+  <h1>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+    已发送
+  </h1>
+  <p class="lead">你的祝福已经交给平台。平台正在做一次内容校验（通常几分钟），通过后外婆打开链接就能看到。</p>
+
+  <div class="prep">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+    <div>「已发送」是你这边的状态；「对方可见」要等校验通过。这两个状态是分开的。</div>
+  </div>
+
+  <div class="card">
+    <span class="tag">审核中</span>
+    <p class="blessing">月亮圆的时候，就当我在你身边。愿你团圆，愿你安好，新的一年慢慢舒展。</p>
+    <p class="meta">给 外婆</p>
+  </div>
+
+  <div class="card">
+    <h2>分享这份祝福</h2>
+    <div class="link-box">bestwishes.app/p/a7f3k9m2c1</div>
+    <div class="row">
+      <div class="btn">微信分享</div>
+      <div class="btn ghost">复制链接</div>
+    </div>
+    <p class="hint">非微信环境用「复制链接」兜底。被分享人打开无需注册。链接默认有效期约 120 天，可续期。</p>
+  </div>
+
+  <p class="hint">状态会自动刷新。<a>前往「我的祝福」管理</a> · <a>再写一段</a></p>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --bg:#f6f4ef;--surface:#fffdf9;--ink:#2b2a27;--soft:#6b6862;--line:#e3ddd2;
+      --accent:#7c8a6a;--accent-ink:#46503a;--warn:#9a6b4b;
+      --serif:"Noto Serif SC",Georgia,"Songti SC",serif;
+      --sans:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.7}
+    a{color:var(--warn)}a:hover{color:#7c5238}
+    .screen{width:390px;min-height:940px;margin:0 auto;padding:0 24px 48px}
+    .status-space{height:44px}
+    .topnav{display:flex;align-items:center;gap:10px;padding:14px 0 6px;color:var(--soft);font-size:13px}
+    .topnav svg{width:18px;height:18px}
+    h1{font-family:var(--serif);font-weight:600;font-size:21px;margin:14px 0 4px}
+    .lead{color:var(--soft);font-size:13px;margin:0 0 6px}
+    h2{font-size:12px;color:var(--soft);margin:22px 0 8px;font-weight:600;letter-spacing:.02em}
+    .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+    label{display:block;font-size:12px;color:var(--soft);margin:12px 0 4px}
+    .field{width:100%;font:inherit;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+    .row{display:flex;gap:10px}
+    .row>*{flex:1}
+    .chips{display:flex;gap:8px;flex-wrap:wrap}
+    .chip{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:5px 12px;background:var(--surface);color:var(--soft)}
+    .chip.on{background:#ecefe4;color:var(--accent-ink);border-color:#d9e0cb}
+    .textarea{min-height:150px;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:12px;font-family:var(--serif);font-size:16px;line-height:1.95;color:var(--ink)}
+    .count{font-size:11px;color:var(--soft);text-align:right;margin-top:4px}
+    .btn{display:block;width:100%;text-align:center;font:inherit;font-size:15px;color:#fff;background:var(--accent);border:1px solid var(--accent);border-radius:10px;padding:12px 0;margin-top:20px}
+    .hint{font-size:11px;color:var(--soft);margin-top:8px}
+    .breathe{width:44px;height:44px;border-radius:50%;border:1px solid var(--accent);opacity:.5;margin:6px auto 4px}
+    .center{text-align:center}
+    .sample{font-family:var(--serif);font-size:14px;color:var(--ink);margin:6px 0}
+  </style>
+</helmet>
+<div class="screen">
+  <div class="status-space"></div>
+  <div class="topnav">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M15 18l-6-6 6-6"/></svg>
+    写祝福
+  </div>
+
+  <h1>写一段祝福</h1>
+
+  <div class="breathe"></div>
+  <p class="lead center">不必赶。先想清楚写给谁，深呼吸一次，再开始。</p>
+
+  <h2>场景</h2>
+  <div class="chips">
+    <span class="chip">生日</span>
+    <span class="chip on">节日</span>
+    <span class="chip">鼓励</span>
+    <span class="chip">康复祈愿</span>
+    <span class="chip">纪念 / 追思</span>
+    <span class="chip">日常问候</span>
+  </div>
+
+  <h2>从一个范本开始（可选）</h2>
+  <div class="card">
+    <div style="font-family:var(--serif);font-size:14px;font-weight:600">新年祝福</div>
+    <div class="hint" style="margin:2px 0 4px">回想过去一年你们之间发生的好事。</div>
+    <div class="sample">新的一年，愿你所求皆有回应，所行皆有归途，平安顺遂。</div>
+    <span class="chip" style="margin-top:4px;display:inline-block">用这个起草</span>
+  </div>
+
+  <h2>祝福正文</h2>
+  <div class="textarea">月亮圆的时候，就当我在你身边。愿你团圆，愿你安好，新的一年慢慢舒展。</div>
+  <div class="count">33 字 · 建议 15–500</div>
+
+  <h2>让 TA 知道是谁在祝福</h2>
+  <label>给谁（必填）</label>
+  <div class="field">外婆</div>
+  <div class="row">
+    <div><label>与 TA 的关系</label><div class="field">长辈</div></div>
+    <div><label>我是谁（落款）</label><div class="field">阿念</div></div>
+  </div>
+  <label>我所在的城市</label>
+  <div class="field">杭州</div>
+
+  <div class="btn">写好了，发送</div>
+  <p class="hint">草稿已自动保存 · 不计时、不评分。</p>
+</div>
+</x-dc>
+</body>
+</html>

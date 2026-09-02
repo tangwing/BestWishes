@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --bg:#f6f4ef;--surface:#fffdf9;--ink:#2b2a27;--soft:#6b6862;--line:#e3ddd2;
+      --accent:#7c8a6a;--accent-ink:#46503a;--warn:#9a6b4b;
+      --serif:"Noto Serif SC",Georgia,"Songti SC",serif;
+      --sans:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.7;-webkit-font-smoothing:antialiased}
+    a{color:var(--warn)}a:hover{color:#7c5238}
+    .screen{width:390px;min-height:844px;margin:0 auto;padding:0 24px 40px;display:flex;flex-direction:column}
+    .status-space{height:44px}
+    .brand{font-family:var(--serif);font-size:20px;letter-spacing:.14em;margin-top:64px}
+    .tagline{color:var(--soft);font-size:14px;margin-top:8px}
+    .spacer{flex-grow:1}
+    .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px}
+    label{display:block;font-size:12px;color:var(--soft);margin:14px 0 4px}
+    .field{width:100%;font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:11px 12px}
+    .btn{display:block;width:100%;text-align:center;font:inherit;font-size:15px;color:#fff;background:var(--accent);border:1px solid var(--accent);border-radius:10px;padding:12px 0;margin-top:18px}
+    .hint{font-size:12px;color:var(--soft);margin-top:10px}
+    .breathe{width:56px;height:56px;border-radius:50%;border:1px solid var(--accent);opacity:.55}
+  </style>
+</helmet>
+<div class="screen">
+  <div class="status-space"></div>
+  <div class="brand">BEST WISHES</div>
+  <div class="tagline">练习专注，传递善意。<br>为世界上的某个人，认真写一段祝福。</div>
+
+  <div class="spacer"></div>
+  <div class="breathe"></div>
+  <div class="spacer"></div>
+
+  <div class="card">
+    <div style="font-family:var(--serif);font-size:16px">用微信继续</div>
+    <label>昵称（别人会看到，可不授权）</label>
+    <div class="field" style="color:var(--soft)">阿念</div>
+    <label>所在城市（只到城市，用于「来自 XX 的祝福」）</label>
+    <div class="field">杭州</div>
+    <a class="btn" style="color:#fff;text-decoration:none">微信登录</a>
+    <div class="hint">拒绝昵称 / 头像授权也能登录，会用占位名和默认头像。访客打开分享链接无需登录。</div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

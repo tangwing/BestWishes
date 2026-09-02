@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --bg:#f6f4ef;--surface:#fffdf9;--ink:#2b2a27;--soft:#6b6862;--line:#e3ddd2;
+      --accent:#7c8a6a;--accent-ink:#46503a;--warn:#9a6b4b;
+      --serif:"Noto Serif SC",Georgia,"Songti SC",serif;
+      --sans:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.7}
+    a{color:var(--warn)}a:hover{color:#7c5238}
+    .screen{width:390px;min-height:900px;margin:0 auto;padding:0 24px 40px}
+    .status-space{height:44px}
+    .topnav{padding:14px 0 6px;color:var(--soft);font-size:13px}
+    h1{font-family:var(--serif);font-weight:600;font-size:20px;margin:14px 0 12px}
+    .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px 16px}
+    .item{padding:16px 0;border-bottom:1px solid var(--line)}
+    .item:last-child{border-bottom:none}
+    .tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+    .tag{font-size:11px;padding:2px 9px;border-radius:999px}
+    .t-pub{background:#e4ede0;color:var(--accent-ink)}
+    .t-ver{background:#f3ead9;color:#8a6d3b}
+    .t-wd{background:#e9e6df;color:var(--soft)}
+    .t-exp{background:#e9e6df;color:var(--soft)}
+    .t-occ{background:#ecefe4;color:var(--accent-ink)}
+    .body{font-family:var(--serif);font-size:14px;color:var(--ink)}
+    .meta{font-size:12px;color:var(--soft);margin-top:4px}
+    .actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+    .a{font-size:12px;border:1px solid var(--line);border-radius:8px;padding:5px 10px;background:var(--surface);color:var(--accent-ink)}
+    .a.warn{color:var(--warn);border-color:#e6d3c9}
+    .hint{font-size:11px;color:var(--soft);margin-top:14px}
+  </style>
+</helmet>
+<div class="screen">
+  <div class="status-space"></div>
+  <div class="topnav">我的</div>
+  <h1>我的祝福</h1>
+
+  <div class="card">
+    <div class="item">
+      <div class="tags"><span class="tag t-pub">已送达</span><span class="tag t-occ">节日</span></div>
+      <div class="body">月亮圆的时候，就当我在你身边。愿你团圆，愿你安好…</div>
+      <div class="meta">给 外婆 · <a>访客视角</a></div>
+      <div class="actions">
+        <span class="a">复制链接</span><span class="a">撤回</span><span class="a warn">删除</span>
+      </div>
+    </div>
+    <div class="item">
+      <div class="tags"><span class="tag t-ver">审核中</span><span class="tag t-occ">鼓励</span></div>
+      <div class="body">你准备得很认真，我都看在眼里。放平心态，正常发挥就很好。</div>
+      <div class="meta">给 小舟</div>
+      <div class="actions"><span class="a">复制链接</span></div>
+    </div>
+    <div class="item">
+      <div class="tags"><span class="tag t-wd">已撤回</span><span class="tag t-occ">日常问候</span></div>
+      <div class="body">突然想起你，就来说一声：愿你今天顺顺利利，好好吃饭。</div>
+      <div class="meta">给 老陈</div>
+      <div class="actions"><span class="a">重新发布</span><span class="a warn">删除</span></div>
+    </div>
+    <div class="item">
+      <div class="tags"><span class="tag t-exp">已过期</span><span class="tag t-occ">纪念 / 追思</span></div>
+      <div class="body">好久没和你说话了。我们都还好，你也要安心。</div>
+      <div class="meta">给 父亲 · 已续期 1 次</div>
+      <div class="actions"><span class="a">续期</span><span class="a warn">删除</span></div>
+    </div>
+  </div>
+
+  <p class="hint">删除会二次确认，并提示「已送达的祝福，对方保存的截图 / 转发无法追回」。撤回 / 删除 / 下架会即时回撤坚持记录的对应计数。</p>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,37 @@
+{
+  "pages": [
+    { "id": "page-1", "name": "作者流程" },
+    { "id": "page-2", "name": "访客 + 审核" }
+  ],
+  "artboards": [
+    { "file": "Login.dc.html", "page": "page-1", "x": 0, "y": 0, "w": 390, "h": 844, "title": "1 · 登录" },
+    { "file": "Agreement.dc.html", "page": "page-1", "x": 480, "y": 0, "w": 390, "h": 844, "title": "2 · 授权协议" },
+    { "file": "Main.dc.html", "page": "page-1", "x": 960, "y": 0, "w": 390, "h": 960, "title": "3 · 撰写" },
+    { "file": "Sent.dc.html", "page": "page-1", "x": 1440, "y": 0, "w": 390, "h": 844, "title": "4 · 已发送 / 审核中" },
+    { "file": "MyBlessings.dc.html", "page": "page-1", "x": 1920, "y": 0, "w": 390, "h": 912, "title": "5 · 我的祝福" },
+    { "file": "Streak.dc.html", "page": "page-1", "x": 2400, "y": 0, "w": 390, "h": 844, "title": "6 · 坚持" },
+
+    { "file": "PublicContent.dc.html", "page": "page-2", "x": 0, "y": 0, "w": 390, "h": 844, "title": "访客落地页 · 正文" },
+    { "file": "PublicPlaceholders.dc.html", "page": "page-2", "x": 480, "y": 0, "w": 940, "h": 640, "title": "访客落地页 · 占位状态" },
+    { "file": "Moderation.dc.html", "page": "page-2", "x": 1520, "y": 0, "w": 800, "h": 760, "title": "审核台队列" }
+  ],
+  "annotations": [
+    {
+      "id": "flow-note",
+      "page": "page-1",
+      "x": 0,
+      "y": -132,
+      "w": 520,
+      "text": "P1 作者流程。调性：安静、克制、正念。off-white 底、衬线体祝福正文、不计时不评分的静心引导。\n关键机制：提交后作者立即「已发送」并拿到链接，平台 hold 校验通过后接收方才可见（第 4 屏）。"
+    },
+    {
+      "id": "visitor-note",
+      "page": "page-2",
+      "x": 0,
+      "y": -132,
+      "w": 520,
+      "text": "访客侧无登录墙。落地页按祝福状态渲染正文或中性占位；接口只下发占位类型，不下发未发布内容的正文。审核只做安全合规，不评判质量。"
+    }
+  ],
+  "launch": { "view": "canvas", "page": "page-1" }
+}

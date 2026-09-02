@@ -15,3 +15,7 @@ Thumbs.db
 .env.*
 
 # Populated once the tech stack is chosen (node_modules/, build/, Pods/, DerivedData/, etc.)
+node_modules/
+dist/
+build/
+*.tsbuildinfo

@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --bg:#f4f3ef;--surface:#ffffff;--ink:#2b2a27;--soft:#6b6862;--line:#e3ddd2;
+      --accent:#7c8a6a;--accent-ink:#46503a;--warn:#9a6b4b;
+      --serif:"Noto Serif SC",Georgia,"Songti SC",serif;
+      --sans:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;font-size:13px}
+    .wrap{width:760px;margin:0 auto;padding:28px}
+    h1{font-family:var(--serif);font-size:19px;margin:0 0 4px}
+    .lead{color:var(--soft);font-size:12px;margin:0 0 18px}
+    .queue{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+    .r{display:flex;gap:16px;padding:16px;border-bottom:1px solid var(--line)}
+    .r:last-child{border-bottom:none}
+    .r .main{flex-grow:1}
+    .badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+    .b{font-size:10px;padding:2px 8px;border-radius:999px;background:#eee9e0;color:var(--soft)}
+    .b.p-high{background:#f0ddd4;color:var(--warn)}
+    .b.p-mid{background:#f3ead9;color:#8a6d3b}
+    .b.st{background:#e4ede0;color:var(--accent-ink)}
+    .body{font-family:var(--serif);font-size:14px;margin:2px 0}
+    .tl{font-size:11px;color:var(--soft);margin-top:4px}
+    .acts{display:flex;flex-direction:column;gap:6px;min-width:96px}
+    .btn{text-align:center;font-size:12px;border-radius:8px;padding:6px 0;border:1px solid var(--accent);background:var(--accent);color:#fff}
+    .btn.ghost{background:transparent;color:var(--accent-ink)}
+    .btn.warn{background:transparent;color:var(--warn);border-color:#e6d3c9}
+    .note{font-size:11px;color:var(--soft);margin-top:14px;line-height:1.8}
+  </style>
+</helmet>
+<div class="wrap">
+  <h1>审核台</h1>
+  <p class="lead">队列优先级：高危举报 &gt; 用户申诉 &gt; 自动疑似 &gt; 随机抽检。每个工单必须走到终态并留痕。</p>
+
+  <div class="queue">
+    <div class="r">
+      <div class="main">
+        <div class="badges"><span class="b p-high">优先级 90</span><span class="b">举报</span><span class="b st">已下架（待复核）</span><span class="b">涉嫌违法 · 计数 3</span></div>
+        <div class="body">恭喜发财，加我微信 lucky_888 领新年红包，手慢无……</div>
+        <div class="tl">· 工单创建（report）· 高危举报即时临时下架 · 待人工一审</div>
+      </div>
+      <div class="acts"><span class="btn">通过</span><span class="btn warn">维持下架</span><span class="btn ghost">要求修改</span></div>
+    </div>
+
+    <div class="r">
+      <div class="main">
+        <div class="badges"><span class="b p-mid">优先级 60</span><span class="b">申诉</span><span class="b st">已驳回</span><span class="b">作者申诉</span></div>
+        <div class="body">愿你在新的一年里放下执念，安顿身心，一切随缘。</div>
+        <div class="tl">· 自动判定命中「宗教敏感」· 作者申诉：这是常见的祝福语，不涉及收费</div>
+      </div>
+      <div class="acts"><span class="btn">通过</span><span class="btn warn">维持</span></div>
+    </div>
+
+    <div class="r">
+      <div class="main">
+        <div class="badges"><span class="b">优先级 30</span><span class="b">自动疑似</span><span class="b st">审核中</span><span class="b">contact_leak</span></div>
+        <div class="body">祝你生日快乐，有空来我店里坐坐（地址私信）。</div>
+        <div class="tl">· 规则层命中「疑似联系方式导流」· 保持 verifying，对访客显示「准备中」</div>
+      </div>
+      <div class="acts"><span class="btn">通过</span><span class="btn warn">下架</span><span class="btn ghost">要求修改</span></div>
+    </div>
+
+    <div class="r">
+      <div class="main">
+        <div class="badges"><span class="b">优先级 10</span><span class="b">随机抽检</span><span class="b st">已发布</span></div>
+        <div class="body">这段日子不好过，我知道。你不用马上好起来，慢慢来，我一直在。</div>
+        <div class="tl">· 抽检比例 5% · 用于校准自动检查阈值</div>
+      </div>
+      <div class="acts"><span class="btn ghost">标记正常</span><span class="btn warn">下架</span></div>
+    </div>
+  </div>
+
+  <p class="note">
+    审核只做安全合规，不评判质量好坏。低分 / 平淡的祝福照常送达。<br>
+    每个动作写入 blessing_events（谁、何时、为什么），并驱动祝福状态机。
+  </p>
+</div>
+</x-dc>
+</body>
+</html>

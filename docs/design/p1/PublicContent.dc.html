@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --bg:#f2efe8;--surface:#fffdf9;--ink:#2b2a27;--soft:#6b6862;--line:#e3ddd2;
+      --accent:#7c8a6a;--accent-ink:#46503a;--warn:#9a6b4b;
+      --serif:"Noto Serif SC",Georgia,"Songti SC",serif;
+      --sans:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.7}
+    a{color:var(--warn)}a:hover{color:#7c5238}
+    .screen{width:390px;min-height:844px;margin:0 auto;padding:0 24px 40px;display:flex;flex-direction:column}
+    .status-space{height:44px}
+    .bar{display:flex;justify-content:space-between;align-items:center;padding:14px 0;font-size:12px;color:var(--soft)}
+    .bar .brand{font-family:var(--serif);letter-spacing:.12em}
+    .to{font-size:12px;color:var(--soft);margin:18px 0 10px}
+    .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:30px 24px}
+    .blessing{font-family:var(--serif);font-size:19px;line-height:2.15;white-space:pre-wrap}
+    .from{color:var(--soft);font-size:13px;margin-top:22px}
+    .spacer{flex-grow:1}
+    .foot{font-size:11px;color:var(--soft);text-align:center;margin-top:24px}
+    .report{font-size:12px;color:var(--warn);text-align:center;margin-top:10px}
+  </style>
+</helmet>
+<div class="screen">
+  <div class="status-space"></div>
+  <div class="bar">
+    <span class="brand">BEST WISHES</span>
+    <span>我也写一段 →</span>
+  </div>
+
+  <div class="to">给 外婆 · 节日</div>
+  <div class="card">
+    <p class="blessing">外婆——
+
+月亮圆的时候，就当我在你身边。愿你团圆，愿你安好，新的一年慢慢舒展，少些操劳，多些安睡。
+
+阿念</p>
+    <p class="from">来自 杭州 的 阿念<br>2026 年 9 月 2 日</p>
+  </div>
+
+  <div class="spacer"></div>
+  <p class="foot">内容由用户创作。</p>
+  <p class="report">举报这份内容</p>
+</div>
+</x-dc>
+</body>
+</html>

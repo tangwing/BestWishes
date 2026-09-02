@@ -6,7 +6,11 @@
 
 ## 1. 项目状态
 
-技术栈未定。当前处于产品概念澄清 + 脚手架阶段。不要在技术选型尚未在 [docs/adr/](docs/adr/) 中落定之前假设某个具体框架/语言。
+产品概念与北极星已立（[docs/product/vision.md](docs/product/vision.md)）。当前在做 **P1（文本静心祝福）** 的需求拆分与实现准备。
+
+P1 技术栈已定（[ADR 0003](docs/adr/0003-p1-tech-stack-web-first.md)）：**Web-first PWA（React + TypeScript + Vite）+ Node.js + TypeScript（Fastify）+ PostgreSQL + pnpm monorepo**，领域逻辑放 `packages/domain` 前后端共享。所有代码必须遵循 [docs/engineering/coding-standards.md](docs/engineering/coding-standards.md)。
+
+P2 及以后的技术决策（音视频管线、AI/ML 服务、多端原生）仍未定，不要提前假设。
 
 ## 2. 质量标准
 
@@ -39,17 +43,30 @@
 | 内容类型 | 位置 |
 |---|---|
 | 产品概念/需求 | `docs/product/` |
+| 调研报告（架构/合规/技术选型的决策输入） | `docs/research/`，按 `YYYY-MM-DD-主题.md` 命名，只增不改 |
+| 架构设计（跨模块的技术方案） | `docs/architecture/` |
+| 界面设计走查稿（Claude Design 画布工作文件） | `docs/design/` |
 | 架构决策记录 | `docs/adr/`，新增决策用下一个编号新建文件，不修改已合并的旧决策 |
 | 用户 prompt 完整记录 | `PROMPT_LOG.md` |
 | 版本变更 | `CHANGELOG.md`（Keep a Changelog 格式） |
-| 客户端/服务端代码 | 技术栈选定后再建立，届时更新本表 |
+| 需求生命周期（Spec/评审/任务，见 [ADR 0002](docs/adr/0002-openspec-for-requirement-lifecycle.md)） | `openspec/`，通过 `/opsx:propose` `/opsx:apply` `/opsx:archive` 等 slash command 操作 |
+| 工程规范（代码风格、架构、注释、性能） | `docs/engineering/`，所有代码必须遵循 |
+| Claude Code Skill/slash command | `.claude/` |
+| P1 走查原型（spike，非生产代码） | `prototype/`，见其 README |
+| 客户端/服务端代码 | 技术栈见 [ADR 0003](docs/adr/0003-p1-tech-stack-web-first.md)；`client/` `server/` `packages/domain/` 在 apply 阶段建立 |
 
 ## 6. 尚未决定，需要与用户共同澄清
 
-- 技术栈（多端实现方式：原生 × N / 跨端框架 / Web-first 等）
-- 后端架构与数据模型
-- 悬赏机制的具体规则（谁出资、如何托管、如何验收）
+- 多端原生实现方式（P2 之后：原生 × N / 跨端框架 / 继续 Web）；微信小程序（P2 录音实测后决策，见 ADR 0003 §D13）
+- P2 音视频管线与 AI/ML 服务的具体选型
+- 悬赏机制的具体规则（谁出资、如何托管、如何验收）——见调研报告 ADR-A…ADR-G
 - 变现模式
 - 目标平台清单
 
 不要在这些问题上替用户拍板并动手写产品代码；讨论清楚、写入 ADR 后再开始实现。
+
+## 7. Git 工作流
+
+- 单开发者仓库。**每轮对话结束自动 `commit` + `push` 到 `main`**（`.claude/hooks/auto-commit-push.sh`，Stop hook），保证工作实时同步到远端。
+- Claude 在每轮结束前应先自己用清晰、准确、符合 Conventional Commits 的信息提交；hook 是兜底（漏提交时用概要信息补一笔）。
+- commit message 规范：`<type>(<scope>): <subject>`，type ∈ feat/fix/docs/refactor/test/chore/build，正文说明「为什么」，结尾带 `Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>`。

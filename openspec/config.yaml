@@ -1,0 +1,56 @@
+schema: spec-driven
+
+# Project context
+context: |
+  Project: BestWishes (working name) — a ToC multi-device platform where users
+  post wish requests (e.g. birthdays, holidays, encouragement), can attach a
+  bounty to a request, and anyone can fulfill a request or send a wish
+  unprompted. Target scale is potentially 100M+ users; quality bar is high.
+
+  Tech stack: UNDECIDED. Do not assume a specific framework/language until it
+  is recorded in docs/adr/. See docs/adr/ for any decisions made so far.
+
+  This repo's authoritative engineering rules live in AGENTS.md (read it, not
+  just this file) — key points AI must follow even when working only inside
+  openspec/:
+  - Surgical changes only: touch just what's asked, smallest diff that solves it.
+  - Root-cause debugging: read full errors, reproduce before fixing, one fix at
+    a time, verify before moving on.
+  - Fix a bug by first writing a failing test that reproduces it.
+  - Dependencies are permanent code: prefer stdlib/existing code; justify new ones.
+  - Read before writing; resist premature abstraction ("might need it later" is
+    not a reason).
+  - Self-check before finishing: catch Kitchen Sink (opportunistic refactor),
+    Optimistic Path (happy-path only), Runaway Refactor (cascading changes) —
+    stop and flag rather than push through.
+  - Traceability: every user prompt that drives the project goes in
+    PROMPT_LOG.md; major/hard-to-reverse architecture decisions go in
+    docs/adr/ as a new numbered ADR (never edit a merged one).
+  - Don't decide open product/architecture questions unilaterally (see
+    AGENTS.md §6) — surface them for the user instead of guessing.
+
+  Review gate and TDD enforcement in this workflow are currently prompt-level
+  discipline only (per ADR 0002), consistent with the rest of AGENTS.md — not
+  a machine-enforced gate yet.
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
