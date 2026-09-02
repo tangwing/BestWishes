@@ -11,6 +11,7 @@ export const occasionSchema = z.enum([
   'remembrance',
   'daily',
 ]);
+export type Occasion = z.infer<typeof occasionSchema>;
 
 /** 发送者信息。给谁必填；落款和城市默认取个人空间，写入时已合并进来。 */
 export const personalizationSchema = z.object({

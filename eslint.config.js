@@ -47,9 +47,14 @@ export default tseslint.config(
     },
   },
   {
-    // React 组件的返回类型是显然的，逐个标注是噪音
+    // 前端是 UI 胶水层：返回类型显然、事件回调常用箭头简写、模板里常插数字。
+    // 更严的类型保证放在 domain / application / infrastructure。
     files: ['client/**/*.tsx'],
-    rules: { '@typescript-eslint/explicit-function-return-type': 'off' },
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/no-confusing-void-expression': ['error', { ignoreArrowShorthand: true }],
+      '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
+    },
   },
   {
     // application 服务用工厂模式，导出类型 = ReturnType<typeof 工厂>，不会和实现脱节；

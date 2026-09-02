@@ -40,13 +40,13 @@ describe('HTTP 端到端：核心流程', () => {
     expect(submit.statusCode).toBe(200);
     const { slug } = submit.json<{ slug: string }>();
 
-    const preparing = await ctx.server.inject({ method: 'GET', url: `/p/${slug}` });
+    const preparing = await ctx.server.inject({ method: 'GET', url: `/api/p/${slug}` });
     expect(preparing.json<{ type: string }>().type).toBe('preparing');
 
     ctx.clock.advance(6000);
     await ctx.app.scans.publishReady();
 
-    const page = await ctx.server.inject({ method: 'GET', url: `/p/${slug}` });
+    const page = await ctx.server.inject({ method: 'GET', url: `/api/p/${slug}` });
     const body = page.json<{ type: string; content?: { body: string; fromLine: string } }>();
     expect(body.type).toBe('content');
     expect(body.content?.body).toContain('温柔以待');
@@ -81,7 +81,7 @@ describe('HTTP 端到端：核心流程', () => {
     });
     expect(w.statusCode).toBe(200);
 
-    const page = await ctx.server.inject({ method: 'GET', url: `/p/${slug}` });
+    const page = await ctx.server.inject({ method: 'GET', url: `/api/p/${slug}` });
     expect(page.json<{ type: string }>().type).toBe('withdrawn');
     const streak = await ctx.server.inject({
       method: 'GET',
@@ -141,7 +141,8 @@ describe('HTTP 端到端：核心流程', () => {
       payload: { category: 'illegal', note: '疑似违法' },
     });
     expect(
-      (await ctx.server.inject({ method: 'GET', url: `/p/${slug}` })).json<{ type: string }>().type,
+      (await ctx.server.inject({ method: 'GET', url: `/api/p/${slug}` })).json<{ type: string }>()
+        .type,
     ).toBe('taken_down');
 
     const queue = await ctx.server.inject({
@@ -159,7 +160,8 @@ describe('HTTP 端到端：核心流程', () => {
       payload: { action: 'pass', reason: '误报' },
     });
     expect(
-      (await ctx.server.inject({ method: 'GET', url: `/p/${slug}` })).json<{ type: string }>().type,
+      (await ctx.server.inject({ method: 'GET', url: `/api/p/${slug}` })).json<{ type: string }>()
+        .type,
     ).toBe('content');
     await ctx.server.close();
   });

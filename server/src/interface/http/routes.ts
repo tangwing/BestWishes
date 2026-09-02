@@ -167,8 +167,8 @@ export function registerRoutes(app: FastifyInstance, application: Application): 
     return view;
   });
 
-  // ---- public landing page (no session) ----
-  app.get('/p/:slug', async (request) => {
+  // ---- public landing page 数据 (no session)。/p/:slug 本身是前端路由。 ----
+  app.get('/api/p/:slug', async (request) => {
     const { slug } = parse(z.object({ slug: z.string() }), request.params);
     return application.blessings.getPublicPage(slug);
   });

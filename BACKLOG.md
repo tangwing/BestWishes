@@ -9,9 +9,8 @@
 ## 恢复点（先读这段）
 
 - **阶段**：P1「文本静心祝福」**实现中**。用户已批准开工（"就按这个走吧，开工"），按 `/loop` 自定步调迭代，直到初版 Demo 跑通。
-- **iteration 1-4 完成**：monorepo + 领域层 + 配置 + 数据层（ports + 内存实现）+ application 用例 + **Fastify HTTP API**（`interface/http/routes.ts`，cookie 会话，全部 P1 端点）+ 范本 seed + 扫描任务 + 组合根。**117 测试全绿**（含 5 个 `app.inject` 端到端）。`pnpm --filter @bestwishes/server start` 实测：登录→协议→提交→hold→发布→访客看正文→outbox→streak 全通。
-- **iteration 5（下一步）**：client —— 把走查原型的屏幕迁到 `client/`，接真实 API（api 客户端封装 + TanStack Query 或轻量方案），CSS Modules，i18n 层。屏幕：登录 / 个人空间 / 授权协议 / 撰写（拦粘贴 + 发心提示）/ 已发送 / 收发记录 / 坚持 / 访客落地页 / 审核台。
-- **iteration 6**：`pnpm dev` 起 server+client，端到端点一遍，截图，收尾（README 跑通步骤、E2E Playwright 骨架）→ 初版 Demo 完成。
+- **iteration 1-5 完成**：monorepo + 领域层 + 数据层 + application 用例 + Fastify HTTP API + **client**（React + Vite + CSS Modules，10 个页面，`api/client.ts` 唯一 fetch，`SessionProvider`）。**117 测试全绿**，`pnpm verify` 绿。全栈 smoke（server 3000 + vite 5173 proxy）：client 出 HTML、登录→协议→提交→占位→落地页 全通。
+- **iteration 6（下一步，收尾）**：`pnpm dev` 双进程说明写进 README；跑一遍完整 demo 确认（可加 `@fastify/static` 让 `server start` 单进程也能出 client）；Playwright E2E 骨架（§7.4/7.5 占位）；把 tasks.md §7 端到端脚本落成实际测试；PROMPT_LOG / CHANGELOG 收尾 → **初版 Demo 完成**。
 - **实现计划**：[openspec/changes/add-p1-text-blessing/tasks.md](openspec/changes/add-p1-text-blessing/tasks.md)（7 组任务）。逐组做，每组 commit + 勾选。
 - **本机限制**：无 psql。数据层先做 `ports` + 内存 adapter（架构上就是可换的），Drizzle 迁移 + PG 集成测试作为需要 DB 的独立任务（B-24）。
 - **技术栈**（已定，ADR 0003）：Web-first PWA（React+TS+Vite / CSS Modules）+ Node+TS（Fastify）+ PostgreSQL（Drizzle）+ pnpm monorepo，领域逻辑在 `packages/domain`。
@@ -43,6 +42,10 @@
 - [ ] **B-21 架构测试补全** — 依赖方向 / 无循环 / 无孤儿的规则已上；`eslint-plugin-boundaries` 的完整分层配置待补（现用 dependency-cruiser + no-restricted-imports）。
 - [ ] **B-24 数据层落 PostgreSQL** — Drizzle schema + 迁移脚本 + testcontainers 集成测试。需要能跑 psql 的环境；开发阶段先用内存 adapter。
 - [ ] **B-25 `packages/config`** — 共享 tsconfig / eslint 预设抽成包（现在直接放根目录）。
+- [ ] **B-26 i18n 抽取** — client 现为字面中文；抽到 i18n 层（standards 要求"第一天"，为可读性 demo 阶段先字面）。
+- [ ] **B-27 微信 H5 适配 + PWA** — JS-SDK 分享、`manifest.json`、Service Worker。
+- [ ] **B-28 生产静态托管** — `@fastify/static` 服务 `client/dist` + SPA fallback，让单进程也能跑；或分开部署（ADR 0003 D12 推迟项）。
+- [ ] **B-29 移除 `prototype/`** — monorepo 已功能对齐；确认后删。
 
 ### 待澄清 / 需用户或法务
 

@@ -1,30 +1,41 @@
-// 应用外壳。迭代 1 只有占位；P1 的屏幕在后续迭代从走查原型迁移过来。
-
-import { useEffect, useState } from 'react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useSession } from './session';
+import s from './app.module.css';
 
 export function App() {
-  const [health, setHealth] = useState<'…' | 'ok' | '连不上'>('…');
-
-  useEffect(() => {
-    fetch('/healthz')
-      .then((r) => {
-        setHealth(r.ok ? 'ok' : '连不上');
-      })
-      .catch(() => {
-        setHealth('连不上');
-      });
-  }, []);
+  const { user, logout } = useSession();
+  const nav = useNavigate();
 
   return (
-    <main
-      style={{ fontFamily: 'system-ui, sans-serif', padding: 24, maxWidth: 640, margin: '0 auto' }}
-    >
-      <h1>BestWishes</h1>
-      <p style={{ color: '#6b6862' }}>练习专注，传递善意。</p>
-      <p style={{ color: '#6b6862', fontSize: 13 }}>后端连接：{health}</p>
-      <p style={{ color: '#9a6b4b', fontSize: 13 }}>
-        P1 界面正在从走查原型迁移到这里。见 BACKLOG.md。
-      </p>
-    </main>
+    <div className={s.app}>
+      <div className={s.topbar}>
+        <span className={s.brand}>BestWishes</span>
+        <nav className={s.nav}>
+          <NavLink to="/" end>
+            首页
+          </NavLink>
+          {user && (
+            <>
+              <NavLink to="/compose">写祝福</NavLink>
+              <NavLink to="/records">收发记录</NavLink>
+              <NavLink to="/streak">坚持</NavLink>
+              <NavLink to="/profile">个人空间</NavLink>
+              <NavLink to="/moderation">审核台</NavLink>
+              <button
+                className="link"
+                onClick={() => {
+                  void logout().then(() => {
+                    nav('/');
+                  });
+                }}
+              >
+                退出
+              </button>
+            </>
+          )}
+        </nav>
+      </div>
+      <Outlet />
+    </div>
   );
 }
