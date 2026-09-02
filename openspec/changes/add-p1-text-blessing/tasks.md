@@ -5,31 +5,32 @@
 - [x] 1.3 配置分层测试命令：`test:arch` / `test:unit` / `test:integration` / `test:e2e`(占位) + 聚合 `test`（vitest workspace，各 project 可独立跑）
 - [x] 1.4 **架构测试**：`.dependency-cruiser.cjs` 落地 domain 纯净 / 依赖方向 / 无循环 / 无孤儿 + `arch/architecture.test.ts` 断言；`pnpm test:arch` 通过、独立 project
 - [x] 1.5 更新 AGENTS.md §5 目录表 + README「Repo layout / Getting started」为 monorepo
-- [ ] 1.6 配置模块（`featuredDefaultOn` / `bodyMinLen` / `bodyMaxLen` / `linkTtlDays` / `holdTimeoutHours` / `spotCheckRatio`），Zod 解析、默认值、单测（`domain/config.ts` 已迁；server 侧 Zod env 解析待补齐这些运营配置）
+- [x] 1.6 配置模块：`domain/config.ts` 的 `DEFAULT_CONFIG` + `server/config/app-config.ts`（`BW_*` 环境变量覆盖，Zod 解析，单测覆盖默认 / 覆盖 / 非法）
 - [x] 1.7 从 `prototype/` 迁移领域模块（`lifecycle` / `visibility` / `streak` / `moderation`）到 `packages/domain` + 测试（78 个）；`test:arch` 绿。清理到 strict lint（去 dynamic-delete、码位计数等）
 
 ## 2. 领域逻辑（纯函数，先写测试）
 
-- [ ] 2.1 为祝福状态机写失败测试：所有合法转移、所有非法转移被拒、`deleted` 为终态（对应 `blessing-delivery` 状态机 scenario）
-- [ ] 2.2 实现 `lifecycle` 状态机模块直到 2.1 全绿
-- [ ] 2.3 为 `isPubliclyVisible(state, expiresAt, now)` 写测试并实现：仅 `published` 且未过期为 true（对应落地页 scenario）
-- [ ] 2.4 为坚持记录写失败测试：当日发布 +1、离开 published -1、归零中断连续、续期不加计数、跨时区按作者地区自然日（对应 `blessing-streak` 全部 scenario）
-- [ ] 2.5 实现 `streak` 聚合模块直到 2.4 全绿
-- [ ] 2.6 为审核判定映射写测试并实现：`pass→published` / `suspect→verifying+工单` / `violation→rejected` / 超时→保守（对应 `content-moderation` 三档 scenario）
+- [x] 2.1 / 2.2 祝福状态机 `lifecycle`（转移表 + 合法 / 非法转移测试 + `deleted` 终态 + `verifying→withdrawn`）—— 随 `packages/domain` 迁移，33 测试
+- [x] 2.3 `isPubliclyVisible` / `placeholderType` —— 迁移，16 测试
+- [x] 2.4 / 2.5 坚持记录 `streak`（+1 / 回撤 / 归零中断 / 续期不加 / 跨时区）—— 迁移，12 测试
+- [x] 2.6 审核判定映射 `outcomeFor`（三档 + 超时保守）—— 迁移，6 测试
+- [ ] 2.7 补 spec 迭代新增但 domain 层还没覆盖的：链接过期不回撤（这条在 application 层验证，见 §5.5）
 
 ## 3. 内容审核
 
-- [ ] 3.1 定义 `ModerationProvider` 接口；写"更换实现不改契约"的契约测试
-- [ ] 3.2 实现 `RuleBasedProvider`：违禁 / 敏感词表→`violation`；宗教敛财护栏词→至少 `suspect`；结构规则（长度、乱码、导流）→`suspect`；无命中→`pass`。单测覆盖每类
-- [ ] 3.3 实现审核服务不可用时的保守分支并测试（维持 hold + 进队列，不放行）
-- [ ] 3.4 实现复核工单模型（`reports` + 时间线）与队列优先级排序，单测覆盖排序与终态约束
-- [ ] 3.5 实现复核动作（通过 / 下架 / 要求修改 / 申诉驳回）对祝福状态机的驱动 + 留痕，单测覆盖
+- [x] 3.1 `ModerationProvider` 接口（在 `domain/types.ts`）+ 契约测试 —— 迁移
+- [x] 3.2 `RuleBasedProvider`（违禁→violation / 护栏词→suspect / 结构规则→suspect / 无命中→pass）—— 迁移，11 测试
+- [x] 3.3 `UnavailableProvider` + `outcomeFor` 的保守分支 —— 迁移
+- [ ] 3.4 复核工单模型 —— `ReportRecord` + `InMemoryReportRepository`（优先级排序、同源合并查询、终态）已建；工单编排（application 层）在 §5
+- [ ] 3.5 复核动作驱动状态机 —— application 层，见 §5.9
 
 ## 4. 数据层
 
-- [ ] 4.1 编写 PostgreSQL 迁移脚本建表（users / user_profiles / consents / templates / blessing_drafts / blessings / blessing_events / reports / streak_days / inbox_items），迁移在空库执行成功
-- [ ] 4.2 实现各表的 repository（含 openid 幂等 upsert、slug 唯一），用集成测试（可跑在测试库）覆盖幂等与唯一约束
-- [ ] 4.3 实现范本库 seed（每类≥3 条）+ 运营侧护栏词校验；测试：含"代祷收费"的范本被拒
+- [ ] 4.1 PostgreSQL 迁移脚本（Drizzle）—— **推迟到 B-24**（本机无 psql；开发用内存实现）
+- [x] 4.2a `ports/repositories.ts` 定义全部仓储接口 + `Repositories` 聚合；`ports/records.ts` 记录类型；`ports/ids.ts`（IdGenerator / SlugGenerator）
+- [x] 4.2b `infrastructure/memory/` 内存实现（openid 幂等、slug 唯一、读写 clone、工单优先级排序）+ 测试
+- [ ] 4.2c PG 实现（Drizzle）+ testcontainers 集成测试 —— B-24
+- [ ] 4.3 范本库 seed（每类≥3 条，从 prototype/seed.ts 迁）+ 运营侧护栏词校验；测试：含"代祷收费"的范本被拒
 
 ## 5. 后端 API
 

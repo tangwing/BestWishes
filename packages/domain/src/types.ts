@@ -101,5 +101,7 @@ export interface Blessing {
   expiresAt: string | null;
   moderation: ModerationResult | null;
   renewCount: number;
+  /** 当前是否计入作者的坚持记录。首次 published 时置 true；作者撤回 / 删除 / 平台下架时置 false（链接过期不动）。 */
+  countedInStreak: boolean;
   events: BlessingEvent[];
 }

@@ -9,8 +9,8 @@
 ## 恢复点（先读这段）
 
 - **阶段**：P1「文本静心祝福」**实现中**。用户已批准开工（"就按这个走吧，开工"），按 `/loop` 自定步调迭代，直到初版 Demo 跑通。
-- **iteration 1 完成**：pnpm monorepo 骨架 + 领域层迁移。`pnpm verify` 全绿（typecheck / depcruise 0 违规 / 84 测试 / build / eslint / prettier）。server `/healthz` 实测可起。tasks.md §1 除 1.6 全勾。
-- **iteration 2（下一步）**：tasks.md §2 —— 领域逻辑的失败测试先行（大部分已随迁移带过来，补齐 spec 新增的 scenario）+ §1.6 配置模块（把 `bodyMinLen` 等运营配置补进 server 的 Zod env / config）+ 开始 §4 数据层（先定义 ports 接口 + 内存实现，Drizzle/PG 迁移单列，因本机无 psql）。
+- **iteration 1-2 完成**：monorepo 骨架 + 领域层迁移（78 测试）+ 配置模块（§1.6）+ 数据层 ports（`ports/repositories.ts` / `records.ts` / `ids.ts`）+ 内存实现（`infrastructure/memory/`，openid 幂等 / slug 唯一 / 工单排序，93 测试全绿）。`pnpm verify` 绿。
+- **iteration 3（下一步）**：§5 的 application 层用例 —— 从 `submitBlessing`（发布即校验、延迟送达、把个人空间默认值合并进发送者信息、拦粘贴由前端主管）开始，逐个把用例编排出来，port 用内存替身测。然后 §5 的 HTTP 路由。范本 seed（§4.3）从 prototype 迁。
 - **实现计划**：[openspec/changes/add-p1-text-blessing/tasks.md](openspec/changes/add-p1-text-blessing/tasks.md)（7 组任务）。逐组做，每组 commit + 勾选。
 - **本机限制**：无 psql。数据层先做 `ports` + 内存 adapter（架构上就是可换的），Drizzle 迁移 + PG 集成测试作为需要 DB 的独立任务（B-24）。
 - **技术栈**（已定，ADR 0003）：Web-first PWA（React+TS+Vite / CSS Modules）+ Node+TS（Fastify）+ PostgreSQL（Drizzle）+ pnpm monorepo，领域逻辑在 `packages/domain`。
