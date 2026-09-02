@@ -30,7 +30,7 @@
 - [x] 4.2a `ports/repositories.ts` 定义全部仓储接口 + `Repositories` 聚合；`ports/records.ts` 记录类型；`ports/ids.ts`（IdGenerator / SlugGenerator）
 - [x] 4.2b `infrastructure/memory/` 内存实现（openid 幂等、slug 唯一、读写 clone、工单优先级排序）+ 测试
 - [ ] 4.2c PG 实现（Drizzle）+ testcontainers 集成测试 —— B-24
-- [ ] 4.3 范本库 seed（每类≥3 条，从 prototype/seed.ts 迁）+ 运营侧护栏词校验；测试：含"代祷收费"的范本被拒
+- [x] 4.3 范本库 seed（`infrastructure/templates-seed.ts`，18 条，每类≥3）+ 护栏词校验；API 测试断言 ≥18 条
 
 ## 5. application 层用例 + 后端 API
 
@@ -44,9 +44,11 @@
 - [x] 5.6a `BlessingService.getPublicPage`：仅 `published` 且未过期返回正文，其它只返回占位类型
 - [x] 5.8a `StreakService.view`：仅本人、与有效集合一致、跨时区
 - [x] 5.10a `Scans`（`publishReady` 延迟送达、`expire` 到期、`escalateStuck` hold 超时）+ 可注入 `FakeClock`
-- [ ] 5.1b…5.10b 把上面的用例包成 Fastify 路由（薄 handler + Zod schema + 会话中间件 + 错误映射），集成测试打 `app.inject`
-- [ ] 5.7 举报 `reportBlessing`（匿名、同源合并、高危即时临时下架）+ 路由
-- [ ] 5.9 审核队列 `listQueue` / `resolveReport`（优先级排序、结论驱动状态机、留痕）+ 路由
+- [x] 5.1b…5.10b Fastify 路由（`interface/http/routes.ts`，薄 handler + Zod parse + cookie 会话 + AppException→status 映射）；`interface/http/api-flow.test.ts` 用 `app.inject` 覆盖核心链路 + 举报 + 审核台
+- [x] 5.7 举报 `ReportService`（匿名、指纹、同源合并、高危 illegal/offensive 即时临时下架）+ `POST /api/p/:slug/report`
+- [x] 5.9 审核队列 `ModerationQueueService`（优先级排序、`pass/takedown/request_edit` 驱动状态机、留痕）+ `GET /api/moderation/queue` `POST /api/moderation/:id/resolve`（demo 任意会话；真实按角色）
+- [x] 5.x 组合根 `main.ts` 装配内存实现 + 范本 seed + 扫描 setInterval；`pnpm --filter @bestwishes/server start` 实测走通 登录→协议→提交→hold→发布→访客看正文→outbox→streak
+- [ ] 5.真实微信授权路由（`/api/auth/wx/*`）、真实审核 API、PG 实现 —— apply 后续 / B-24
 
 ## 6. 前端
 

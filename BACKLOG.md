@@ -9,9 +9,9 @@
 ## 恢复点（先读这段）
 
 - **阶段**：P1「文本静心祝福」**实现中**。用户已批准开工（"就按这个走吧，开工"），按 `/loop` 自定步调迭代，直到初版 Demo 跑通。
-- **iteration 1-3 完成**：monorepo 骨架 + 领域层迁移 + 配置模块 + 数据层 ports & 内存实现 + **application 层用例**（auth / profile / consent / drafts / blessings / streak / scans）。核心 P1 流程（登录 → 协议 → 提交 → 延迟送达 → 发布 → 访客看正文 → 撤回 → 占位 → 坚持记录回撤 → 过期 → 续期 → 审核三档）都有端到端测试。**111 测试全绿**，`pnpm verify` 绿。
-- **iteration 4（下一步）**：把 application 用例包成 Fastify 路由（薄 handler + Zod schema + 会话中间件 + 错误映射），`app.inject` 集成测试；补举报（§5.7）、审核队列（§5.9）；范本 seed（§4.3）从 prototype 迁。
-- **iteration 5-6**：client（从 prototype 迁 UI，接真实 API）+ 端到端 demo。
+- **iteration 1-4 完成**：monorepo + 领域层 + 配置 + 数据层（ports + 内存实现）+ application 用例 + **Fastify HTTP API**（`interface/http/routes.ts`，cookie 会话，全部 P1 端点）+ 范本 seed + 扫描任务 + 组合根。**117 测试全绿**（含 5 个 `app.inject` 端到端）。`pnpm --filter @bestwishes/server start` 实测：登录→协议→提交→hold→发布→访客看正文→outbox→streak 全通。
+- **iteration 5（下一步）**：client —— 把走查原型的屏幕迁到 `client/`，接真实 API（api 客户端封装 + TanStack Query 或轻量方案），CSS Modules，i18n 层。屏幕：登录 / 个人空间 / 授权协议 / 撰写（拦粘贴 + 发心提示）/ 已发送 / 收发记录 / 坚持 / 访客落地页 / 审核台。
+- **iteration 6**：`pnpm dev` 起 server+client，端到端点一遍，截图，收尾（README 跑通步骤、E2E Playwright 骨架）→ 初版 Demo 完成。
 - **实现计划**：[openspec/changes/add-p1-text-blessing/tasks.md](openspec/changes/add-p1-text-blessing/tasks.md)（7 组任务）。逐组做，每组 commit + 勾选。
 - **本机限制**：无 psql。数据层先做 `ports` + 内存 adapter（架构上就是可换的），Drizzle 迁移 + PG 集成测试作为需要 DB 的独立任务（B-24）。
 - **技术栈**（已定，ADR 0003）：Web-first PWA（React+TS+Vite / CSS Modules）+ Node+TS（Fastify）+ PostgreSQL（Drizzle）+ pnpm monorepo，领域逻辑在 `packages/domain`。

@@ -6,6 +6,8 @@ import { createDraftService } from './draft-service';
 import { createBlessingService } from './blessing-service';
 import { createStreakService } from './streak-service';
 import { createScans } from './scans';
+import { createReportService } from './report-service';
+import { createModerationQueueService } from './moderation-queue-service';
 
 export function createApplication(deps: AppDeps) {
   return {
@@ -15,9 +17,12 @@ export function createApplication(deps: AppDeps) {
     drafts: createDraftService(deps),
     blessings: createBlessingService(deps),
     streak: createStreakService(deps),
+    reports: createReportService(deps),
+    moderationQueue: createModerationQueueService(deps),
     scans: createScans(deps),
     templates: {
-      list: () => deps.repos.templates.listActive(),
+      list: (): ReturnType<typeof deps.repos.templates.listActive> =>
+        deps.repos.templates.listActive(),
     },
   };
 }

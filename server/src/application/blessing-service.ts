@@ -6,7 +6,14 @@ import {
   type Personalization,
   type PlaceholderType,
 } from '@bestwishes/domain';
-import { AppException, appError, err, ok, type Result } from '@bestwishes/shared';
+import {
+  AppException,
+  appError,
+  err,
+  ok,
+  type PersonalizationDto,
+  type Result,
+} from '@bestwishes/shared';
 import { AGREEMENT_VERSION, type AppDeps } from './deps';
 import { transitionAndPersist } from './blessing-write';
 import type { BlessingRecord } from '../ports/records';
@@ -14,7 +21,7 @@ import type { BlessingRecord } from '../ports/records';
 export interface SubmitInput {
   body: string;
   occasion: Occasion;
-  personalization: Personalization;
+  personalization: PersonalizationDto;
 }
 
 export interface SubmittedBlessing {

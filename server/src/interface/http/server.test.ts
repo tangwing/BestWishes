@@ -1,23 +1,26 @@
 import { describe, it, expect } from 'vitest';
-import { buildServer } from './server';
-import type { Env } from '../../config/env';
-
-const testEnv: Env = { NODE_ENV: 'test', PORT: 3000, HOST: '127.0.0.1' };
-const fixedClock = { now: (): Date => new Date('2026-09-02T00:00:00Z') };
+import { makeServer } from './test-server';
 
 describe('server 骨架', () => {
   it('健康检查返回 ok + 注入的时间', async () => {
-    const app = buildServer({ clock: fixedClock, env: testEnv });
-    const res = await app.inject({ method: 'GET', url: '/healthz' });
+    const { server } = await makeServer();
+    const res = await server.inject({ method: 'GET', url: '/healthz' });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ ok: true, at: '2026-09-02T00:00:00.000Z' });
-    await app.close();
+    await server.close();
   });
 
   it('未知路由 404', async () => {
-    const app = buildServer({ clock: fixedClock, env: testEnv });
-    const res = await app.inject({ method: 'GET', url: '/nope' });
+    const { server } = await makeServer();
+    const res = await server.inject({ method: 'GET', url: '/nope' });
     expect(res.statusCode).toBe(404);
-    await app.close();
+    await server.close();
+  });
+
+  it('未登录访问需要会话的接口 → 401', async () => {
+    const { server } = await makeServer();
+    const res = await server.inject({ method: 'GET', url: '/api/streak/me' });
+    expect(res.statusCode).toBe(401);
+    await server.close();
   });
 });

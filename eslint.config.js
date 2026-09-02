@@ -52,8 +52,9 @@ export default tseslint.config(
     rules: { '@typescript-eslint/explicit-function-return-type': 'off' },
   },
   {
-    // application 服务用工厂模式，导出类型 = ReturnType<typeof 工厂>，不会和实现脱节
-    files: ['server/src/application/**/*.ts'],
+    // application 服务用工厂模式，导出类型 = ReturnType<typeof 工厂>，不会和实现脱节；
+    // 测试脚手架同理
+    files: ['server/src/application/**/*.ts', '**/test-{server,harness}.ts'],
     rules: { '@typescript-eslint/explicit-function-return-type': 'off' },
   },
   {

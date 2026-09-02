@@ -67,7 +67,9 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: '(\\.test\\.(ts|tsx)$|test-harness\\.ts$|^arch/|/prototype/|/(dist|build)/)' },
+    exclude: {
+      path: '(\\.test\\.(ts|tsx)$|test-(harness|server)\\.ts$|^arch/|/prototype/|/(dist|build)/)',
+    },
     tsConfig: { fileName: 'tsconfig.base.json' },
     tsPreCompilationDeps: true,
     enhancedResolveOptions: {
