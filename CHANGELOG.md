@@ -20,3 +20,6 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - `docs/design/p1/`: P1 UI walkthrough as a Claude Design canvas (9 mobile artboards).
 - `docs/product/p1-acceptance-status.md`: per-use-case status of P1 acceptance criteria against the prototype.
 - `docs/architecture/` and `docs/design/` conventions added (AGENTS.md §5); `.gitignore` now ignores `node_modules/`, `dist/`.
+- [ADR 0003](docs/adr/0003-p1-tech-stack-web-first.md) moved to Accepted (core items): D1 Web-first PWA, D4 Node.js+TS, D6 PostgreSQL, D10 rule-based moderation for P1; includes a long-term-fitness review.
+- `docs/engineering/coding-standards.md` (v1): the technical code standard all production code must follow — layering, TypeScript, comments, API/DB conventions, concurrency & performance, security, testing, review checklist.
+- Git workflow: `.claude/hooks/auto-commit-push.sh` (Stop hook) auto-commits and pushes to `main` after every turn; AGENTS.md §7 documents it.

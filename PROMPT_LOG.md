@@ -70,3 +70,12 @@
 > 链接过期可以不扣。校验期撤回可以加上。ADR 0003 我现在看，如果有明确的决策项，最好列出来供我选择。
 
 **结果**：(a) 链接过期不回撤坚持记录（只有撤回/删除/下架回撤，续期不加计数）——改 `blessing-streak` spec（加 3 个 scenario）、`streak` 说明、`repo.ts`（引入 `countedInStreak` 标记）、`streak.test.ts`/`repo.test.ts`、architecture §5。(b) 加 `verifying → withdrawn`（校验期取消，清除待发布定时与关联自动疑似工单）——改 `blessing-delivery` spec、`lifecycle.ts`、architecture §3/§4、`MyBlessings.tsx`、测试。原型 **103 测试全绿**，openspec `validate --strict` 通过。ADR 0003 重写为 **13 个决策项**（D1 整体形态 … D13 小程序），每项列 A/B/C… 选项 + ★倾向 + 影响面 + 可逆性，待用户逐条选择后转 Accepted。use-cases.md「已拍板」补两条。
+
+### 自动 commit/push + 技术栈拍板 + 工程规范
+
+> 每次对话完自动 commit and push（单开发者，保障实时同步到远端），需要的话加 hook，commit msg 要规范。技术栈 double check 是否满足长期需求 / 保留灵活性，满足就推进。基于技术栈生成一套标准 MD 规范，要求所有代码遵循——高软件工程要求：架构清晰、可读、注释充足、性能（多线程等）。
+
+**结果**：
+1. **技术栈决策项拍板**（用选择器）：D1 = Web-first PWA、D4 = Node.js+TS、D6 = PostgreSQL、D10 = P1 用规则审核 / 真实 API 放收尾或 P2（用户选 B，非我倾向的 A）。D9 由 D1 锁定为微信网页授权。D2/D3/D5/D7/D8/D11 按 ★倾向执行（React / CSS Modules / Fastify / Drizzle / pnpm monorepo / 审核后台内嵌），用户未反对。ADR 0003 转 **Accepted（核心项）**，加「决策记录」表 + 「长期适配性核验」节（规模、P2 AI 拆独立服务、P3 一致性、并发模型、灵活性保留点、唯一取舍）。AGENTS.md §1 / §6 更新（技术栈未定状态解除）。
+2. **工程规范**：新建 [docs/engineering/coding-standards.md](docs/engineering/coding-standards.md) v1——17 节：总则、仓库结构（Hexagonal 分层 `packages/domain` 零 IO）、依赖规则（机制化强制）、命名、TypeScript（禁 any/!、判别联合穷尽、Result vs throw）、校验边界（Zod 前后端共享）、注释（写「为什么」）、API（Fastify + schema、幂等、游标分页）、数据库（约束落库 / 业务不落库、事务边界在 application、N+1 零容忍）、前端（服务端状态分层、a11y、i18n）、**并发与性能**（Node 事件循环、绝不阻塞、worker_threads / 独立服务、连接池、缓存纪律、先测再优化）、可观测性、安全与隐私（PIPL）、测试（分层 + TDD + 无 flaky）、依赖管理、提交与分支、评审清单。AGENTS.md §5 加 `docs/engineering/`。
+3. **自动同步 hook**：`.claude/hooks/auto-commit-push.sh`（Stop hook，`.claude/settings.json`）——有改动则 add -A + Conventional Commits fallback message（顶层 scope + UTC 时间戳 + Co-Authored-By），领先远端则 push（`GIT_SSH_COMMAND` BatchMode + ConnectTimeout + 40s 自限时，超时/失败给 systemMessage）。AGENTS.md 新增 §7 Git 工作流。**注意**：settings.json 是本会话新建的，hook 要等用户打开 `/hooks` 或重启后才生效。本会话已手动验证脚本可提交并推送成功（origin/main 已更新）。
