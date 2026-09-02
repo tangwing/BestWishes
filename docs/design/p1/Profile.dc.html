@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600&display=swap">
+  <style>
+    :root{
+      --bg:#f6f4ef;--surface:#fffdf9;--ink:#2b2a27;--soft:#6b6862;--line:#e3ddd2;
+      --accent:#7c8a6a;--accent-ink:#46503a;--warn:#9a6b4b;
+      --serif:"Noto Serif SC",Georgia,"Songti SC",serif;
+      --sans:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.7}
+    a{color:var(--warn)}a:hover{color:#7c5238}
+    .screen{width:390px;min-height:844px;margin:0 auto;padding:0 24px 40px}
+    .status-space{height:44px}
+    .topnav{padding:14px 0 6px;color:var(--soft);font-size:13px}
+    h1{font-family:var(--serif);font-weight:600;font-size:20px;margin:14px 0 4px}
+    .lead{color:var(--soft);font-size:13px;margin:0 0 16px}
+    .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
+    label{display:block;font-size:12px;color:var(--soft);margin:12px 0 4px}
+    label:first-child{margin-top:0}
+    .field{width:100%;font:inherit;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+    .row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+    .row:last-child{border-bottom:none}
+    .row .t{font-size:14px}
+    .row .d{font-size:11px;color:var(--soft);margin-top:2px}
+    .toggle{width:40px;height:23px;border-radius:999px;background:var(--line);position:relative;flex-shrink:0}
+    .toggle.on{background:var(--accent)}
+    .toggle i{position:absolute;top:2px;left:2px;width:19px;height:19px;border-radius:50%;background:#fff;transition:.15s}
+    .toggle.on i{left:19px}
+    .link-row{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);font-size:14px;color:var(--accent-ink)}
+    .link-row:last-child{border-bottom:none}
+    .hint{font-size:11px;color:var(--soft);margin-top:8px}
+    .danger{font-size:13px;color:var(--warn)}
+    .btn{display:block;width:100%;text-align:center;font:inherit;font-size:14px;color:var(--accent-ink);background:transparent;border:1px solid var(--line);border-radius:10px;padding:11px 0;margin-top:8px}
+  </style>
+</helmet>
+<div class="screen">
+  <div class="status-space"></div>
+  <div class="topnav">个人空间</div>
+  <h1>个人空间</h1>
+  <p class="lead">把每次写祝福都要填的东西，在这里设一次。</p>
+
+  <div class="card">
+    <label>落款（"我是谁"）</label>
+    <div class="field">阿念</div>
+    <label>我的城市 / 地区</label>
+    <div class="field">杭州</div>
+    <p class="hint">只到城市。用于"来自 杭州 的祝福"。以后可以开定位自动获取。</p>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div>
+        <div class="t">用定位自动获取城市</div>
+        <div class="d">P1 还没上线，先记着你的选择</div>
+      </div>
+      <div class="toggle"><i></i></div>
+    </div>
+    <div class="row">
+      <div>
+        <div class="t">新祝福默认允许精选展示</div>
+        <div class="d">写祝福时授权项的默认勾选状态</div>
+      </div>
+      <div class="toggle on"><i></i></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="link-row"><span>坚持记录</span><span>›</span></div>
+    <div class="link-row"><span>《用户内容与授权协议》</span><span>›</span></div>
+  </div>
+
+  <div class="card">
+    <button class="btn">退出登录</button>
+    <div style="height:8px"></div>
+    <div class="danger">注销账户</div>
+    <p class="hint">注销后我们会按规定处理你的数据。P1 阶段走人工流程。</p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

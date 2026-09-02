@@ -18,7 +18,7 @@
     *{box-sizing:border-box}
     body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.7}
     a{color:var(--warn)}a:hover{color:#7c5238}
-    .screen{width:390px;min-height:940px;margin:0 auto;padding:0 24px 48px}
+    .screen{width:390px;min-height:980px;margin:0 auto;padding:0 24px 48px}
     .status-space{height:44px}
     .topnav{display:flex;align-items:center;gap:10px;padding:14px 0 6px;color:var(--soft);font-size:13px}
     .topnav svg{width:18px;height:18px}
@@ -28,8 +28,6 @@
     .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
     label{display:block;font-size:12px;color:var(--soft);margin:12px 0 4px}
     .field{width:100%;font:inherit;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-    .row{display:flex;gap:10px}
-    .row>*{flex:1}
     .chips{display:flex;gap:8px;flex-wrap:wrap}
     .chip{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:5px 12px;background:var(--surface);color:var(--soft)}
     .chip.on{background:#ecefe4;color:var(--accent-ink);border-color:#d9e0cb}
@@ -39,7 +37,9 @@
     .hint{font-size:11px;color:var(--soft);margin-top:8px}
     .breathe{width:44px;height:44px;border-radius:50%;border:1px solid var(--accent);opacity:.5;margin:6px auto 4px}
     .center{text-align:center}
-    .sample{font-family:var(--serif);font-size:14px;color:var(--ink);margin:6px 0}
+    .sample{font-family:var(--serif);font-size:14px;color:var(--ink);margin:6px 0;user-select:none}
+    .intention{background:#f1efe6;border-radius:12px;padding:12px 14px;font-size:13px;color:#5c5850;line-height:1.8}
+    .paste-note{font-size:11px;color:var(--warn);margin-top:6px}
   </style>
 </helmet>
 <div class="screen">
@@ -52,7 +52,9 @@
   <h1>写一段祝福</h1>
 
   <div class="breathe"></div>
-  <p class="lead center">不必赶。先想清楚写给谁，深呼吸一次，再开始。</p>
+  <div class="intention">
+    先别急着写。想一想 TA 打开这段话的时候，正处在什么样的心情——然后用你自己的话，一个字一个字写给 TA。
+  </div>
 
   <h2>场景</h2>
   <div class="chips">
@@ -64,30 +66,29 @@
     <span class="chip">日常问候</span>
   </div>
 
-  <h2>从一个范本开始（可选）</h2>
+  <h2>范本（只作参考，不能一键套用）</h2>
   <div class="card">
     <div style="font-family:var(--serif);font-size:14px;font-weight:600">新年祝福</div>
     <div class="hint" style="margin:2px 0 4px">回想过去一年你们之间发生的好事。</div>
     <div class="sample">新的一年，愿你所求皆有回应，所行皆有归途，平安顺遂。</div>
-    <span class="chip" style="margin-top:4px;display:inline-block">用这个起草</span>
   </div>
 
-  <h2>祝福正文</h2>
+  <h2>祝福正文（自己写）</h2>
   <div class="textarea">月亮圆的时候，就当我在你身边。愿你团圆，愿你安好，新的一年慢慢舒展。</div>
   <div class="count">33 字 · 建议 15–500</div>
+  <div class="paste-note">试图粘贴时：用你自己的话写出来，TA 会感受到不一样。</div>
 
   <h2>让 TA 知道是谁在祝福</h2>
   <label>给谁（必填）</label>
   <div class="field">外婆</div>
-  <div class="row">
-    <div><label>与 TA 的关系</label><div class="field">长辈</div></div>
-    <div><label>我是谁（落款）</label><div class="field">阿念</div></div>
-  </div>
-  <label>我所在的城市</label>
+  <label>我是谁（落款）</label>
+  <div class="field">阿念</div>
+  <label>我的城市</label>
   <div class="field">杭州</div>
+  <p class="hint">落款和城市的默认值来自个人空间，这里可以临时改。</p>
 
   <div class="btn">写好了，发送</div>
-  <p class="hint">草稿已自动保存 · 不计时、不评分。</p>
+  <p class="hint center">草稿已自动保存 · 不计时、不评分</p>
 </div>
 </x-dc>
 </body>

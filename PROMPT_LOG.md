@@ -89,4 +89,20 @@
 2. **架构测试**：coding-standards.md 加 §3.1（fitness functions）——dependency-cruiser 作主检查（domain 纯净 / 依赖方向 / 无循环 / 无孤儿）+ `*.arch.test.ts` 断言，**独立成套**（`test:arch` 单独命令、CI 独立一步、最先跑）。§14 测试改为分层各自独立命令。prototype 落地：`.dependency-cruiser.cjs` + `src/arch/architecture.arch.test.ts`（5 条断言：不 import 前端 / 存储 / Node 内建、不用 Date.now/Math.random）+ `test:arch` / `verify` 脚本 + `@types/node`、`dependency-cruiser` 依赖。`npm run verify` 全绿（typecheck + depcruise 0 违规 + 108 测试 + build）。
 3. openspec `tasks.md` §1 重写为 pnpm monorepo + ESLint + 分层测试命令 + 架构测试落地 + 从 prototype 迁 `packages/domain` 的任务。
 
-**下一步**：一起看设计稿（Claude Design 画布已发布）。
+### 设计稿第一轮点评：撰写页精简 / 范本不可复制 / 个人空间 / 收发记录 / 发心 + 建 BACKLOG + 并行
+
+> 撰写页字段多，关系不需要；城市未来靠定位，落款和城市在个人空间预配（个人空间还没设计，加待办）。"我的祝福"要像邮箱一样分收件 / 发件，都要有记录，设计一下。调性偏冥想、素一点 OK；语言 / 图片要帮人更好地发心，感知善意的意义、更真诚——比如范本不允许复制，要自己打出来。你适当改，会快速迭代。以后我都这样点评，管好 todo list、持续加持续做。条件允许多派 Agent 并行。
+> （补充）根目录除 CHANGELOG 外应有 BACKLOG，管待办；确保电脑 / 会话重启能继续工作。CHANGELOG 记已完成。
+
+**结果**：
+1. **BACKLOG.md（根目录）** 建立——「恢复点」一节 = 当前进展 + 下一步，会话 / 电脑重启从这里接着干。AGENTS.md（顶部 + §5 + 新 §8 工作方式）、CLAUDE.md 都指向它。B-NN 编号管理点评项。
+2. **并行**：派 1 个 subagent 改原型（B-01/02/03/07），主线程改 spec + 画布 + docs，互不碰对方文件。agent 收尾 `npm run verify` 全绿（108 测试）。
+3. **B-02 撰写页精简**：个性化砍到 3 项（给谁必填 / 落款 / 城市），删关系、前后缀。`Personalization` = `{toName, fromName?, fromCity?}`。
+4. **B-03 范本不可复制**：范本只作参考、无一键填入、示例 `user-select:none`；正文须自己录入，粘贴被拦 + 温和提示。
+5. **B-01 个人空间**：新 capability `user-profile`——落款 / 城市预设、定位授权开关（P1 占位）、精选展示个人偏好、坚持记录入口、退出 / 注销。新画布 artboard `Profile`。
+6. **B-07 收发记录**：`blessing-records` capability + "我的祝福"→"收发记录"（送出的 / 收到的两 tab），P1 发件箱完整、收件箱空状态 + 结构预留（`inbox_items` 表）。
+7. **B-04 发心引导**：撰写页动笔前的"想一想 TA 打开这段话时的心情"提示；送达页"你的心意正在送往 [城市的 XX]"。
+8. openspec change 现覆盖 **8 个能力域**，`validate --strict` 通过；use-cases 升到 P1-UC-15、architecture 数据模型 + API 更新、proposal / tasks 同步。
+9. **界面画布 v2 已发布**（同一 URL）：https://claude.ai/code/artifact/2b91c40d-3d05-49af-8ebe-d05ffae6fa43
+
+**下一步**：用户第二轮评审设计稿（B-09）。

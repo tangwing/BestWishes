@@ -27,35 +27,37 @@
 
 ## 4. 数据层
 
-- [ ] 4.1 编写 PostgreSQL 迁移脚本建表（users / consents / templates / blessing_drafts / blessings / blessing_events / reports / streak_days），迁移在空库执行成功
+- [ ] 4.1 编写 PostgreSQL 迁移脚本建表（users / user_profiles / consents / templates / blessing_drafts / blessings / blessing_events / reports / streak_days / inbox_items），迁移在空库执行成功
 - [ ] 4.2 实现各表的 repository（含 openid 幂等 upsert、slug 唯一），用集成测试（可跑在测试库）覆盖幂等与唯一约束
 - [ ] 4.3 实现范本库 seed（每类≥3 条）+ 运营侧护栏词校验；测试：含"代祷收费"的范本被拒
 
 ## 5. 后端 API
 
 - [ ] 5.1 实现 auth：`GET /api/auth/wx/url`、`GET /api/auth/wx/callback`、会话中间件；用 stub auth 实现（同接口签名），集成测试覆盖"首次建号 / 再次复用 / 回调重试幂等"
-- [ ] 5.2 实现协议：`GET /api/agreement/current`、`POST /api/consents`；测试覆盖必选项拒绝、精选展示开关记录、改版重新确认、默认值配置切换
-- [ ] 5.3 实现范本与草稿：`GET /api/templates`、`GET/PUT /api/drafts/me`；测试覆盖草稿不触发审核 / 不生成链接、会话过期后可恢复
-- [ ] 5.4 实现祝福提交与管理：`POST /api/blessings`（受理即返回、内部同步校验落状态）、`GET /api/blessings/mine`、`withdraw` / `republish` / `DELETE` / `renew`；集成测试覆盖 `blessing-delivery` 的每条 scenario
-- [ ] 5.5 实现落地页数据接口 `GET /p/:slug`：published 且未过期返回正文 + 来源；其它状态只返回占位类型枚举。测试：verifying / withdrawn / taken_down / expired 均不返回正文
-- [ ] 5.6 实现举报 `POST /api/p/:slug/report`：匿名可提交、防滥用记录、同源合并、高危即时临时下架。集成测试覆盖
-- [ ] 5.7 实现坚持记录 `GET /api/streak/me`：仅本人、与有效祝福集合一致。集成测试覆盖回撤即时反映
-- [ ] 5.8 实现审核后台接口 `GET /api/moderation/queue`、`POST /api/moderation/:reportId/resolve`：角色鉴权、优先级排序、结论留痕
-- [ ] 5.9 实现定时任务：到期祝福转 `expired`、hold 超时升级 + 通知。用可注入时钟的单测覆盖
+- [ ] 5.2 实现个人空间：`GET/PUT /api/profile/me`、`POST /api/account/deletion`；测试覆盖城市粒度限制、定位开关留痕、精选展示个人偏好读写
+- [ ] 5.3 实现协议：`GET /api/agreement/current`、`POST /api/consents`；精选展示默认值 = 个人偏好 > 系统默认；测试覆盖必选项拒绝、改版重新确认、默认值来源优先级
+- [ ] 5.4 实现范本与草稿：`GET /api/templates`（只作参考）、`GET/PUT /api/drafts/me`；测试覆盖草稿不触发审核 / 不生成链接、会话过期后可恢复
+- [ ] 5.5 实现祝福提交与管理：`POST /api/blessings`（受理即返回、内部同步校验落状态；写入时把个人空间默认值合并进发送者信息；服务端拒绝把粘贴大段文本当正文的启发式由前端主管、后端做基本长度 / 结构校验）、`GET /api/records/outbox`、`GET /api/records/inbox`（P1 恒空 + 说明）、`withdraw` / `republish` / `DELETE` / `renew`；集成测试覆盖 `blessing-delivery` + `blessing-records` 的每条 scenario
+- [ ] 5.6 实现落地页数据接口 `GET /p/:slug`：published 且未过期返回正文 + 来源；其它状态只返回占位类型枚举。测试：verifying / withdrawn / taken_down / expired 均不返回正文
+- [ ] 5.7 实现举报 `POST /api/p/:slug/report`：匿名可提交、防滥用记录、同源合并、高危即时临时下架。集成测试覆盖
+- [ ] 5.8 实现坚持记录 `GET /api/streak/me`：仅本人、与有效祝福集合一致。集成测试覆盖回撤即时反映
+- [ ] 5.9 实现审核后台接口 `GET /api/moderation/queue`、`POST /api/moderation/:reportId/resolve`：角色鉴权、优先级排序、结论留痕
+- [ ] 5.10 实现定时任务：到期祝福转 `expired`、hold 超时升级 + 通知。用可注入时钟的单测覆盖
 
 ## 6. 前端
 
-- [ ] 6.1 应用骨架、路由、会话态、微信 H5 环境适配；`npm run build` 通过
-- [ ] 6.2 登录页 + 未登录访客可看落地页 / 不能进创作（对应 `wx-account` scenario）
-- [ ] 6.3 授权协议页：分层勾选、精选展示默认态跟随配置、改版重新确认
-- [ ] 6.4 范本选择 + 自由创作入口；范本加载失败回退自由创作
-- [ ] 6.5 撰写页：正文 + 结构化个性化字段 + 静心引导（无计时无评分）+ 前后端字数校验 + 自动存草稿
-- [ ] 6.6 提交后「已发送・审核中」态 + 拿到可分享链接 + 轮询最终状态
-- [ ] 6.7 分享：微信分享调用 + 复制外链兜底
-- [ ] 6.8 访客落地页：按占位类型渲染（正文 / 准备中 / 已收回 / 已下架 / 已过期 / 未找到）+ 举报入口 + "我也写一段"引导
-- [ ] 6.9 我的祝福：列表 + 撤回 / 重新发布 / 删除（二次确认 + 已分发副本不可追回告知）/ 续期
-- [ ] 6.10 坚持记录页：温和文案、仅本人、无排行无积分
-- [ ] 6.11 审核后台页面：队列（优先级）+ 复核动作 + 留痕展示
+- [ ] 6.1 应用骨架、路由、会话态、微信 H5 环境适配；`build` 通过
+- [ ] 6.2 登录页（昵称即可）+ 未登录访客可看落地页 / 不能进创作（对应 `wx-account` scenario）
+- [ ] 6.3 个人空间页：落款 / 城市预设、定位授权开关（占位）、精选展示默认偏好、坚持记录入口、退出、发起注销
+- [ ] 6.4 授权协议页：分层勾选、精选展示默认态 = 个人偏好 > 系统默认、改版重新确认
+- [ ] 6.5 范本参考（无一键填入、示例 `user-select:none`）+ 自由创作；范本加载失败回退自由创作
+- [ ] 6.6 撰写页：正文（拦粘贴 + 温和提示）+ 三项发送者信息（默认取个人空间）+ 静心与发心引导（无计时无评分）+ 前后端字数校验 + 自动存草稿
+- [ ] 6.7 提交后「已发送・审核中」态 + 拿到可分享链接 + 轮询最终状态
+- [ ] 6.8 分享：微信分享调用 + 复制外链兜底
+- [ ] 6.9 访客落地页：按占位类型渲染（正文 / 准备中 / 已收回 / 已下架 / 已过期 / 未找到）+ 举报入口 + "我也写一段"引导
+- [ ] 6.10 收发记录页：发件箱（撤回 / 取消 / 重新发布 / 删除 / 续期）+ 收件箱空状态
+- [ ] 6.11 坚持记录页：温和文案、仅本人、无排行无积分
+- [ ] 6.12 审核后台页面：队列（优先级）+ 复核动作 + 留痕展示
 
 ## 7. 端到端验收
 

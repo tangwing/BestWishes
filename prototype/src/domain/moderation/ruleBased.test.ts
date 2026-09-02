@@ -51,9 +51,9 @@ describe('RuleBasedProvider — 三档判定', () => {
     expect(r.categories).toContain('malformed');
   });
 
-  it('也检查个性化字段（前后缀里的违禁词）', async () => {
+  it('也检查个性化字段（落款里的违禁词）', async () => {
     const r = await p.check(
-      input('愿你被这个世界温柔以待，平安喜乐每一天。', { suffix: '内部中奖速来' }),
+      input('愿你被这个世界温柔以待，平安喜乐每一天。', { fromName: '内部中奖速来' }),
     );
     expect(r.verdict).toBe('violation');
   });

@@ -5,11 +5,12 @@
   ],
   "artboards": [
     { "file": "Login.dc.html", "page": "page-1", "x": 0, "y": 0, "w": 390, "h": 844, "title": "1 · 登录" },
-    { "file": "Agreement.dc.html", "page": "page-1", "x": 480, "y": 0, "w": 390, "h": 844, "title": "2 · 授权协议" },
-    { "file": "Main.dc.html", "page": "page-1", "x": 960, "y": 0, "w": 390, "h": 960, "title": "3 · 撰写" },
-    { "file": "Sent.dc.html", "page": "page-1", "x": 1440, "y": 0, "w": 390, "h": 844, "title": "4 · 已发送 / 审核中" },
-    { "file": "MyBlessings.dc.html", "page": "page-1", "x": 1920, "y": 0, "w": 390, "h": 912, "title": "5 · 我的祝福" },
-    { "file": "Streak.dc.html", "page": "page-1", "x": 2400, "y": 0, "w": 390, "h": 844, "title": "6 · 坚持" },
+    { "file": "Profile.dc.html", "page": "page-1", "x": 480, "y": 0, "w": 390, "h": 844, "title": "2 · 个人空间" },
+    { "file": "Agreement.dc.html", "page": "page-1", "x": 960, "y": 0, "w": 390, "h": 844, "title": "3 · 授权协议" },
+    { "file": "Main.dc.html", "page": "page-1", "x": 1440, "y": 0, "w": 390, "h": 1000, "title": "4 · 撰写" },
+    { "file": "Sent.dc.html", "page": "page-1", "x": 1920, "y": 0, "w": 390, "h": 844, "title": "5 · 已发送 / 审核中" },
+    { "file": "MyBlessings.dc.html", "page": "page-1", "x": 2400, "y": 0, "w": 390, "h": 940, "title": "6 · 收发记录" },
+    { "file": "Streak.dc.html", "page": "page-1", "x": 2880, "y": 0, "w": 390, "h": 844, "title": "7 · 坚持" },
 
     { "file": "PublicContent.dc.html", "page": "page-2", "x": 0, "y": 0, "w": 390, "h": 844, "title": "访客落地页 · 正文" },
     { "file": "PublicPlaceholders.dc.html", "page": "page-2", "x": 480, "y": 0, "w": 940, "h": 640, "title": "访客落地页 · 占位状态" },
@@ -20,9 +21,9 @@
       "id": "flow-note",
       "page": "page-1",
       "x": 0,
-      "y": -132,
-      "w": 520,
-      "text": "P1 作者流程。调性：安静、克制、正念。off-white 底、衬线体祝福正文、不计时不评分的静心引导。\n关键机制：提交后作者立即「已发送」并拿到链接，平台 hold 校验通过后接收方才可见（第 4 屏）。"
+      "y": -150,
+      "w": 560,
+      "text": "P1 作者流程。调性：安静、克制、冥想感。off-white 底、衬线体正文、不计时不评分。\n本轮改动：撰写页个性化砍到 3 项（给谁 / 落款 / 城市）+ 范本不可一键套用、正文须自己敲（拦粘贴）+ 动笔前的发心提示；落款 / 城市在「个人空间」预设；「我的祝福」→「收发记录」含收 / 发两个视图。\n关键机制：提交后作者立即「已发送」并拿到链接，平台 hold 校验通过后接收方才可见（第 5 屏）。"
     },
     {
       "id": "visitor-note",

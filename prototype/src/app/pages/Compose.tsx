@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../useStore';
-import { OCCASION_LABEL, RELATION_OPTIONS } from '../../store/seed';
+import { OCCASION_LABEL } from '../../store/seed';
 import type { Occasion, Personalization } from '../../domain/types';
 
 export function Compose() {
@@ -10,20 +10,19 @@ export function Compose() {
   const user = store.currentUser();
   const templates = store.getTemplates();
   const draft = store.getDraft();
+  const profile = store.getProfile();
 
   const [occasion, setOccasion] = useState<Occasion>(draft?.occasion ?? 'daily');
   const [body, setBody] = useState(draft?.body ?? '');
   const [p, setP] = useState<Personalization>(
     draft?.personalization ?? {
       toName: '',
-      relation: '朋友',
-      fromName: user?.nickname ?? '',
-      fromCity: user?.city ?? '',
-      prefix: '',
-      suffix: '',
+      fromName: profile.fromName,
+      fromCity: profile.city,
     },
   );
   const [err, setErr] = useState('');
+  const [pasteBlocked, setPasteBlocked] = useState(false);
   const [templatesFailed] = useState(false);
 
   useEffect(() => {
@@ -75,27 +74,26 @@ export function Compose() {
         ))}
       </select>
 
-      <h2>从一个范本开始（可选）</h2>
+      <h2>范本（只作参考）</h2>
       {templatesFailed ? (
-        <p className="hint">范本加载失败，直接自由创作吧。</p>
+        <p className="hint">范本加载失败，直接自己写吧。</p>
       ) : (
         <div>
+          <p className="hint">
+            范本只是给你一个起头的方向。正文要你自己敲，一个字一个字写给 TA。
+          </p>
           {byOccasion.map((t) => (
             <div className="card" key={t.id} style={{ padding: 12 }}>
               <b style={{ fontSize: 14 }}>{t.title}</b>
               <p className="hint" style={{ margin: '4px 0' }}>
                 {t.prompt}
               </p>
-              <p className="blessing" style={{ fontSize: 15, margin: '6px 0' }}>
+              <p
+                className="blessing"
+                style={{ fontSize: 15, margin: '6px 0', userSelect: 'none' }}
+              >
                 {t.sample}
               </p>
-              <button
-                className="ghost"
-                onClick={() => setBody(t.sample)}
-                style={{ fontSize: 12, padding: '4px 10px' }}
-              >
-                用这个起草
-              </button>
             </div>
           ))}
         </div>
@@ -105,11 +103,20 @@ export function Compose() {
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}
+        onPaste={(e) => {
+          e.preventDefault();
+          setPasteBlocked(true);
+        }}
         placeholder="慢慢写，写给一个具体的人。"
       />
       <div className="count">
         {bodyLen} 字 · 建议 {cfg.bodyMinLen}–{cfg.bodyMaxLen}
       </div>
+      {pasteBlocked && (
+        <p className="hint" onClick={() => setPasteBlocked(false)}>
+          用你自己的话写出来，TA 会感受到不一样。（点这里关掉）
+        </p>
+      )}
 
       <h2>让 TA 知道是谁在祝福</h2>
       <label>给谁（必填）</label>
@@ -119,53 +126,20 @@ export function Compose() {
         placeholder="称呼，如 阿明 / 妈妈"
         onChange={(e) => setP({ ...p, toName: e.target.value })}
       />
-      <div className="row">
-        <div>
-          <label>与 TA 的关系</label>
-          <select
-            value={p.relation}
-            onChange={(e) => setP({ ...p, relation: e.target.value })}
-          >
-            {RELATION_OPTIONS.map((r) => (
-              <option key={r}>{r}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label>我是谁（落款）</label>
-          <input
-            type="text"
-            value={p.fromName ?? ''}
-            onChange={(e) => setP({ ...p, fromName: e.target.value })}
-          />
-        </div>
-      </div>
-      <label>我所在的城市</label>
+      <label>我是谁（落款）</label>
+      <input
+        type="text"
+        value={p.fromName ?? ''}
+        onChange={(e) => setP({ ...p, fromName: e.target.value })}
+      />
+      <label>我的城市</label>
       <input
         type="text"
         value={p.fromCity ?? ''}
+        placeholder="只到城市，用于「来自 XX 的祝福」"
         onChange={(e) => setP({ ...p, fromCity: e.target.value })}
       />
-      <div className="row">
-        <div>
-          <label>开头（可选）</label>
-          <input
-            type="text"
-            value={p.prefix ?? ''}
-            placeholder="如：阿明——"
-            onChange={(e) => setP({ ...p, prefix: e.target.value })}
-          />
-        </div>
-        <div>
-          <label>落款（可选）</label>
-          <input
-            type="text"
-            value={p.suffix ?? ''}
-            placeholder="如：远方的小林"
-            onChange={(e) => setP({ ...p, suffix: e.target.value })}
-          />
-        </div>
-      </div>
+      <p className="hint">落款和城市的默认值来自个人空间，这里可以临时改。</p>
 
       {err && <div className="error">{err}</div>}
 

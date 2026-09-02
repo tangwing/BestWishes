@@ -142,14 +142,3 @@ export const OCCASION_LABEL: Record<Occasion, string> = {
   remembrance: '纪念 / 追思',
   daily: '日常问候',
 };
-
-export const RELATION_OPTIONS = [
-  '朋友',
-  '家人',
-  '同事',
-  '同学',
-  '爱人',
-  '长辈',
-  '晚辈',
-  '其他',
-];

@@ -34,16 +34,10 @@ export type LifecycleActor =
 export interface Personalization {
   /** 给谁（称呼）——必填 */
   toName: string;
-  /** 与对方的关系（枚举键） */
-  relation?: string;
-  /** 关系自定义文本 */
-  relationCustom?: string;
-  /** 我是谁（昵称），默认取账户名 */
+  /** 我是谁（落款），默认取个人空间设置 */
   fromName?: string;
-  /** 所在城市 / 省级，粒度不超过城市 */
+  /** 所在城市 / 省级，粒度不超过城市，默认取个人空间设置 */
   fromCity?: string;
-  prefix?: string;
-  suffix?: string;
 }
 
 export type Occasion =

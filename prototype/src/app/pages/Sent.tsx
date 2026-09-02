@@ -54,7 +54,7 @@ export function Sent() {
       </div>
 
       <p>
-        <Link to="/mine">前往"我的祝福"管理</Link> ·{' '}
+        <Link to="/mine">前往"收发记录"管理</Link> ·{' '}
         <button className="link" onClick={() => nav('/compose')}>
           再写一段
         </button>

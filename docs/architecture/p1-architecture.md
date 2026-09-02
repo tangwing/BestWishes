@@ -133,13 +133,18 @@ P1 的"近实时"实现：`submit` 请求内同步调用 RuleBasedProvider（本
 ```
 users
   id, wx_openid (uniq), wx_unionid (nullable), nickname, avatar_url,
-  region_city, source, created_at
+  source, created_at
+
+user_profiles        -- 个人空间：每次写祝福的默认值 + 偏好
+  user_id (pk/fk), sender_name (落款), region_city,
+  location_granted (bool, P1 占位), featured_by_default (bool, nullable
+    → null 时用系统默认), updated_at
 
 consents
   id, user_id, agreement_version, scope_deliver (bool, 恒 true),
   scope_featured (bool), scope_synthesis (bool), agreed_at
 
-templates            -- 范本库，运营维护
+templates            -- 范本库，运营维护，只作参考
   id, category, title, prompt_text, sample_text, sensitive_guard_passed (bool),
   is_active, sort_order
 
@@ -166,9 +171,12 @@ reports              -- 举报 / 疑似 / 申诉 统一工单
 streak_days
   user_id, local_date, published_count
   PK (user_id, local_date)
+
+inbox_items          -- 收件箱。P1 建表不填充；P2（主动赠送 / 请求）写入
+  id, recipient_id, sender_id, blessing_id, delivered_at
 ```
 
-`personalization` (jsonb): `{ toName, relation, relationCustom, fromName, fromCity, prefix, suffix }`。
+`personalization` (jsonb)：`{ toName, fromName?, fromCity? }`。`toName` 必填；`fromName` / `fromCity` 写入时已把个人空间的默认值合并进来（或为空）。不再有 relation / prefix / suffix。
 
 ## 8. API 草图（P1）
 
@@ -177,13 +185,17 @@ streak_days
 | GET | `/api/auth/wx/url` | 取微信授权跳转地址 | 无 |
 | GET | `/api/auth/wx/callback` | 授权回调 → 建/取用户 + 会话 | 无 |
 | GET | `/api/me` | 当前用户 | 会话 |
+| GET | `/api/profile/me` | 个人空间（落款、城市、偏好） | 会话 |
+| PUT | `/api/profile/me` | 更新个人空间 | 会话 |
+| POST | `/api/account/deletion` | 发起注销（P1 走人工 / 占位） | 会话 |
 | GET | `/api/agreement/current` | 当前协议版本与条款 | 无 |
-| POST | `/api/consents` | 记录同意（含精选展示开关） | 会话 |
-| GET | `/api/templates` | 范本库 | 会话 |
+| POST | `/api/consents` | 记录同意（精选展示默认 = 个人偏好 > 系统默认） | 会话 |
+| GET | `/api/templates` | 范本库（只作参考） | 会话 |
 | PUT | `/api/drafts/me` | 保存/更新我的草稿 | 会话 |
 | GET | `/api/drafts/me` | 取我的草稿 | 会话 |
 | POST | `/api/blessings` | 提交祝福（submit）→ 返回 slug + 状态 | 会话 |
-| GET | `/api/blessings/mine` | 我的祝福列表 | 会话 |
+| GET | `/api/records/outbox` | 发件箱（我创作的祝福 + 状态） | 会话 |
+| GET | `/api/records/inbox` | 收件箱（P1 恒为空 + 说明） | 会话 |
 | POST | `/api/blessings/:id/withdraw` | 撤回 | 会话（作者） |
 | POST | `/api/blessings/:id/republish` | 重新发布 | 会话（作者） |
 | DELETE | `/api/blessings/:id` | 删除 | 会话（作者） |

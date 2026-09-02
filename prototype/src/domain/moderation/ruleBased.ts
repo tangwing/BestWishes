@@ -34,8 +34,6 @@ export class RuleBasedProvider implements ModerationProvider {
     const haystack = [
       input.text,
       input.personalization.toName,
-      input.personalization.prefix ?? '',
-      input.personalization.suffix ?? '',
       input.personalization.fromName ?? '',
     ].join('\n');
 

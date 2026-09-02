@@ -42,6 +42,16 @@ export interface User {
   source: string;
 }
 
+/** 个人空间设置。作者创作时的默认落款 / 城市从这里取。存在 localStorage（随整份 state 落盘）。 */
+export interface Profile {
+  fromName: string;
+  city: string;
+  /** 定位授权开关。P1 只存这个 boolean，不真的读定位。 */
+  locationGranted: boolean;
+  /** 新祝福是否默认开启精选展示 */
+  featuredByDefault: boolean;
+}
+
 export interface Consent {
   userId: string;
   agreementVersion: string;
@@ -76,6 +86,7 @@ export interface Report {
 
 interface PersistState {
   users: User[];
+  profiles: Record<string, Partial<Profile>>;
   consents: Consent[];
   drafts: Draft[];
   blessings: (Blessing & {
@@ -94,6 +105,7 @@ interface PersistState {
 function emptyState(): PersistState {
   return {
     users: [],
+    profiles: {},
     consents: [],
     drafts: [],
     blessings: [],
@@ -266,7 +278,7 @@ class Store {
     const user: User = {
       id: rid('usr'),
       nickname: nickname || '匿名的祝福者',
-      city: city || '未知',
+      city,
       utcOffsetMinutes,
       source: 'stub-login',
     };
@@ -289,6 +301,27 @@ class Store {
     const u = this.currentUser();
     if (!u) throw new Error('需要登录');
     return u;
+  }
+
+  // ---------- profile / 个人空间 ----------
+
+  /** 当前用户的个人空间设置，未设过的字段回落到默认值。无登录时返回空默认。 */
+  getProfile(): Profile {
+    const u = this.currentUser();
+    const saved = (u && this.state.profiles[u.id]) || {};
+    return {
+      fromName: saved.fromName ?? u?.nickname ?? '',
+      city: saved.city ?? '',
+      locationGranted: saved.locationGranted ?? false,
+      featuredByDefault: saved.featuredByDefault ?? this.state.config.featuredDefaultOn,
+    };
+  }
+
+  saveProfile(patch: Partial<Profile>): Profile {
+    const u = this.requireUser();
+    this.state.profiles[u.id] = { ...this.state.profiles[u.id], ...patch };
+    this.save();
+    return this.getProfile();
   }
 
   // ---------- agreement / consent ----------
@@ -568,7 +601,7 @@ class Store {
     return {
       type: 'content',
       content: {
-        body: [p.prefix, b.body, p.suffix].filter(Boolean).join('\n\n'),
+        body: b.body,
         fromLine,
         toName: p.toName,
         occasion: b.occasion,

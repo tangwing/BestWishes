@@ -2,6 +2,8 @@
 
 本仓库的唯一事实来源。任何 AI、任何模型、任何平台，进入本仓库前先读本文件。
 
+**每次会话开始，读本文件 + [BACKLOG.md](BACKLOG.md)。** BACKLOG.md 的「恢复点」一节说明当前进展和下一步——会话或电脑重启后从那里接着干。
+
 本项目是一个正规软件工程项目（非个人知识库/记忆系统），按标准软件开发者的要求组织：清晰的目录结构、可追溯的决策记录、代码工艺标准。
 
 ## 1. 项目状态
@@ -18,6 +20,7 @@ P2 及以后的技术决策（音视频管线、AI/ML 服务、多端原生）�
 - **最简方案**：用最少的活动部件解决问题。不为假设中的未来需求做设计。
 - **可追溯性**：每个推动项目演变的用户 prompt 记录在 [PROMPT_LOG.md](PROMPT_LOG.md)。重大架构决策记录为 [docs/adr/](docs/adr/) 下的 ADR。
 - **完成 = 已同步**：代码写完、文档更新、CHANGELOG 记录、commit 完毕，才算完成。未提交的工作是未完成的工作。
+- **待办进 [BACKLOG.md](BACKLOG.md)，完成的进 [CHANGELOG.md](CHANGELOG.md)。** 用户按点评方式提改动时，先记进 BACKLOG，再逐条做。每轮结束把做完的从 BACKLOG 挪到 CHANGELOG。BACKLOG 要随时能当作恢复点。
 
 ## 3. 协作模型
 
@@ -42,6 +45,7 @@ P2 及以后的技术决策（音视频管线、AI/ML 服务、多端原生）�
 
 | 内容类型 | 位置 |
 |---|---|
+| 待办事项 + 工作恢复点 | `BACKLOG.md`（根目录） |
 | 产品概念/需求 | `docs/product/` |
 | 调研报告（架构/合规/技术选型的决策输入） | `docs/research/`，按 `YYYY-MM-DD-主题.md` 命名，只增不改 |
 | 架构设计（跨模块的技术方案） | `docs/architecture/` |
@@ -70,3 +74,9 @@ P2 及以后的技术决策（音视频管线、AI/ML 服务、多端原生）�
 - 单开发者仓库。**每轮对话结束自动 `commit` + `push` 到 `main`**（`.claude/hooks/auto-commit-push.sh`，Stop hook），保证工作实时同步到远端。
 - Claude 在每轮结束前应先自己用清晰、准确、符合 Conventional Commits 的信息提交；hook 是兜底（漏提交时用概要信息补一笔）。
 - commit message 规范：`<type>(<scope>): <subject>`，type ∈ feat/fix/docs/refactor/test/chore/build，正文说明「为什么」，结尾带 `Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>`。
+
+## 8. 工作方式
+
+- **点评式迭代**：用户会针对设计稿 / spec 逐点提改动。每一点先记进 [BACKLOG.md](BACKLOG.md)（给个 `B-NN` 编号），再逐条落地——同步改 spec、画布、原型三处，保持一致。迭代快，不必每步都等确认；有真正的歧义或不可逆决策才停下问。
+- **并行**：条件允许时派多个 subagent 并行推进相互独立的块（如"改原型" vs "改 spec" vs "调研"）。派之前把共同的决策写清楚（BACKLOG 或 agent prompt 里），避免各做各的对不上。彼此有依赖或会改同一批文件的，不要并行。
+- **恢复**：任何时候都假设下一秒会话可能重启。重要进展随时落 BACKLOG「恢复点」+ commit。

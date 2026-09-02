@@ -18,8 +18,9 @@ export function App() {
           {user && (
             <>
               <NavLink to="/compose">写祝福</NavLink>
-              <NavLink to="/mine">我的祝福</NavLink>
+              <NavLink to="/mine">收发记录</NavLink>
               <NavLink to="/streak">坚持</NavLink>
+              <NavLink to="/profile">个人空间</NavLink>
               <NavLink to="/moderation">审核台</NavLink>
             </>
           )}
@@ -83,7 +84,8 @@ function DemoControls() {
       </div>
       {user && (
         <div className="hint">
-          当前登录：{user.nickname}（{user.city}，UTC{user.utcOffsetMinutes >= 0 ? '+' : ''}
+          当前登录：{user.nickname}（{user.city ? `${user.city}，` : ''}UTC
+          {user.utcOffsetMinutes >= 0 ? '+' : ''}
           {user.utcOffsetMinutes / 60}） ·{' '}
           <button className="link" onClick={() => store.logout()}>
             退出
