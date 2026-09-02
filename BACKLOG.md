@@ -8,11 +8,12 @@
 
 ## 恢复点（先读这段）
 
-- **阶段**：P1「文本静心祝福」**实现中**。用户已批准开工（"就按这个走吧，开工"），按 `/loop` 自定步调迭代，直到初版 Demo 跑通。
-- **iteration 1-5 完成**：monorepo + 领域层 + 数据层 + application 用例 + Fastify HTTP API + **client**（React + Vite + CSS Modules，10 个页面，`api/client.ts` 唯一 fetch，`SessionProvider`）。**117 测试全绿**，`pnpm verify` 绿。全栈 smoke（server 3000 + vite 5173 proxy）：client 出 HTML、登录→协议→提交→占位→落地页 全通。
-- **iteration 6（下一步，收尾）**：`pnpm dev` 双进程说明写进 README；跑一遍完整 demo 确认（可加 `@fastify/static` 让 `server start` 单进程也能出 client）；Playwright E2E 骨架（§7.4/7.5 占位）；把 tasks.md §7 端到端脚本落成实际测试；PROMPT_LOG / CHANGELOG 收尾 → **初版 Demo 完成**。
-- **实现计划**：[openspec/changes/add-p1-text-blessing/tasks.md](openspec/changes/add-p1-text-blessing/tasks.md)（7 组任务）。逐组做，每组 commit + 勾选。
-- **本机限制**：无 psql。数据层先做 `ports` + 内存 adapter（架构上就是可换的），Drizzle 迁移 + PG 集成测试作为需要 DB 的独立任务（B-24）。
+- **阶段**：P1「文本静心祝福」**初版 Demo 完成**（iteration 1-6，`/loop` 自定步调 6 轮）。`pnpm demo` 起单进程走完整链路。`pnpm verify` 绿，**119 测试**（含 7 个 `app.inject` 端到端覆盖 §7.1-7.3）。openspec `validate --strict` 通过。
+- **代码**：`packages/domain`（纯领域逻辑）· `packages/shared`（Zod / 错误码）· `server/`（Fastify，分层 interface/application/infrastructure/ports，内存仓储 + 扫描任务 + 静态托管）· `client/`（React + Vite + CSS Modules，10 页）· `arch/`（架构测试）。
+- **走查**：见 [docs/DEMO.md](docs/DEMO.md)。
+- **实现计划**：[openspec/changes/add-p1-text-blessing/tasks.md](openspec/changes/add-p1-text-blessing/tasks.md)。§1-§6 基本勾完，§7 端到端测试到位。
+- **下一步选项**（等用户定）：(a) 补真实依赖——PostgreSQL/Drizzle（B-24）、真实微信授权、真实内容审核 API；(b) Playwright E2E（B-30）；(c) 界面第二轮评审（B-09）后再迭代；(d) `/opsx:archive` 归档这个 change 并开 P2。
+- **本机限制**：无 psql——数据层用内存 adapter（同一组 ports，换 PG 是改一层的事，见 B-24）。
 - **技术栈**（已定，ADR 0003）：Web-first PWA（React+TS+Vite / CSS Modules）+ Node+TS（Fastify）+ PostgreSQL（Drizzle）+ pnpm monorepo，领域逻辑在 `packages/domain`。
 - **关键文档**：[docs/product/vision.md](docs/product/vision.md) · [docs/product/use-cases.md](docs/product/use-cases.md) · [docs/architecture/p1-architecture.md](docs/architecture/p1-architecture.md) · [docs/engineering/coding-standards.md](docs/engineering/coding-standards.md) · [openspec/changes/add-p1-text-blessing/](openspec/changes/add-p1-text-blessing/) · 走查原型 [prototype/](prototype/)（`npm run verify`）· 界面画布见 PROMPT_LOG 最新条目的链接。
 - **工作方式**：用户按点评提改动 → 记进本文件 → 持续完成。条件允许时派多 Agent 并行。每轮结束自动 commit + push（`.claude/hooks/auto-commit-push.sh`）。
@@ -22,7 +23,7 @@
 
 ## 进行中
 
-- [~] **P1 实现（loop）** — 按 openspec `tasks.md` 逐组推进。iteration 1：monorepo 骨架 + 迁 `packages/domain`（`pnpm install` / `pnpm verify` 待跑）。
+（无——P1 初版 Demo 完成，等用户下一步指示）
 
 ## 待办
 
@@ -46,6 +47,8 @@
 - [ ] **B-27 微信 H5 适配 + PWA** — JS-SDK 分享、`manifest.json`、Service Worker。
 - [ ] **B-28 生产静态托管** — `@fastify/static` 服务 `client/dist` + SPA fallback，让单进程也能跑；或分开部署（ADR 0003 D12 推迟项）。
 - [ ] **B-29 移除 `prototype/`** — monorepo 已功能对齐；确认后删。
+- [ ] **B-30 Playwright E2E** — 真浏览器点一遍关键旅程（需要浏览器下载，本机环境未装）。
+- [ ] **B-31 更新 p1-acceptance-status.md** — 现在对照的是 prototype，改成对照 monorepo。
 
 ### 待澄清 / 需用户或法务
 

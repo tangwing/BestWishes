@@ -18,7 +18,7 @@ Best wishes for you and for the world.
 
 ## Status
 
-**P1（文本静心祝福）实现中。** 产品北极星、用例、架构、技术栈（[ADR 0003](docs/adr/0003-p1-tech-stack-web-first.md)：Web-first）、工程规范都已成文。正在把 P1 从走查原型（`prototype/`）迁到生产 monorepo，按 [BACKLOG.md](BACKLOG.md) 的循环推进直到初版 Demo。
+**P1（文本静心祝福）初版 Demo 可跑。** 产品北极星、用例、架构、技术栈（[ADR 0003](docs/adr/0003-p1-tech-stack-web-first.md)：Web-first）、工程规范都已成文。生产 monorepo 里 `packages/domain` + `server/`（Fastify）+ `client/`（React）已把 P1 完整链路跑通——见下方「跑 Demo」和 [docs/DEMO.md](docs/DEMO.md)。数据层现为内存实现，PostgreSQL、真实微信授权、真实内容审核 API 见 [BACKLOG.md](BACKLOG.md)。
 
 ## Repo layout
 
@@ -45,7 +45,24 @@ prototype/        P1 走查原型（spike，功能对齐后移除）
 corepack enable          # 启用 pnpm
 pnpm install
 pnpm verify              # typecheck + 架构测试 + 全部测试 + build
-pnpm dev                 # server + client 一起起
 ```
 
-走查原型（独立）：`cd prototype && npm install && npm run dev`
+## 跑 Demo
+
+**单进程**（server 托管 build 好的 client）：
+
+```bash
+pnpm demo                # http://127.0.0.1:3000
+```
+
+**开发模式**（server + Vite HMR）：
+
+```bash
+pnpm dev                 # client http://localhost:5173，API 代理到 :3000
+```
+
+走查一遍：登录 → 个人空间设落款/城市 → 同意协议 → 写一段祝福（试试粘贴，会被拦）→ 已发送（等几秒审核）→ 打开分享链接看正文 → 收发记录里撤回 → 再看链接变占位。详见 [docs/DEMO.md](docs/DEMO.md)。
+
+数据存在内存里，重启即清空。
+
+走查原型（独立、将移除）：`cd prototype && npm install && npm run dev`

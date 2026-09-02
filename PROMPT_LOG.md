@@ -105,4 +105,18 @@
 8. openspec change 现覆盖 **8 个能力域**，`validate --strict` 通过；use-cases 升到 P1-UC-15、architecture 数据模型 + API 更新、proposal / tasks 同步。
 9. **界面画布 v2 已发布**（同一 URL）：https://claude.ai/code/artifact/2b91c40d-3d05-49af-8ebe-d05ffae6fa43
 
-**下一步**：用户第二轮评审设计稿（B-09）。
+### 开工实现 P1（/loop，自定步调，6 轮迭代）
+
+> 可以了，就按这个走吧，开工，持续进行，按照 Loop 进行，直到完成初版 Demo。
+
+**结果**：`/loop` 自定步调，6 轮迭代把 P1 从走查原型迁到生产 monorepo 并跑通初版 Demo。每轮 `pnpm verify` 绿 + commit + push。
+- **iter 1**：pnpm monorepo 骨架（`packages/domain` `packages/shared` `server` `client` `arch`）+ 根级 tsconfig(strict) / ESLint(typescript-eslint strict-type-checked) / Prettier / dependency-cruiser / vitest workspace。领域逻辑从 prototype 迁入。
+- **iter 2**：`server/config/app-config.ts`（`BW_*` env 覆盖）+ 数据层 `ports/`（全部仓储接口 + `records` + `ids`）+ `infrastructure/memory/` 内存实现（openid 幂等 / slug 唯一 / 工单排序）。PostgreSQL 因本机无 psql 推迟 B-24。
+- **iter 3**：`application/` 用例——auth（占位登录）/ profile / consent / drafts / blessings（submit 同步规则审核落状态、合并个人空间默认值、字数与 consent 校验；withdraw/republish/delete/renew；outbox；inbox 空状态）/ streak / scans（延迟送达 / 到期 / hold 超时）。domain 加 `applyBlessingTransition`（纯：转移 + 事件 + streakDelta）。
+- **iter 4**：Fastify HTTP API `interface/http/routes.ts`（全部 P1 端点，cookie 会话，Zod parse，AppException→status）+ ReportService（匿名 / 指纹 / 同源合并 / 高危即时下架）+ ModerationQueueService + 范本 seed（18 条）+ 组合根 `main.ts`。
+- **iter 5**：`client/` React + Vite + CSS Modules——10 个页面（登录 / 个人空间 / 授权协议 / 撰写[拦粘贴 + 发心提示 + 呼吸圆环] / 已发送 / 收发记录 / 坚持 / 审核台 / 访客落地页 / 首页），`api/client.ts` 唯一 fetch，`SessionProvider`。落地页数据挪到 `GET /api/p/:slug`，`/p/:slug` 留给前端路由。
+- **iter 6**：`@fastify/static` 单进程托管 client（`pnpm demo`）+ `docs/DEMO.md` 走查稿 + README「跑 Demo」+ §7 端到端测试（`api-flow.test.ts`，7 个 `app.inject` 覆盖核心流程 / 护栏词 / 违禁词 / 过期续期 / 举报下架）。
+
+**产物**：`pnpm demo` 单进程跑通 登录→个人空间→协议→撰写→已发送→hold→发布→访客看正文→撤回→占位→坚持记录回撤。**119 测试全绿**，`pnpm verify`（typecheck + depcruise 0 违规 + 测试 + build + eslint + prettier）绿，openspec `validate --strict` 通过。工程规范补 `explicit-function-return-type` / `noUncheckedIndexedAccess` 等在各层的分级校准（严在内层，松在 UI 胶水层），均写进 eslint.config.js 注释。
+
+**待用户定下一步**：真实依赖（PG / 微信授权 / 审核 API）、Playwright E2E（B-30）、界面第二轮评审（B-09）、或 `/opsx:archive` 归档开 P2。

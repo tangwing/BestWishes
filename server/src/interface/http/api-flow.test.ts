@@ -165,4 +165,78 @@ describe('HTTP 端到端：核心流程', () => {
     ).toBe('content');
     await ctx.server.close();
   });
+
+  it('命中护栏词 → suspect → 进队列 → 人工通过 → 送达（§7.2）', async () => {
+    const ctx = await loggedInServer();
+    const r = await ctx.server.inject({
+      method: 'POST',
+      url: '/api/blessings',
+      headers: ctx.auth,
+      payload: {
+        body: '愿你平安，如需超度收费请私信我们，价格公道，服务周到。',
+        occasion: 'remembrance',
+        personalization: { toName: '故人' },
+      },
+    });
+    const { slug } = r.json<{ slug: string }>();
+    ctx.clock.advance(60000);
+    await ctx.app.scans.publishReady();
+    expect(
+      (await ctx.server.inject({ method: 'GET', url: `/api/p/${slug}` })).json<{ type: string }>()
+        .type,
+    ).toBe('preparing');
+
+    const queue = (
+      await ctx.server.inject({ method: 'GET', url: '/api/moderation/queue', headers: ctx.auth })
+    ).json<{ id: string; origin: string }[]>();
+    expect(queue.some((q) => q.origin === 'auto_suspect')).toBe(true);
+
+    await ctx.server.inject({
+      method: 'POST',
+      url: `/api/moderation/${queue[0]?.id ?? ''}/resolve`,
+      headers: ctx.auth,
+      payload: { action: 'pass', reason: '常见悼念用语' },
+    });
+    expect(
+      (await ctx.server.inject({ method: 'GET', url: `/api/p/${slug}` })).json<{ type: string }>()
+        .type,
+    ).toBe('content');
+    await ctx.server.close();
+  });
+
+  it('链接到期 → expired 占位 → 续期 → 恢复可见（不重新审核）（§7.3）', async () => {
+    const ctx = await loggedInServer();
+    const r = await ctx.server.inject({
+      method: 'POST',
+      url: '/api/blessings',
+      headers: ctx.auth,
+      payload: { body: GOOD_BODY, occasion: 'birthday', personalization: { toName: '阿明' } },
+    });
+    const { id, slug } = r.json<{ id: string; slug: string }>();
+    ctx.clock.advance(6000);
+    await ctx.app.scans.publishReady();
+
+    ctx.clock.advance(121 * 86_400_000);
+    await ctx.app.scans.expire();
+    expect(
+      (await ctx.server.inject({ method: 'GET', url: `/api/p/${slug}` })).json<{ type: string }>()
+        .type,
+    ).toBe('expired');
+
+    await ctx.server.inject({
+      method: 'POST',
+      url: `/api/blessings/${id}/renew`,
+      headers: ctx.auth,
+    });
+    expect(
+      (await ctx.server.inject({ method: 'GET', url: `/api/p/${slug}` })).json<{ type: string }>()
+        .type,
+    ).toBe('content');
+    // 续期不重复加计数
+    const streak = (
+      await ctx.server.inject({ method: 'GET', url: '/api/streak/me', headers: ctx.auth })
+    ).json<{ total: number }>();
+    expect(streak.total).toBe(1);
+    await ctx.server.close();
+  });
 });

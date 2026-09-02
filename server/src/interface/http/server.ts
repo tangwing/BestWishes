@@ -6,6 +6,7 @@ import cookie from '@fastify/cookie';
 import { isAppException } from '@bestwishes/shared';
 import { httpStatusFor } from './errors';
 import { registerRoutes } from './routes';
+import { registerStatic } from './static';
 import type { Application } from '../../application';
 import type { Clock } from '../../ports/clock';
 import type { Env } from '../../config/env';
@@ -41,6 +42,13 @@ export async function buildServer(deps: ServerDeps): Promise<FastifyInstance> {
   app.get('/healthz', () => ({ ok: true, at: deps.clock.now().toISOString() }));
 
   registerRoutes(app, deps.application);
+  const servingClient = await registerStatic(app, deps.env.NODE_ENV !== 'test');
+  if (deps.env.NODE_ENV !== 'test') {
+    app.log.info(
+      { servingClient },
+      servingClient ? '托管 client/dist' : 'client 未 build，只提供 API',
+    );
+  }
 
   return app;
 }

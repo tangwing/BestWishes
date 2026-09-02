@@ -17,7 +17,8 @@
     "test:e2e": "echo 'e2e: 待 client/server 就绪后接入 Playwright' ",
     "test": "vitest run",
     "build": "pnpm -r build",
-    "dev": "pnpm --parallel -r dev",
+    "dev": "pnpm --parallel -r --if-present dev",
+    "demo": "pnpm --filter @bestwishes/client build && BW_HOLD_SECONDS=8 pnpm --filter @bestwishes/server start",
     "verify": "pnpm typecheck && pnpm test:arch && pnpm test && pnpm build"
   },
   "devDependencies": {

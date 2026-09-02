@@ -68,8 +68,10 @@
 
 ## 7. 端到端验收
 
-- [ ] 7.1 端到端脚本：登录 → 同意协议 → 选范本 → 撰写 → 提交 → 校验中占位 → 通过 → 访客看到正文 → 撤回 → 访客看到占位 → 坚持记录回撤。全链路通过
-- [ ] 7.2 端到端：命中护栏词 → suspect → 进队列 → 人工通过 → 送达；命中违禁词 → rejected → 访客占位
-- [ ] 7.3 端到端：链接到期 → expired 占位 → 作者续期 → 恢复可见（未重新审核）
-- [ ] 7.4 逐条核对 [use-cases.md](../../../docs/product/use-cases.md) 的 P1 验收标准，产出"满足 / prototype 满足 / 阻塞于外部账号"清单
-- [ ] 7.5 `openspec validate add-p1-text-blessing --strict` 通过；PROMPT_LOG.md、CHANGELOG.md 更新
+- [x] 7.1 `server/src/interface/http/api-flow.test.ts`：登录 → 协议 → 提交 → 校验中占位 → hold 后发布 → 访客看正文 → 撤回 → 占位 → 坚持记录回撤（`app.inject`，可注入时钟）
+- [x] 7.2 同上：命中护栏词 → suspect → 进队列 → 人工通过 → 送达；命中违禁词 → rejected → 访客占位
+- [x] 7.3 同上：链接到期 → expired 占位 → 作者续期 → 恢复可见（不重新审核、不加计数）
+- [x] 7.x 单进程 Demo（`pnpm demo`，`@fastify/static` 托管 client/dist + SPA fallback）；`docs/DEMO.md` 走查稿；README「跑 Demo」
+- [ ] 7.4 逐条核对 [use-cases.md](../../../docs/product/use-cases.md) 的 P1 验收标准 —— 更新 [docs/product/p1-acceptance-status.md](../../../docs/product/p1-acceptance-status.md) 为 monorepo 版
+- [ ] 7.5 Playwright E2E（真浏览器点一遍）—— BACKLOG B-30（需要浏览器下载）
+- [x] 7.6 `openspec validate add-p1-text-blessing --strict` 通过；PROMPT_LOG.md、CHANGELOG.md 更新
