@@ -8,6 +8,9 @@ export const ERROR_CODES = [
   'consent_required', // 还没同意《授权协议》
   'blessing_state_conflict', // 对祝福做了它当前状态不允许的操作
   'paste_not_allowed', // 正文是粘贴进来的
+  'location_required', // 群发要求发送者先设置位置
+  'audience_empty', // 受众筛选没命中任何人
+  'audience_too_large', // 受众命中人数超过群发上限
   'rate_limited', // 触发限流
   'moderation_unavailable', // 内容审核服务不可用
   'internal', // 兜底：意外错误

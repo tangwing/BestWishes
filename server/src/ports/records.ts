@@ -1,11 +1,12 @@
 // 持久化记录的形状。领域聚合（Blessing / BlessingEvent 等）在 @bestwishes/domain；
-// 这里是那些偏"存储记录"的类型（账户、个人空间、同意记录、工单…）。
+// 这里是那些偏"存储记录"的类型（账户、个人空间、同意记录、工单、通知…）。
 
 import type {
+  AudienceFilter,
   Blessing,
   BlessingEvent,
+  Gender,
   Occasion,
-  Personalization,
   ReportCategory,
   ReportOrigin,
   ReportState,
@@ -26,7 +27,15 @@ export interface UserRecord {
 export interface ProfileRecord {
   userId: string;
   senderName: string | null;
+  /** 显示用城市 / 省级名，粒度不超过城市。 */
   regionCity: string | null;
+  /** 受众距离筛选用的经纬度。两者都有才参与匹配。 */
+  lat: number | null;
+  lng: number | null;
+  gender: Gender | null;
+  birthYear: number | null;
+  /** 自报标签，用于被别人的受众筛选命中。 */
+  tags: string[];
   locationGranted: boolean;
   /** null = 跟随系统默认；true/false = 用户自己设过 */
   featuredByDefault: boolean | null;
@@ -56,8 +65,8 @@ export interface TemplateRecord {
 export interface DraftRecord {
   userId: string;
   body: string;
-  personalization: Personalization;
   occasion: Occasion;
+  audience: AudienceFilter | null;
   updatedAt: string;
 }
 
@@ -86,10 +95,24 @@ export interface ReportRecord {
   timeline: { at: string; text: string }[];
 }
 
+/** 收件箱条目：某人收到的一条祝福。内容 / 状态读取时从 blessing 拼。 */
 export interface InboxItemRecord {
   id: string;
   recipientId: string;
   senderId: string;
   blessingId: string;
   deliveredAt: string;
+  readAt: string | null;
+}
+
+export type NotificationKind = 'blessing_received';
+
+export interface NotificationRecord {
+  id: string;
+  userId: string;
+  kind: NotificationKind;
+  blessingId: string;
+  fromUserId: string;
+  createdAt: string;
+  readAt: string | null;
 }

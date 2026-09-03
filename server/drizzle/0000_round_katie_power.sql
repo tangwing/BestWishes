@@ -1,8 +1,8 @@
 CREATE TABLE IF NOT EXISTS "blessing_drafts" (
 	"user_id" text PRIMARY KEY NOT NULL,
 	"body" text NOT NULL,
-	"personalization" jsonb NOT NULL,
 	"occasion" text NOT NULL,
+	"audience" jsonb,
 	"updated_at" timestamp with time zone NOT NULL
 );
 --> statement-breakpoint
@@ -20,13 +20,19 @@ CREATE TABLE IF NOT EXISTS "blessing_events" (
 CREATE TABLE IF NOT EXISTS "blessings" (
 	"id" text PRIMARY KEY NOT NULL,
 	"author_id" text NOT NULL,
+	"content_type" text DEFAULT 'text' NOT NULL,
 	"body" text NOT NULL,
-	"personalization" jsonb NOT NULL,
+	"media" jsonb,
 	"occasion" text NOT NULL,
+	"scope" text DEFAULT 'broadcast' NOT NULL,
+	"audience" jsonb NOT NULL,
+	"reply_to_user_id" text,
+	"recipient_ids" jsonb DEFAULT '[]'::jsonb NOT NULL,
 	"state" text NOT NULL,
 	"public_slug" text NOT NULL,
 	"created_at" timestamp with time zone NOT NULL,
 	"published_at" timestamp with time zone,
+	"delivered_at" timestamp with time zone,
 	"expires_at" timestamp with time zone,
 	"hold_until" timestamp with time zone,
 	"moderation" jsonb,
@@ -50,7 +56,18 @@ CREATE TABLE IF NOT EXISTS "inbox_items" (
 	"recipient_id" text NOT NULL,
 	"sender_id" text NOT NULL,
 	"blessing_id" text NOT NULL,
-	"delivered_at" timestamp with time zone NOT NULL
+	"delivered_at" timestamp with time zone NOT NULL,
+	"read_at" timestamp with time zone
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "notifications" (
+	"id" text PRIMARY KEY NOT NULL,
+	"user_id" text NOT NULL,
+	"kind" text NOT NULL,
+	"blessing_id" text NOT NULL,
+	"from_user_id" text NOT NULL,
+	"created_at" timestamp with time zone NOT NULL,
+	"read_at" timestamp with time zone
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "reports" (
@@ -91,6 +108,11 @@ CREATE TABLE IF NOT EXISTS "user_profiles" (
 	"user_id" text PRIMARY KEY NOT NULL,
 	"sender_name" text,
 	"region_city" text,
+	"lat" double precision,
+	"lng" double precision,
+	"gender" text,
+	"birth_year" integer,
+	"tags" jsonb DEFAULT '[]'::jsonb NOT NULL,
 	"location_granted" boolean DEFAULT false NOT NULL,
 	"featured_by_default" boolean,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
@@ -146,6 +168,24 @@ END $$;
 --> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "inbox_items" ADD CONSTRAINT "inbox_items_blessing_id_blessings_id_fk" FOREIGN KEY ("blessing_id") REFERENCES "public"."blessings"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "notifications" ADD CONSTRAINT "notifications_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "notifications" ADD CONSTRAINT "notifications_blessing_id_blessings_id_fk" FOREIGN KEY ("blessing_id") REFERENCES "public"."blessings"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "notifications" ADD CONSTRAINT "notifications_from_user_id_users_id_fk" FOREIGN KEY ("from_user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;

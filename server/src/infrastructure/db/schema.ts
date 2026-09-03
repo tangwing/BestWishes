@@ -3,6 +3,7 @@
 
 import {
   boolean,
+  doublePrecision,
   integer,
   jsonb,
   pgTable,
@@ -12,12 +13,19 @@ import {
   timestamp,
 } from 'drizzle-orm/pg-core';
 import type {
+  AudienceFilter,
+  BlessingContentType,
+  BlessingMedia,
+  BlessingScope,
   BlessingState,
+  Gender,
   LifecycleActor,
   ModerationResult,
-  Personalization,
+  ReportCategory,
+  ReportOrigin,
+  ReportState,
 } from '@bestwishes/domain';
-import type { ReportCategory, ReportOrigin, ReportState } from '@bestwishes/domain';
+import type { NotificationKind } from '../../ports/records';
 
 // 所有时间列存 timestamptz，drizzle 默认读出来是 Date，仓储映射层再转 ISO 字符串。
 const ts = (name: string): PgTimestampBuilderInitial<string> =>
@@ -40,6 +48,11 @@ export const userProfiles = pgTable('user_profiles', {
     .references(() => users.id, { onDelete: 'cascade' }),
   senderName: text('sender_name'),
   regionCity: text('region_city'),
+  lat: doublePrecision('lat'),
+  lng: doublePrecision('lng'),
+  gender: text('gender').$type<Gender>(),
+  birthYear: integer('birth_year'),
+  tags: jsonb('tags').$type<string[]>().notNull().default([]),
   locationGranted: boolean('location_granted').notNull().default(false),
   featuredByDefault: boolean('featured_by_default'), // null = 跟随系统默认
   updatedAt: ts('updated_at').notNull().defaultNow(),
@@ -72,8 +85,8 @@ export const blessingDrafts = pgTable('blessing_drafts', {
     .primaryKey()
     .references(() => users.id, { onDelete: 'cascade' }),
   body: text('body').notNull(),
-  personalization: jsonb('personalization').$type<Personalization>().notNull(),
   occasion: text('occasion').notNull(),
+  audience: jsonb('audience').$type<AudienceFilter>(),
   updatedAt: ts('updated_at').notNull(),
 });
 
@@ -82,13 +95,19 @@ export const blessings = pgTable('blessings', {
   authorId: text('author_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
+  contentType: text('content_type').$type<BlessingContentType>().notNull().default('text'),
   body: text('body').notNull(),
-  personalization: jsonb('personalization').$type<Personalization>().notNull(),
+  media: jsonb('media').$type<BlessingMedia>(),
   occasion: text('occasion').notNull(),
+  scope: text('scope').$type<BlessingScope>().notNull().default('broadcast'),
+  audience: jsonb('audience').$type<AudienceFilter>().notNull(),
+  replyToUserId: text('reply_to_user_id'),
+  recipientIds: jsonb('recipient_ids').$type<string[]>().notNull().default([]),
   state: text('state').$type<BlessingState>().notNull(),
   publicSlug: text('public_slug').notNull().unique(),
   createdAt: ts('created_at').notNull(),
   publishedAt: ts('published_at'),
+  deliveredAt: ts('delivered_at'),
   expiresAt: ts('expires_at'),
   holdUntil: ts('hold_until'),
   moderation: jsonb('moderation').$type<ModerationResult>(),
@@ -137,7 +156,7 @@ export const streakDays = pgTable(
     localDate: text('local_date').notNull(),
     publishedCount: integer('published_count').notNull(),
   },
-  (t) => [primaryKey({ columns: [t.userId, t.localDate] })],
+  (table) => [primaryKey({ columns: [table.userId, table.localDate] })],
 );
 
 export const inboxItems = pgTable('inbox_items', {
@@ -152,4 +171,21 @@ export const inboxItems = pgTable('inbox_items', {
     .notNull()
     .references(() => blessings.id, { onDelete: 'cascade' }),
   deliveredAt: ts('delivered_at').notNull(),
+  readAt: ts('read_at'),
+});
+
+export const notifications = pgTable('notifications', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  kind: text('kind').$type<NotificationKind>().notNull(),
+  blessingId: text('blessing_id')
+    .notNull()
+    .references(() => blessings.id, { onDelete: 'cascade' }),
+  fromUserId: text('from_user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: ts('created_at').notNull(),
+  readAt: ts('read_at'),
 });

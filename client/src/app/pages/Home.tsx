@@ -9,18 +9,19 @@ export function Home() {
   if (user) {
     return (
       <div className={s.page}>
-        <h1>静一静，为一个人写一段祝福</h1>
+        <h1>给身边的陌生人，写一段祝福</h1>
         <p className={s.lead}>
-          不用急。想好要写给谁，把这一年里 TA 让你记得的一件小事，慢慢写下来。
+          你不认识 TA。选一个范围——比如"三公里内、正在熬夜的人"——把一句好话送过去。
         </p>
         <div className={s.card}>
           <Link to="/compose">
             <button>写一段祝福</button>
           </Link>{' '}
-          <Link to="/records">
-            <button className="ghost">看看我写过的</button>
+          <Link to="/inbox">
+            <button className="ghost">看看我收到的</button>
           </Link>
         </div>
+        <p className={s.hint}>先去个人空间设好位置和标签，别人才筛得到你、你也才能群发。</p>
       </div>
     );
   }
@@ -28,12 +29,14 @@ export function Home() {
   return (
     <div className={s.page}>
       <h1>BestWishes</h1>
-      <p className={s.lead}>练习专注，传递善意。为世界上的某个人，认真写一段祝福。</p>
+      <p className={s.lead}>
+        练习专注，传递善意。给附近的陌生人写一段认真的祝福；也在收件箱里，收到别人给你的。
+      </p>
       <div className={s.card}>
         <Link to="/login">
           <button>开始</button>
         </Link>
-        <p className={s.hint}>访客打开分享链接无需登录。</p>
+        <p className={s.hint}>这里没有聊天，只有一来一回的祝福。</p>
       </div>
     </div>
   );

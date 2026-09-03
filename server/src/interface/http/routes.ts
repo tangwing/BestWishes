@@ -3,9 +3,11 @@
 
 import { z, type ZodTypeAny } from 'zod';
 import {
-  personalizationSchema,
+  audienceFilterSchema,
+  draftSchema,
   occasionSchema,
   profileUpdateSchema,
+  submitBlessingSchema,
   AppException,
   type Result,
 } from '@bestwishes/shared';
@@ -33,13 +35,7 @@ function fingerprint(request: FastifyRequest): string {
   return `ip:${request.ip}|ua:${(request.headers['user-agent'] ?? '').slice(0, 40)}`;
 }
 
-const reportCategorySchema = z.enum([
-  'misinformation',
-  'offensive',
-  'harassment',
-  'illegal',
-  'other',
-]);
+const reportCategorySchema = z.enum(['spam', 'offensive', 'harassment', 'illegal', 'other']);
 
 export function registerRoutes(app: FastifyInstance, application: Application): void {
   // ---- auth ----
@@ -77,6 +73,8 @@ export function registerRoutes(app: FastifyInstance, application: Application): 
     return view;
   });
 
+  app.get('/api/tags/suggested', () => ({ tags: application.profile.suggestedTags() }));
+
   app.post('/api/account/deletion', (request, reply) => {
     requireUserId(request);
     void reply.status(202);
@@ -110,37 +108,42 @@ export function registerRoutes(app: FastifyInstance, application: Application): 
   });
 
   app.put('/api/drafts/me', async (request) => {
-    const input = parse(
-      z.object({
-        body: z.string(),
-        occasion: occasionSchema,
-        personalization: personalizationSchema,
-      }),
-      request.body,
-    );
+    const input = parse(draftSchema, request.body);
     await application.drafts.save(requireUserId(request), input);
     return { ok: true };
   });
 
+  // ---- audience ----
+  app.post('/api/audience/preview', async (request) => {
+    const filter = parse(audienceFilterSchema, request.body);
+    return unwrap(await application.audience.preview(requireUserId(request), filter));
+  });
+
   // ---- blessings ----
   app.post('/api/blessings', async (request) => {
-    const input = parse(
-      z.object({
-        body: z.string(),
-        occasion: occasionSchema,
-        personalization: personalizationSchema,
-      }),
-      request.body,
-    );
+    const input = parse(submitBlessingSchema, request.body);
     return unwrap(await application.blessings.submit(requireUserId(request), input));
   });
 
   app.get('/api/records/outbox', async (request) =>
     application.blessings.outbox(requireUserId(request)),
   );
-  app.get('/api/records/inbox', async (request) =>
-    application.blessings.inbox(requireUserId(request)),
+
+  // ---- inbox ----
+  app.get('/api/inbox', async (request) => application.inbox.list(requireUserId(request)));
+  app.post('/api/inbox/read', async (request) => {
+    await application.inbox.markAllRead(requireUserId(request));
+    return { ok: true };
+  });
+
+  // ---- notifications ----
+  app.get('/api/notifications', async (request) =>
+    application.notifications.list(requireUserId(request)),
   );
+  app.post('/api/notifications/read', async (request) => {
+    await application.notifications.markAllRead(requireUserId(request));
+    return { ok: true };
+  });
 
   const idParam = z.object({ id: z.string() });
   app.post('/api/blessings/:id/withdraw', async (request) => {
@@ -160,7 +163,7 @@ export function registerRoutes(app: FastifyInstance, application: Application): 
     return unwrap(await application.blessings.renew(requireUserId(request), id));
   });
 
-  // ---- streak ----
+  // ---- streak / 回响 ----
   app.get('/api/streak/me', async (request) => {
     const view = await application.streak.view(requireUserId(request));
     if (!view) throw new AppException('unauthorized', 'stale session');
@@ -202,4 +205,7 @@ export function registerRoutes(app: FastifyInstance, application: Application): 
     unwrap(await application.moderationQueue.resolve(reportId, action, reason, moderatorId));
     return { ok: true };
   });
+
+  // 未使用但保留：occasion 列表给前端下拉（避免前端硬编码枚举漂移）
+  app.get('/api/occasions', () => ({ occasions: occasionSchema.options }));
 }

@@ -13,7 +13,7 @@ const OCC: Record<string, string> = {
 };
 
 const CATEGORIES: [string, string][] = [
-  ['misinformation', '不实信息'],
+  ['spam', '垃圾 / 广告'],
   ['offensive', '冒犯内容'],
   ['harassment', '骚扰'],
   ['illegal', '涉嫌违法'],
@@ -62,9 +62,7 @@ export function PublicPage() {
 
       {page.type === 'content' && (
         <div className={s.page}>
-          <p className={s.hint}>
-            给 {page.content.toName} · {OCC[page.content.occasion]}
-          </p>
+          <p className={s.hint}>一段送给陌生人的祝福 · {OCC[page.content.occasion]}</p>
           <div className={s.card} style={{ padding: 26 }}>
             <p className={s.blessing}>{page.content.body}</p>
             <p className={s.meta}>

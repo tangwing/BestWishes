@@ -123,7 +123,7 @@ const RAW: RawTemplate[] = [
 ];
 
 function violatesGuard(text: string): boolean {
-  return words.RELIGIOUS_SOLICITATION_GUARD.some((w) => text.includes(w));
+  return words.SOLICITATION_GUARD.some((w) => text.includes(w));
 }
 
 export function seedTemplates(): TemplateRecord[] {

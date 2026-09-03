@@ -12,6 +12,8 @@ const overridesSchema = z.object({
   BW_HOLD_SECONDS: z.coerce.number().min(0).optional(),
   BW_HOLD_TIMEOUT_HOURS: z.coerce.number().positive().optional(),
   BW_SPOT_CHECK_RATIO: z.coerce.number().min(0).max(1).optional(),
+  BW_MAX_AUDIENCE: z.coerce.number().int().positive().optional(),
+  BW_AUDIENCE_MAX_RADIUS_KM: z.coerce.number().positive().optional(),
 });
 
 export function loadP1Config(source: NodeJS.ProcessEnv = process.env): P1Config {
@@ -28,5 +30,8 @@ export function loadP1Config(source: NodeJS.ProcessEnv = process.env): P1Config 
     holdTimeoutHours: o.BW_HOLD_TIMEOUT_HOURS ?? DEFAULT_CONFIG.holdTimeoutHours,
     spotCheckRatio: o.BW_SPOT_CHECK_RATIO ?? DEFAULT_CONFIG.spotCheckRatio,
     publicInvalidationSeconds: DEFAULT_CONFIG.publicInvalidationSeconds,
+    maxAudienceSize: o.BW_MAX_AUDIENCE ?? DEFAULT_CONFIG.maxAudienceSize,
+    audienceMaxRadiusKm: o.BW_AUDIENCE_MAX_RADIUS_KM ?? DEFAULT_CONFIG.audienceMaxRadiusKm,
+    audienceMinRadiusKm: DEFAULT_CONFIG.audienceMinRadiusKm,
   };
 }

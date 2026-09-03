@@ -2,8 +2,9 @@ import {
   outcomeFor,
   placeholderType,
   PLACEHOLDER_TEXT,
+  type AudienceFilter,
+  type BlessingContentType,
   type Occasion,
-  type Personalization,
   type PlaceholderType,
 } from '@bestwishes/domain';
 import {
@@ -11,23 +12,28 @@ import {
   appError,
   err,
   ok,
-  type PersonalizationDto,
+  type AudienceFilterDto,
   type Result,
 } from '@bestwishes/shared';
 import { AGREEMENT_VERSION, type AppDeps } from './deps';
 import { transitionAndPersist } from './blessing-write';
+import { createAudienceService } from './audience-service';
 import type { BlessingRecord } from '../ports/records';
 
 export interface SubmitInput {
+  contentType: BlessingContentType;
   body: string;
   occasion: Occasion;
-  personalization: PersonalizationDto;
+  scope: 'broadcast' | 'reply';
+  replyToUserId?: string | undefined;
+  audience?: AudienceFilterDto | undefined;
 }
 
 export interface SubmittedBlessing {
   id: string;
   slug: string;
   state: string;
+  recipientCount: number;
 }
 
 export interface PublicPage {
@@ -35,8 +41,8 @@ export interface PublicPage {
   placeholderText?: string;
   content?: {
     body: string;
+    contentType: BlessingContentType;
     fromLine: string;
-    toName: string;
     occasion: Occasion;
     publishedAt: string;
   };
@@ -47,75 +53,118 @@ export interface OutboxItem {
   slug: string;
   state: string;
   occasion: Occasion;
-  toName: string;
+  scope: 'broadcast' | 'reply';
+  recipientCount: number;
   bodyPreview: string;
   renewCount: number;
   createdAt: string;
 }
 
+const REPLY_AUDIENCE: AudienceFilter = {
+  radiusKm: 0,
+  ageMin: null,
+  ageMax: null,
+  gender: 'any',
+  tags: [],
+};
+
 function charCount(s: string): number {
   return Array.from(s.trim()).length;
 }
 
+function toAudienceFilter(dto: AudienceFilterDto): AudienceFilter {
+  return {
+    radiusKm: dto.radiusKm,
+    ageMin: dto.ageMin,
+    ageMax: dto.ageMax,
+    gender: dto.gender,
+    tags: [...dto.tags],
+  };
+}
+
 export function createBlessingService(deps: AppDeps) {
+  const audience = createAudienceService(deps);
+
   async function requireUser(userId: string) {
     const u = await deps.repos.users.findById(userId);
     if (!u) throw new AppException('unauthorized', 'no session');
     return u;
   }
 
+  async function resolveRecipients(
+    userId: string,
+    input: SubmitInput,
+  ): Promise<Result<{ recipientIds: string[]; audience: AudienceFilter; replyToUserId: string | null }>> {
+    if (input.scope === 'reply') {
+      if (!input.replyToUserId) {
+        return err(appError('validation_failed', 'replyToUserId required', '缺少回复对象'));
+      }
+      if (input.replyToUserId === userId) {
+        return err(appError('validation_failed', 'cannot reply self', '不能回复自己'));
+      }
+      const target = await deps.repos.users.findById(input.replyToUserId);
+      if (!target) {
+        return err(appError('not_found', 'reply target missing', '找不到这个人'));
+      }
+      return ok({ recipientIds: [input.replyToUserId], audience: REPLY_AUDIENCE, replyToUserId: input.replyToUserId });
+    }
+
+    if (!input.audience) {
+      return err(appError('validation_failed', 'audience required', '先选一个送达范围'));
+    }
+    const filter = toAudienceFilter(input.audience);
+    const resolved = await audience.resolveRecipients(userId, filter);
+    if (!resolved.ok) return resolved;
+    return ok({ recipientIds: resolved.value, audience: filter, replyToUserId: null });
+  }
+
   return {
     async submit(userId: string, input: SubmitInput): Promise<Result<SubmittedBlessing>> {
-      const user = await requireUser(userId);
+      await requireUser(userId);
 
       const consent = await deps.repos.consents.latestForVersion(userId, AGREEMENT_VERSION);
       if (!consent) {
         return err(appError('consent_required', 'no consent', '请先同意《用户内容与授权协议》'));
       }
 
-      if (!input.personalization.toName.trim()) {
-        return err(appError('validation_failed', 'toName required', '请填写「给谁」'));
+      if (input.contentType !== 'text') {
+        return err(
+          appError('validation_failed', 'non-text not supported in P1', '语音 / 视频祝福即将支持，先用文字写一段'),
+        );
       }
 
       const len = charCount(input.body);
       if (len < deps.config.bodyMinLen) {
         return err(
-          appError(
-            'validation_failed',
-            'body too short',
-            `再多写一点吧（至少 ${String(deps.config.bodyMinLen)} 字）`,
-          ),
+          appError('validation_failed', 'body too short', `再多写一点吧（至少 ${String(deps.config.bodyMinLen)} 字）`),
         );
       }
       if (len > deps.config.bodyMaxLen) {
         return err(
-          appError(
-            'validation_failed',
-            'body too long',
-            `有点长了，精简到 ${String(deps.config.bodyMaxLen)} 字以内`,
-          ),
+          appError('validation_failed', 'body too long', `有点长了，精简到 ${String(deps.config.bodyMaxLen)} 字以内`),
         );
       }
 
-      const profile = await deps.repos.profiles.get(userId);
-      const personalization: Personalization = { toName: input.personalization.toName.trim() };
-      const fromName =
-        input.personalization.fromName?.trim() || profile?.senderName || user.nickname;
-      if (fromName) personalization.fromName = fromName;
-      const fromCity = input.personalization.fromCity?.trim() || profile?.regionCity || '';
-      if (fromCity) personalization.fromCity = fromCity;
+      const recipients = await resolveRecipients(userId, input);
+      if (!recipients.ok) return recipients;
 
       const now = deps.clock.now().toISOString();
       const draftRecord: BlessingRecord = {
         id: deps.ids.next('bls'),
         authorId: userId,
+        contentType: 'text',
         body: input.body.trim(),
-        personalization,
+        media: null,
         occasion: input.occasion,
+        scope: input.scope,
+        audience: recipients.value.audience,
+        replyToUserId: recipients.value.replyToUserId,
+        recipientIds: recipients.value.recipientIds,
         state: 'draft',
         slug: deps.slugs.next(),
         createdAt: now,
         publishedAt: null,
+        deliveredAt: null,
         expiresAt: null,
         moderation: null,
         renewCount: 0,
@@ -134,12 +183,10 @@ export function createBlessingService(deps: AppDeps) {
       if (!submitted.ok) return submitted;
       await deps.repos.drafts.clear(userId);
 
-      // 同步跑规则审核（对标 architecture D4）。真实云 API 接入后改异步 + 回调，前端已为占位留好位。
-      const moderation = await deps.moderation.check({ text: draftRecord.body, personalization });
+      const moderation = await deps.moderation.check({ text: draftRecord.body, occasion: input.occasion });
       const outcome = outcomeFor(moderation);
 
-      let current = submitted.value;
-      current = { ...current, moderation };
+      let current: BlessingRecord = { ...submitted.value, moderation };
       await deps.repos.blessings.save(current);
 
       if (outcome.trigger === 'auto_violation') {
@@ -178,7 +225,12 @@ export function createBlessingService(deps: AppDeps) {
         });
       }
 
-      return ok({ id: current.id, slug: current.slug, state: current.state });
+      return ok({
+        id: current.id,
+        slug: current.slug,
+        state: current.state,
+        recipientCount: current.recipientIds.length,
+      });
     },
 
     async getPublicPage(slug: string): Promise<PublicPage> {
@@ -189,15 +241,18 @@ export function createBlessingService(deps: AppDeps) {
       if (type !== 'content') {
         return { type, placeholderText: PLACEHOLDER_TEXT[type] };
       }
-      const author = await deps.repos.users.findById(b.authorId);
-      const fromName = b.personalization.fromName ?? author?.nickname ?? '一位朋友';
-      const fromCity = b.personalization.fromCity ?? '';
+      const [author, profile] = await Promise.all([
+        deps.repos.users.findById(b.authorId),
+        deps.repos.profiles.get(b.authorId),
+      ]);
+      const fromName = profile?.senderName ?? author?.nickname ?? '一位朋友';
+      const fromCity = profile?.regionCity ?? '';
       return {
         type: 'content',
         content: {
           body: b.body,
+          contentType: b.contentType,
           fromLine: fromCity ? `来自 ${fromCity} 的 ${fromName}` : `来自 ${fromName}`,
-          toName: b.personalization.toName,
           occasion: b.occasion,
           publishedAt: b.publishedAt ?? b.createdAt,
         },
@@ -213,23 +268,15 @@ export function createBlessingService(deps: AppDeps) {
           slug: b.slug,
           state: b.state,
           occasion: b.occasion,
-          toName: b.personalization.toName,
+          scope: b.scope,
+          recipientCount: b.recipientIds.length,
           bodyPreview: b.body.slice(0, 40),
           renewCount: b.renewCount,
           createdAt: b.createdAt,
         }));
     },
 
-    async inbox(userId: string): Promise<{ items: never[]; note: string }> {
-      await requireUser(userId);
-      return {
-        items: [],
-        note: '你写给别人的祝福通过链接送达；站内收发要等主动赠送和祝福请求上线。',
-      };
-    },
-
-    withdraw: (userId: string, id: string) =>
-      manage(deps, userId, id, 'withdraw', '作者撤回', true),
+    withdraw: (userId: string, id: string) => manage(deps, userId, id, 'withdraw', '作者撤回', true),
     delete: (userId: string, id: string) => manage(deps, userId, id, 'delete', '作者删除', false),
     renew: (userId: string, id: string) => manage(deps, userId, id, 'renew', '作者续期', false),
 
@@ -247,7 +294,7 @@ export function createBlessingService(deps: AppDeps) {
       if (!back.ok) return back;
       const moderation = await deps.moderation.check({
         text: back.value.body,
-        personalization: back.value.personalization,
+        occasion: back.value.occasion,
       });
       const outcome = outcomeFor(moderation);
       let current: BlessingRecord = { ...back.value, moderation };

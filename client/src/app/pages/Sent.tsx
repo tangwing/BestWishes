@@ -4,10 +4,11 @@ import { api, type OutboxItem } from '../../api/client';
 import s from '../app.module.css';
 
 const STATE_LABEL: Record<string, string> = {
-  verifying: '审核中',
+  verifying: '校验中',
   published: '已送达',
   rejected: '未通过',
   taken_down: '已下架',
+  withdrawn: '已撤回',
 };
 
 export function Sent() {
@@ -32,18 +33,18 @@ export function Sent() {
 
   if (!item) return <div className={s.page}>…</div>;
 
-  const shareUrl = `${location.origin}/p/${item.slug}`;
-  const visible = item.state === 'published';
+  const n = item.recipientCount;
+  const target = item.scope === 'reply' ? '对方' : `${n} 位陌生人`;
 
   return (
     <div className={s.page}>
       <h1>已发送 ✓</h1>
       <p className={s.lead}>
-        你的心意正在送往 <b>{item.toName}</b>。
-        {visible
-          ? ' 校验已通过，现在对方打开链接就能看到。'
+        你的心意正在送往 <b>{target}</b>。
+        {item.state === 'published'
+          ? ' 校验已通过，已经进了 TA 们的收件箱。'
           : item.state === 'verifying'
-            ? ' 平台正在做一次内容校验（通常几分钟），通过后对方才会看到。'
+            ? ' 平台正在做一次内容校验（通常几分钟），通过后才会投递并通知对方。'
             : ' 这次没有通过校验。'}
       </p>
 
@@ -54,31 +55,31 @@ export function Sent() {
         <p className={s.blessing} style={{ fontSize: 16 }}>
           {item.bodyPreview}
         </p>
-        <p className={s.meta}>给 {item.toName}</p>
+        <p className={s.meta}>
+          {item.scope === 'reply' ? '回复给一个人' : `群发 · ${n} 人`}
+        </p>
       </div>
 
       <div className={s.card}>
-        <h2>分享这份祝福</h2>
+        <h2>把 BestWishes 讲给朋友</h2>
         <p className={s.hint}>
-          把这个链接发给 TA（微信、短信都行）。对方点开就能看到，不用注册、不用登录。
-        </p>
-        <p className={s.hint} style={{ wordBreak: 'break-all' }}>
-          {shareUrl}
+          这份祝福有一个公开链接，可以转发到微信，让更多人来这里给陌生人写祝福。
+          （祝福本身已经进了收件人的收件箱，不需要靠链接送达。）
         </p>
         <button
           onClick={() => {
-            void navigator.clipboard.writeText(shareUrl);
+            void navigator.clipboard.writeText(`${location.origin}/p/${item.slug}`);
           }}
         >
-          复制链接
+          复制公开链接
         </button>{' '}
         <a href={`/p/${item.slug}`} target="_blank" rel="noreferrer">
-          <button className="ghost">以访客视角打开</button>
+          <button className="ghost">打开看看</button>
         </a>
       </div>
 
       <p>
-        <Link to="/records">去「收发记录」管理</Link> · <Link to="/compose">再写一段</Link>
+        <Link to="/records">去「发出的」管理</Link> · <Link to="/compose">再写一段</Link>
       </p>
     </div>
   );

@@ -133,6 +133,7 @@
   display: flex;
   gap: 6px;
   margin-bottom: 14px;
+  flex-wrap: wrap;
 }
 .tab {
   font-size: 13px;
@@ -146,6 +147,23 @@
   background: #ecefe4;
   color: var(--accent-ink);
   border-color: #d9e0cb;
+}
+.tab.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.badge {
+  display: inline-block;
+  min-width: 16px;
+  padding: 0 4px;
+  margin-left: 4px;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+  border-radius: 999px;
+  background: var(--warn, #b5502f);
+  color: #fff;
 }
 
 .row {

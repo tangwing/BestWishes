@@ -39,9 +39,11 @@ export function Agreement() {
             }}
           />
           <span>
-            <b>送达 / 展示给被分享人</b>（必选）
+            <b>群发 / 送达给符合条件的陌生人</b>（必选）
             <br />
-            <span className={s.hint}>平台获非独占许可，把这份祝福送到你分享的人手里。</span>
+            <span className={s.hint}>
+              平台获非独占许可，把这份祝福投递到你所选范围内陌生人的收件箱，并通知对方。
+            </span>
           </span>
         </label>
         <label style={{ display: 'flex', gap: 8, marginTop: 16 }}>

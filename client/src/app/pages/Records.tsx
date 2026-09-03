@@ -5,7 +5,7 @@ import { useSession } from '../session';
 import s from '../app.module.css';
 
 const STATE_LABEL: Record<string, string> = {
-  verifying: '审核中',
+  verifying: '校验中',
   published: '已送达',
   rejected: '未通过',
   taken_down: '已下架',
@@ -24,9 +24,7 @@ const OCC: Record<string, string> = {
 export function Records() {
   const { user, loading } = useSession();
   const nav = useNavigate();
-  const [tab, setTab] = useState<'sent' | 'received'>('sent');
   const [list, setList] = useState<OutboxItem[]>([]);
-  const [inboxNote, setInboxNote] = useState('');
 
   useEffect(() => {
     if (!loading && !user) nav('/login');
@@ -34,9 +32,6 @@ export function Records() {
 
   const load = useCallback(() => {
     void api.outbox().then(setList);
-    void api.inbox().then((i) => {
-      setInboxNote(i.note);
-    });
   }, []);
   useEffect(load, [load]);
 
@@ -46,111 +41,75 @@ export function Records() {
 
   return (
     <div className={s.page}>
-      <h1>收发记录</h1>
-      <div className={s.tabs}>
-        <span
-          className={`${s.tab} ${tab === 'sent' ? s.on : ''}`}
-          onClick={() => {
-            setTab('sent');
-          }}
-        >
-          送出的
-        </span>
-        <span
-          className={`${s.tab} ${tab === 'received' ? s.on : ''}`}
-          onClick={() => {
-            setTab('received');
-          }}
-        >
-          收到的
-        </span>
-      </div>
+      <h1>发出的祝福</h1>
+      <p className={s.lead}>你群发和回复出去的祝福，以及它们现在的状态。</p>
 
-      {tab === 'received' && (
-        <div className={s.card}>
-          <p className={s.lead}>这里还是空的。</p>
-          <p className={s.hint}>{inboxNote}</p>
-        </div>
-      )}
-
-      {tab === 'sent' && (
-        <div className={s.card}>
-          {list.length === 0 && <p className={s.lead}>还没有写过。</p>}
-          {list.map((b) => (
-            <div className={s.listItem} key={b.id}>
-              <div style={{ flex: 1 }}>
-                <span className={`${s.tag} ${s[b.state] ?? ''}`}>
-                  {STATE_LABEL[b.state] ?? b.state}
-                </span>
-                <span className={s.tag}>{OCC[b.occasion]}</span>
-                <div style={{ fontFamily: 'var(--serif)', fontSize: 15 }}>{b.bodyPreview}</div>
-                <div className={s.meta}>
-                  给 {b.toName} ·{' '}
-                  <a href={`/p/${b.slug}`} target="_blank" rel="noreferrer">
-                    访客视角
-                  </a>
-                  {b.renewCount > 0 && ` · 已续期 ${String(b.renewCount)} 次`}
-                </div>
+      <div className={s.card}>
+        {list.length === 0 && <p className={s.lead}>还没有写过。</p>}
+        {list.map((b) => (
+          <div className={s.listItem} key={b.id}>
+            <div style={{ flex: 1 }}>
+              <span className={`${s.tag} ${s[b.state] ?? ''}`}>
+                {STATE_LABEL[b.state] ?? b.state}
+              </span>
+              <span className={s.tag}>{OCC[b.occasion]}</span>
+              <span className={s.tag}>
+                {b.scope === 'reply' ? '回复' : `群发 ${b.recipientCount} 人`}
+              </span>
+              <div style={{ fontFamily: 'var(--serif)', fontSize: 15 }}>{b.bodyPreview}</div>
+              <div className={s.meta}>
+                <a href={`/p/${b.slug}`} target="_blank" rel="noreferrer">
+                  公开链接
+                </a>
+                {b.renewCount > 0 && ` · 已续期 ${String(b.renewCount)} 次`}
               </div>
-              <div className={s.actions}>
+            </div>
+            <div className={s.actions}>
+              {(b.state === 'published' || b.state === 'verifying') && (
                 <button
                   className="ghost"
                   onClick={() => {
-                    void navigator.clipboard.writeText(`${location.origin}/p/${b.slug}`);
+                    act(api.withdraw(b.id));
                   }}
                 >
-                  复制链接
+                  {b.state === 'verifying' ? '取消' : '撤回'}
                 </button>
-                {(b.state === 'published' || b.state === 'verifying') && (
-                  <button
-                    className="ghost"
-                    onClick={() => {
-                      act(api.withdraw(b.id));
-                    }}
-                  >
-                    {b.state === 'verifying' ? '取消' : '撤回'}
-                  </button>
-                )}
-                {b.state === 'withdrawn' && (
-                  <button
-                    className="ghost"
-                    onClick={() => {
-                      act(api.republish(b.id));
-                    }}
-                  >
-                    重新发布
-                  </button>
-                )}
-                {b.state === 'expired' && (
-                  <button
-                    className="ghost"
-                    onClick={() => {
-                      act(api.renew(b.id));
-                    }}
-                  >
-                    续期
-                  </button>
-                )}
+              )}
+              {b.state === 'withdrawn' && (
                 <button
-                  className="link"
+                  className="ghost"
                   onClick={() => {
-                    if (
-                      confirm(
-                        '删除后不可恢复。已送达的祝福，对方保存的截图 / 转发无法追回。确定删除？',
-                      )
-                    ) {
-                      act(api.remove(b.id));
-                    }
+                    act(api.republish(b.id));
                   }}
                 >
-                  删除
+                  重新发布
                 </button>
-              </div>
+              )}
+              {b.state === 'expired' && (
+                <button
+                  className="ghost"
+                  onClick={() => {
+                    act(api.renew(b.id));
+                  }}
+                >
+                  续期
+                </button>
+              )}
+              <button
+                className="link"
+                onClick={() => {
+                  if (confirm('删除后不可恢复。已送达的祝福，对方收件箱里的那份不受影响。确定删除？')) {
+                    act(api.remove(b.id));
+                  }
+                }}
+              >
+                删除
+              </button>
             </div>
-          ))}
-        </div>
-      )}
-      <p className={s.hint}>撤回 / 删除 / 下架会即时回撤坚持记录；链接过期不回撤。</p>
+          </div>
+        ))}
+      </div>
+      <p className={s.hint}>撤回 / 删除 / 下架会即时回撤回响计数；链接过期不回撤。</p>
     </div>
   );
 }

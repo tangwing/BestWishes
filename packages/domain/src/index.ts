@@ -6,6 +6,7 @@ export * from './config';
 export * from './lifecycle';
 export * from './blessing-transition';
 export * from './visibility';
+export * from './audience';
 export * from './streak';
 export * from './moderation/apply';
 export * from './moderation/ruleBased';

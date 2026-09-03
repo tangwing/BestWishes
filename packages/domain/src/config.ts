@@ -17,6 +17,12 @@ export interface P1Config {
   spotCheckRatio: number;
   /** 撤回 / 过期 / 下架后落地页停止返回正文的时限（秒），仅作说明 */
   publicInvalidationSeconds: number;
+  /** 一次群发允许命中的最大陌生人数。超过则拒绝，要求缩小范围。测试期取小值。 */
+  maxAudienceSize: number;
+  /** 受众半径允许的最大值（公里） */
+  audienceMaxRadiusKm: number;
+  /** 受众半径允许的最小值（公里） */
+  audienceMinRadiusKm: number;
 }
 
 export const DEFAULT_CONFIG: P1Config = {
@@ -28,4 +34,7 @@ export const DEFAULT_CONFIG: P1Config = {
   holdTimeoutHours: 24,
   spotCheckRatio: 0.05,
   publicInvalidationSeconds: 60,
+  maxAudienceSize: 10,
+  audienceMaxRadiusKm: 50,
+  audienceMinRadiusKm: 0.2,
 };

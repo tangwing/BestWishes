@@ -8,11 +8,17 @@ import type {
 } from '../types';
 import type { P1Config } from '../config';
 import { DEFAULT_CONFIG } from '../config';
-import { BANNED, RELIGIOUS_SOLICITATION_GUARD, CONTACT_PATTERNS } from './words';
+import {
+  BANNED,
+  CONTACT_PATTERNS,
+  SOLICITATION_GUARD,
+  isLowEffort,
+  looksGarbled,
+} from './words';
 
 export interface RuleBasedOptions {
   config?: P1Config;
-  /** 宗教敛财护栏命中时是否直接判 violation（默认 suspect） */
+  /** 拉客 / 敛财护栏命中时是否直接判 violation（默认 suspect） */
   guardAsViolation?: boolean;
 }
 
@@ -31,49 +37,42 @@ export class RuleBasedProvider implements ModerationProvider {
   }
 
   checkSync(input: ModerationInput): ModerationResult {
-    const haystack = [
-      input.text,
-      input.personalization.toName,
-      input.personalization.fromName ?? '',
-    ].join('\n');
+    const text = input.text;
 
     const violationCats: ModerationCategory[] = [];
     for (const [cat, words] of Object.entries(BANNED)) {
-      if (words.some((w) => haystack.includes(w))) {
+      if (words.some((w) => text.includes(w))) {
         violationCats.push(cat as ModerationCategory);
       }
     }
+    // 明显无效内容（刷屏 / 空 / 全标点）直接判违规，不占人工队列
+    if (isLowEffort(text)) {
+      violationCats.push('low_effort');
+    }
     if (violationCats.length > 0) {
-      return { verdict: 'violation', categories: violationCats, providerRef: this.name };
+      return { verdict: 'violation', categories: [...new Set(violationCats)], providerRef: this.name };
     }
 
     const suspectCats: ModerationCategory[] = [];
 
-    if (RELIGIOUS_SOLICITATION_GUARD.some((w) => haystack.includes(w))) {
+    if (SOLICITATION_GUARD.some((w) => text.includes(w))) {
       if (this.guardAsViolation) {
-        return {
-          verdict: 'violation',
-          categories: ['religious_solicitation'],
-          providerRef: this.name,
-        };
+        return { verdict: 'violation', categories: ['solicitation'], providerRef: this.name };
       }
-      suspectCats.push('religious_solicitation');
+      suspectCats.push('solicitation');
     }
 
-    if (CONTACT_PATTERNS.some((re) => re.test(haystack))) {
+    if (CONTACT_PATTERNS.some((re) => re.test(text))) {
       suspectCats.push('contact_leak');
     }
 
     // 按码位数，中文一个字算一个（不是 UTF-16 单元）
-    const bodyLen = Array.from(input.text.trim()).length;
+    const bodyLen = Array.from(text.trim()).length;
     if (bodyLen < this.cfg.bodyMinLen || bodyLen > this.cfg.bodyMaxLen) {
-      suspectCats.push('malformed');
+      suspectCats.push('low_effort');
     }
-    // 疑似乱码：可打印字符里 CJK + 字母 + 常见标点占比过低
-    const meaningful = (input.text.match(/[\p{Script=Han}a-zA-Z，。！？、；：（）,.!?]/gu) ?? [])
-      .length;
-    if (bodyLen >= this.cfg.bodyMinLen && meaningful / bodyLen < 0.5) {
-      suspectCats.push('malformed');
+    if (bodyLen >= this.cfg.bodyMinLen && looksGarbled(text)) {
+      suspectCats.push('spam');
     }
 
     if (suspectCats.length > 0) {

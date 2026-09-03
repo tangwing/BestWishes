@@ -11,6 +11,7 @@ import { Agreement } from './app/pages/Agreement';
 import { Compose } from './app/pages/Compose';
 import { Sent } from './app/pages/Sent';
 import { Records } from './app/pages/Records';
+import { Inbox } from './app/pages/Inbox';
 import { Streak } from './app/pages/Streak';
 import { Moderation } from './app/pages/Moderation';
 import { PublicPage } from './app/pages/PublicPage';
@@ -27,6 +28,7 @@ const router = createBrowserRouter([
       { path: 'compose', element: <Compose /> },
       { path: 'sent/:id', element: <Sent /> },
       { path: 'records', element: <Records /> },
+      { path: 'inbox', element: <Inbox /> },
       { path: 'streak', element: <Streak /> },
       { path: 'moderation', element: <Moderation /> },
     ],

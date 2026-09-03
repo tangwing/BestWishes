@@ -1,8 +1,12 @@
 // PostgreSQL 仓储实现（Drizzle + PGlite）。和内存实现是同一组 ports，
 // application 层不感知用的是哪个。祝福事件单独存 blessing_events，读祝福时再拼回 events 数组。
 
-import type { BlessingState } from '@bestwishes/domain';
-import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import {
+  type AudienceCandidate,
+  type BlessingState,
+  type GeoPoint,
+} from '@bestwishes/domain';
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import type { IdGenerator } from '../../ports/ids';
 import type {
   BlessingEventRecord,
@@ -10,6 +14,7 @@ import type {
   ConsentRecord,
   DraftRecord,
   InboxItemRecord,
+  NotificationRecord,
   ProfileRecord,
   ReportRecord,
   TemplateRecord,
@@ -21,6 +26,7 @@ import type {
   ConsentRepository,
   DraftRepository,
   InboxRepository,
+  NotificationRepository,
   ProfileRepository,
   Repositories,
   ReportRepository,
@@ -39,6 +45,7 @@ type UserRow = typeof t.users.$inferSelect;
 type BlessingRow = typeof t.blessings.$inferSelect;
 type EventRow = typeof t.blessingEvents.$inferSelect;
 type ReportRow = typeof t.reports.$inferSelect;
+type ProfileRow = typeof t.userProfiles.$inferSelect;
 
 function toUser(row: UserRow): UserRecord {
   return {
@@ -50,6 +57,22 @@ function toUser(row: UserRow): UserRecord {
     utcOffsetMinutes: row.utcOffsetMinutes,
     source: row.source,
     createdAt: iso(row.createdAt),
+  };
+}
+
+function toProfile(row: ProfileRow): ProfileRecord {
+  return {
+    userId: row.userId,
+    senderName: row.senderName,
+    regionCity: row.regionCity,
+    lat: row.lat,
+    lng: row.lng,
+    gender: row.gender,
+    birthYear: row.birthYear,
+    tags: row.tags,
+    locationGranted: row.locationGranted,
+    featuredByDefault: row.featuredByDefault,
+    updatedAt: iso(row.updatedAt),
   };
 }
 
@@ -70,13 +93,19 @@ function toBlessing(row: BlessingRow, events: BlessingEventRecord[]): BlessingRe
   return {
     id: row.id,
     authorId: row.authorId,
+    contentType: row.contentType,
     body: row.body,
-    personalization: row.personalization,
+    media: row.media,
     occasion: row.occasion as BlessingRecord['occasion'],
+    scope: row.scope,
+    audience: row.audience,
+    replyToUserId: row.replyToUserId,
+    recipientIds: row.recipientIds,
     state: row.state,
     slug: row.publicSlug,
     createdAt: iso(row.createdAt),
     publishedAt: isoOrNull(row.publishedAt),
+    deliveredAt: isoOrNull(row.deliveredAt),
     expiresAt: isoOrNull(row.expiresAt),
     moderation: row.moderation,
     renewCount: row.renewCount,
@@ -90,13 +119,19 @@ function blessingValues(r: BlessingRecord): typeof t.blessings.$inferInsert {
   return {
     id: r.id,
     authorId: r.authorId,
+    contentType: r.contentType,
     body: r.body,
-    personalization: r.personalization,
+    media: r.media,
     occasion: r.occasion,
+    scope: r.scope,
+    audience: r.audience,
+    replyToUserId: r.replyToUserId,
+    recipientIds: r.recipientIds,
     state: r.state,
     publicSlug: r.slug,
     createdAt: new Date(r.createdAt),
     publishedAt: r.publishedAt ? new Date(r.publishedAt) : null,
+    deliveredAt: r.deliveredAt ? new Date(r.deliveredAt) : null,
     expiresAt: r.expiresAt ? new Date(r.expiresAt) : null,
     holdUntil: r.holdUntil ? new Date(r.holdUntil) : null,
     moderation: r.moderation,
@@ -167,7 +202,6 @@ class PgUserRepository implements UserRepository {
       createdAt: new Date(),
     };
     const inserted = await this.db.insert(t.users).values(values).returning();
-    // 极小概率并发插入撞 openid 唯一约束——重查一次。
     const row = inserted[0] ?? (await this.byOpenid(openid));
     if (!row) throw new Error(`建用户失败: ${openid}`);
     return toUser(row);
@@ -183,6 +217,12 @@ class PgUserRepository implements UserRepository {
     const row = rows[0];
     return row ? toUser(row) : null;
   }
+
+  async findManyByIds(ids: string[]): Promise<UserRecord[]> {
+    if (ids.length === 0) return [];
+    const rows = await this.db.select().from(t.users).where(inArray(t.users.id, ids));
+    return rows.map(toUser);
+  }
 }
 
 class PgProfileRepository implements ProfileRepository {
@@ -195,25 +235,19 @@ class PgProfileRepository implements ProfileRepository {
       .where(eq(t.userProfiles.userId, userId))
       .limit(1);
     const row = rows[0];
-    if (!row) return null;
-    return {
-      userId: row.userId,
-      senderName: row.senderName,
-      regionCity: row.regionCity,
-      locationGranted: row.locationGranted,
-      featuredByDefault: row.featuredByDefault,
-      updatedAt: iso(row.updatedAt),
-    };
+    return row ? toProfile(row) : null;
   }
 
-  async upsert(
-    userId: string,
-    patch: Partial<Omit<ProfileRecord, 'userId'>>,
-  ): Promise<ProfileRecord> {
-    const current = (await this.get(userId)) ?? {
+  async upsert(userId: string, patch: Partial<Omit<ProfileRecord, 'userId'>>): Promise<ProfileRecord> {
+    const current: ProfileRecord = (await this.get(userId)) ?? {
       userId,
       senderName: null,
       regionCity: null,
+      lat: null,
+      lng: null,
+      gender: null,
+      birthYear: null,
+      tags: [],
       locationGranted: false,
       featuredByDefault: null,
       updatedAt: new Date().toISOString(),
@@ -228,6 +262,11 @@ class PgProfileRepository implements ProfileRepository {
       userId,
       senderName: next.senderName,
       regionCity: next.regionCity,
+      lat: next.lat,
+      lng: next.lng,
+      gender: next.gender,
+      birthYear: next.birthYear,
+      tags: next.tags,
       locationGranted: next.locationGranted,
       featuredByDefault: next.featuredByDefault,
       updatedAt: new Date(next.updatedAt),
@@ -237,6 +276,37 @@ class PgProfileRepository implements ProfileRepository {
       .values(values)
       .onConflictDoUpdate({ target: t.userProfiles.userId, set: values });
     return next;
+  }
+
+  async listCandidates(): Promise<AudienceCandidate[]> {
+    const rows = await this.db
+      .select({
+        userId: t.userProfiles.userId,
+        nickname: t.users.nickname,
+        senderName: t.userProfiles.senderName,
+        city: t.userProfiles.regionCity,
+        lat: t.userProfiles.lat,
+        lng: t.userProfiles.lng,
+        gender: t.userProfiles.gender,
+        birthYear: t.userProfiles.birthYear,
+        tags: t.userProfiles.tags,
+      })
+      .from(t.userProfiles)
+      .innerJoin(t.users, eq(t.users.id, t.userProfiles.userId))
+      .where(and(isNotNull(t.userProfiles.lat), isNotNull(t.userProfiles.lng)));
+    return rows.map((row): AudienceCandidate => {
+      const point: GeoPoint | null =
+        row.lat !== null && row.lng !== null ? { lat: row.lat, lng: row.lng } : null;
+      return {
+        userId: row.userId,
+        nickname: row.senderName ?? row.nickname,
+        city: row.city,
+        point,
+        gender: row.gender,
+        birthYear: row.birthYear,
+        tags: row.tags,
+      };
+    });
   }
 }
 
@@ -311,8 +381,8 @@ class PgDraftRepository implements DraftRepository {
     return {
       userId: row.userId,
       body: row.body,
-      personalization: row.personalization,
       occasion: row.occasion as DraftRecord['occasion'],
+      audience: row.audience,
       updatedAt: iso(row.updatedAt),
     };
   }
@@ -321,8 +391,8 @@ class PgDraftRepository implements DraftRepository {
     const values: typeof t.blessingDrafts.$inferInsert = {
       userId: record.userId,
       body: record.body,
-      personalization: record.personalization,
       occasion: record.occasion,
+      audience: record.audience,
       updatedAt: new Date(record.updatedAt),
     };
     await this.db
@@ -523,13 +593,15 @@ class PgInboxRepository implements InboxRepository {
     const rows = await this.db
       .select()
       .from(t.inboxItems)
-      .where(eq(t.inboxItems.recipientId, recipientId));
+      .where(eq(t.inboxItems.recipientId, recipientId))
+      .orderBy(desc(t.inboxItems.deliveredAt));
     return rows.map((row) => ({
       id: row.id,
       recipientId: row.recipientId,
       senderId: row.senderId,
       blessingId: row.blessingId,
       deliveredAt: iso(row.deliveredAt),
+      readAt: isoOrNull(row.readAt),
     }));
   }
 
@@ -540,7 +612,63 @@ class PgInboxRepository implements InboxRepository {
       senderId: record.senderId,
       blessingId: record.blessingId,
       deliveredAt: new Date(record.deliveredAt),
+      readAt: record.readAt ? new Date(record.readAt) : null,
     });
+  }
+
+  async markAllRead(recipientId: string): Promise<void> {
+    await this.db
+      .update(t.inboxItems)
+      .set({ readAt: new Date() })
+      .where(and(eq(t.inboxItems.recipientId, recipientId), isNull(t.inboxItems.readAt)));
+  }
+}
+
+class PgNotificationRepository implements NotificationRepository {
+  constructor(private readonly db: Db) {}
+
+  async add(record: NotificationRecord): Promise<void> {
+    await this.db.insert(t.notifications).values({
+      id: record.id,
+      userId: record.userId,
+      kind: record.kind,
+      blessingId: record.blessingId,
+      fromUserId: record.fromUserId,
+      createdAt: new Date(record.createdAt),
+      readAt: record.readAt ? new Date(record.readAt) : null,
+    });
+  }
+
+  async listForUser(userId: string): Promise<NotificationRecord[]> {
+    const rows = await this.db
+      .select()
+      .from(t.notifications)
+      .where(eq(t.notifications.userId, userId))
+      .orderBy(desc(t.notifications.createdAt));
+    return rows.map((row) => ({
+      id: row.id,
+      userId: row.userId,
+      kind: row.kind,
+      blessingId: row.blessingId,
+      fromUserId: row.fromUserId,
+      createdAt: iso(row.createdAt),
+      readAt: isoOrNull(row.readAt),
+    }));
+  }
+
+  async unreadCount(userId: string): Promise<number> {
+    const rows = await this.db
+      .select({ n: count() })
+      .from(t.notifications)
+      .where(and(eq(t.notifications.userId, userId), isNull(t.notifications.readAt)));
+    return rows[0]?.n ?? 0;
+  }
+
+  async markAllRead(userId: string): Promise<void> {
+    await this.db
+      .update(t.notifications)
+      .set({ readAt: new Date() })
+      .where(and(eq(t.notifications.userId, userId), isNull(t.notifications.readAt)));
   }
 }
 
@@ -575,5 +703,6 @@ export function createPgRepositories(db: Db, ids: IdGenerator): Repositories {
     reports: new PgReportRepository(db),
     streaks: new PgStreakRepository(db),
     inbox: new PgInboxRepository(db),
+    notifications: new PgNotificationRepository(db),
   };
 }

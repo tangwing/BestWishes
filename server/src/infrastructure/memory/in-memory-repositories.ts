@@ -1,7 +1,7 @@
 // 内存仓储。开发 / 测试 / 演示用。生产换成 PostgreSQL + Drizzle（同一组 ports）。
 // 读写都 clone，避免调用方拿到内部引用后改坏数据。
 
-import type { BlessingState } from '@bestwishes/domain';
+import type { AudienceCandidate, BlessingState } from '@bestwishes/domain';
 import type { IdGenerator } from '../../ports/ids';
 import type {
   BlessingEventRecord,
@@ -9,6 +9,7 @@ import type {
   ConsentRecord,
   DraftRecord,
   InboxItemRecord,
+  NotificationRecord,
   ProfileRecord,
   ReportRecord,
   TemplateRecord,
@@ -20,6 +21,7 @@ import type {
   ConsentRepository,
   DraftRepository,
   InboxRepository,
+  NotificationRepository,
   ProfileRepository,
   Repositories,
   ReportRepository,
@@ -31,7 +33,7 @@ import type {
 const clone = <T>(v: T): T => structuredClone(v);
 
 class InMemoryUserRepository implements UserRepository {
-  private readonly byId = new Map<string, UserRecord>();
+  readonly byId = new Map<string, UserRecord>();
   private readonly idByOpenid = new Map<string, string>();
   constructor(private readonly ids: IdGenerator) {}
 
@@ -58,10 +60,32 @@ class InMemoryUserRepository implements UserRepository {
     const rec = this.byId.get(id);
     return Promise.resolve(rec ? clone(rec) : null);
   }
+
+  findManyByIds(ids: string[]): Promise<UserRecord[]> {
+    const set = new Set(ids);
+    return Promise.resolve([...this.byId.values()].filter((u) => set.has(u.id)).map(clone));
+  }
+}
+
+function emptyProfile(userId: string): ProfileRecord {
+  return {
+    userId,
+    senderName: null,
+    regionCity: null,
+    lat: null,
+    lng: null,
+    gender: null,
+    birthYear: null,
+    tags: [],
+    locationGranted: false,
+    featuredByDefault: null,
+    updatedAt: new Date().toISOString(),
+  };
 }
 
 class InMemoryProfileRepository implements ProfileRepository {
   private readonly byUser = new Map<string, ProfileRecord>();
+  constructor(private readonly users: InMemoryUserRepository) {}
 
   get(userId: string): Promise<ProfileRecord | null> {
     const rec = this.byUser.get(userId);
@@ -69,14 +93,7 @@ class InMemoryProfileRepository implements ProfileRepository {
   }
 
   upsert(userId: string, patch: Partial<Omit<ProfileRecord, 'userId'>>): Promise<ProfileRecord> {
-    const current: ProfileRecord = this.byUser.get(userId) ?? {
-      userId,
-      senderName: null,
-      regionCity: null,
-      locationGranted: false,
-      featuredByDefault: null,
-      updatedAt: new Date().toISOString(),
-    };
+    const current = this.byUser.get(userId) ?? emptyProfile(userId);
     const next: ProfileRecord = {
       ...current,
       ...patch,
@@ -85,6 +102,24 @@ class InMemoryProfileRepository implements ProfileRepository {
     };
     this.byUser.set(userId, next);
     return Promise.resolve(clone(next));
+  }
+
+  listCandidates(): Promise<AudienceCandidate[]> {
+    const out: AudienceCandidate[] = [];
+    for (const p of this.byUser.values()) {
+      if (p.lat === null || p.lng === null) continue;
+      const user = this.users.byId.get(p.userId);
+      out.push({
+        userId: p.userId,
+        nickname: user?.nickname ?? '一位朋友',
+        city: p.regionCity,
+        point: { lat: p.lat, lng: p.lng },
+        gender: p.gender,
+        birthYear: p.birthYear,
+        tags: [...p.tags],
+      });
+    }
+    return Promise.resolve(out);
   }
 }
 
@@ -204,10 +239,7 @@ class InMemoryReportRepository implements ReportRepository {
     this.byId.set(record.id, clone(record));
     return Promise.resolve();
   }
-  findOpenReportByFingerprint(
-    blessingId: string,
-    fingerprint: string,
-  ): Promise<ReportRecord | null> {
+  findOpenReportByFingerprint(blessingId: string, fingerprint: string): Promise<ReportRecord | null> {
     const rec = [...this.byId.values()].find(
       (r) =>
         r.blessingId === blessingId &&
@@ -250,10 +282,50 @@ class InMemoryStreakRepository implements StreakRepository {
 class InMemoryInboxRepository implements InboxRepository {
   private readonly all: InboxItemRecord[] = [];
   listForRecipient(recipientId: string): Promise<InboxItemRecord[]> {
-    return Promise.resolve(this.all.filter((i) => i.recipientId === recipientId).map(clone));
+    return Promise.resolve(
+      this.all
+        .filter((i) => i.recipientId === recipientId)
+        .sort((a, b) => (a.deliveredAt < b.deliveredAt ? 1 : -1))
+        .map(clone),
+    );
   }
   add(record: InboxItemRecord): Promise<void> {
     this.all.push(clone(record));
+    return Promise.resolve();
+  }
+  markAllRead(recipientId: string): Promise<void> {
+    const at = new Date().toISOString();
+    for (const i of this.all) {
+      if (i.recipientId === recipientId && i.readAt === null) i.readAt = at;
+    }
+    return Promise.resolve();
+  }
+}
+
+class InMemoryNotificationRepository implements NotificationRepository {
+  private readonly all: NotificationRecord[] = [];
+  add(record: NotificationRecord): Promise<void> {
+    this.all.push(clone(record));
+    return Promise.resolve();
+  }
+  listForUser(userId: string): Promise<NotificationRecord[]> {
+    return Promise.resolve(
+      this.all
+        .filter((n) => n.userId === userId)
+        .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+        .map(clone),
+    );
+  }
+  unreadCount(userId: string): Promise<number> {
+    return Promise.resolve(
+      this.all.filter((n) => n.userId === userId && n.readAt === null).length,
+    );
+  }
+  markAllRead(userId: string): Promise<void> {
+    const at = new Date().toISOString();
+    for (const n of this.all) {
+      if (n.userId === userId && n.readAt === null) n.readAt = at;
+    }
     return Promise.resolve();
   }
 }
@@ -264,9 +336,10 @@ export interface InMemoryOptions {
 }
 
 export function createInMemoryRepositories(opts: InMemoryOptions): Repositories {
+  const users = new InMemoryUserRepository(opts.ids);
   return {
-    users: new InMemoryUserRepository(opts.ids),
-    profiles: new InMemoryProfileRepository(),
+    users,
+    profiles: new InMemoryProfileRepository(users),
     consents: new InMemoryConsentRepository(),
     templates: new InMemoryTemplateRepository(opts.templates ?? []),
     drafts: new InMemoryDraftRepository(),
@@ -275,5 +348,6 @@ export function createInMemoryRepositories(opts: InMemoryOptions): Repositories 
     reports: new InMemoryReportRepository(),
     streaks: new InMemoryStreakRepository(),
     inbox: new InMemoryInboxRepository(),
+    notifications: new InMemoryNotificationRepository(),
   };
 }
