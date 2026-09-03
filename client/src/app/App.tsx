@@ -18,7 +18,7 @@ export function App() {
             <>
               <NavLink to="/compose">写祝福</NavLink>
               <NavLink to="/records">收发记录</NavLink>
-              <NavLink to="/streak">坚持</NavLink>
+              <NavLink to="/streak">回响</NavLink>
               <NavLink to="/profile">个人空间</NavLink>
               <NavLink to="/moderation">审核台</NavLink>
               <button

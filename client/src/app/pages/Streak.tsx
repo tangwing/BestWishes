@@ -20,16 +20,20 @@ export function Streak() {
 
   return (
     <div className={s.page}>
-      <h1>坚持</h1>
-      <p className={s.lead}>这里只有你自己看得到。没有排名，没有积分，只是一个安静的记录。</p>
+      <h1>回响</h1>
+      <p className={s.lead}>
+        送人玫瑰，手有余香。你写给别人的每一句祝福，也在你自己心里留下一点什么。
+        这里只有你看得到，没有排名，没有积分。
+      </p>
       <div className={s.card} style={{ textAlign: 'center' }}>
         <div className="breathe" />
-        <div className={s.streakNum}>{v.streak}</div>
-        <div className={s.hint}>连续天数</div>
-        <div className={s.streakNum} style={{ marginTop: 12 }}>
-          {v.total}
-        </div>
-        <div className={s.hint}>累计写下的祝福</div>
+        <div className={s.streakNum}>{v.total}</div>
+        <div className={s.hint}>你送出的心意</div>
+        {v.streak > 0 && (
+          <div className={s.hint} style={{ marginTop: 12 }}>
+            最近 {v.streak} 天，每天都想起了别人
+          </div>
+        )}
       </div>
       {v.byDay.length > 0 && (
         <div className={s.card}>
@@ -41,7 +45,7 @@ export function Streak() {
           ))}
         </div>
       )}
-      <p className={s.hint}>撤回 / 删除 / 下架会即时回撤对应计数。</p>
+      <p className={s.hint}>撤回 / 删除 / 下架会即时回撤对应计数；链接过期不影响。</p>
     </div>
   );
 }

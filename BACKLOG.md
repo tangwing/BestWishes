@@ -27,6 +27,12 @@
 
 ## 待办
 
+### 界面实操验收发现（2026-09-03）
+
+- [x] **B-50 新用户提交祝福走不通（consent gate 失效）** — 从导航「写祝福」直接进 Compose，没被引导去同意协议；提交打 403 `consent_required`，错误只在长表单最底一行小字（`.error`），像"没反应"。根因：Compose 用 `GET /api/agreement/current` 判有没有同意，但该接口永远 200。修：`AgreementView` 加 `alreadyConsented`，Compose 进页即判、未同意跳 `/agreement`；`submit` catch 到 `consent_required` 也跳。api-flow +1 断言、E2E +1「新用户进 /compose → 跳 /agreement」（已验证去掉修复即失败）。
+- [x] **B-51 「坚持」改「回响」** — 页面名 + 导航标签 + 文案改为"送人玫瑰手有余香"的调性，累计数为主、"连续天数"降为一句轻描述。仅改 client 文案，domain `streak` 模块名不动。
+- [x] **B-52 送达页说清收件人怎么看** — `Sent.tsx` 补："把链接发给 TA（微信 / 短信都行），对方点开就能看到，不用注册、不用登录。" P1 没有站内 user→user，收件人只是访客。
+
 ### P1 设计 / spec
 
 - [ ] **B-04b 发心 / 送达文案打磨** — 引导框和送达页的连接感文案已就位，措辞还可以再走一遍（B-04 的框架已落地）。

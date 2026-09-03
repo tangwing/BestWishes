@@ -38,8 +38,8 @@ export function Compose() {
     void api.profile().then((prof) => {
       setP((cur) => ({ ...cur, fromName: prof.senderName, fromCity: prof.regionCity }));
     });
-    void api.agreement().catch((e: unknown) => {
-      if (e instanceof ApiCallError && e.code === 'consent_required') nav('/agreement');
+    void api.agreement().then((a) => {
+      if (!a.alreadyConsented) nav('/agreement');
     });
   }, [user, nav]);
 
@@ -55,6 +55,10 @@ export function Compose() {
         nav(`/sent/${r.id}`);
       })
       .catch((e: unknown) => {
+        if (e instanceof ApiCallError && e.code === 'consent_required') {
+          nav('/agreement');
+          return;
+        }
         setErr(e instanceof ApiCallError ? e.message : '出错了');
       })
       .finally(() => {

@@ -47,6 +47,7 @@ export interface ProfileView {
 export interface AgreementView {
   version: string;
   featuredDefaultChecked: boolean;
+  alreadyConsented: boolean;
 }
 export interface Template {
   id: string;

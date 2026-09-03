@@ -3,6 +3,13 @@ import { agree, compose, GOOD_BODY, login, shareSlug } from './support';
 
 test.use({ permissions: ['clipboard-read', 'clipboard-write'] });
 
+test('新用户没同意协议就进写祝福 → 被引导去协议页', async ({ page }) => {
+  await login(page, '新来的');
+  await page.goto('/compose');
+  await page.waitForURL('**/agreement');
+  await expect(page.getByRole('heading', { name: '《用户内容与授权协议》' })).toBeVisible();
+});
+
 test('作者写祝福 → 校验通过送达 → 访客看到正文 → 撤回后访客看到占位', async ({ page, browser }) => {
   await login(page, '小林');
 

@@ -92,6 +92,39 @@ describe('HTTP 端到端：核心流程', () => {
     await ctx.server.close();
   });
 
+  it('协议接口回报是否已同意：同意前 false，同意后 true', async () => {
+    const ctx = await makeServer();
+    const login = await ctx.server.inject({
+      method: 'POST',
+      url: '/api/auth/stub-login',
+      payload: { nickname: '待同意' },
+    });
+    const c = login.cookies.find((x) => x.name === 'bw_uid');
+    const auth = { cookie: `bw_uid=${c?.value ?? ''}` };
+
+    const before = await ctx.server.inject({
+      method: 'GET',
+      url: '/api/agreement/current',
+      headers: auth,
+    });
+    expect(before.json<{ alreadyConsented: boolean }>().alreadyConsented).toBe(false);
+
+    await ctx.server.inject({
+      method: 'POST',
+      url: '/api/consents',
+      headers: auth,
+      payload: { scopeDeliver: true, scopeFeatured: false, scopeSynthesis: false },
+    });
+
+    const after = await ctx.server.inject({
+      method: 'GET',
+      url: '/api/agreement/current',
+      headers: auth,
+    });
+    expect(after.json<{ alreadyConsented: boolean }>().alreadyConsented).toBe(true);
+    await ctx.server.close();
+  });
+
   it('缺协议 → 提交 403 consent_required', async () => {
     const ctx = await makeServer();
     const login = await ctx.server.inject({

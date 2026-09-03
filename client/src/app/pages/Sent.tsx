@@ -59,6 +59,9 @@ export function Sent() {
 
       <div className={s.card}>
         <h2>分享这份祝福</h2>
+        <p className={s.hint}>
+          把这个链接发给 TA（微信、短信都行）。对方点开就能看到，不用注册、不用登录。
+        </p>
         <p className={s.hint} style={{ wordBreak: 'break-all' }}>
           {shareUrl}
         </p>

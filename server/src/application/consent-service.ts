@@ -5,6 +5,8 @@ export interface AgreementView {
   version: string;
   /** 「精选展示」这一项的默认勾选状态：用户个人偏好优先，否则系统默认 */
   featuredDefaultChecked: boolean;
+  /** 用户是否已经对当前版本协议留过同意记录（前端据此决定要不要先走协议页） */
+  alreadyConsented: boolean;
 }
 
 export interface RecordConsentInput {
@@ -16,10 +18,14 @@ export interface RecordConsentInput {
 export function createConsentService(deps: AppDeps) {
   return {
     async agreement(userId: string): Promise<AgreementView> {
-      const profile = await deps.repos.profiles.get(userId);
+      const [profile, consent] = await Promise.all([
+        deps.repos.profiles.get(userId),
+        deps.repos.consents.latestForVersion(userId, AGREEMENT_VERSION),
+      ]);
       return {
         version: AGREEMENT_VERSION,
         featuredDefaultChecked: profile?.featuredByDefault ?? deps.config.featuredDefaultOn,
+        alreadyConsented: consent !== null,
       };
     },
 
