@@ -30,10 +30,21 @@ export function Inbox() {
 
   useEffect(() => {
     if (!user) return;
-    void api.inbox().then(setItems);
     // 进收件箱即把通知标记为已读
     void api.markNotificationsRead();
     void api.markInboxRead();
+    let active = true;
+    const tick = () => {
+      void api.inbox().then((list) => {
+        if (active) setItems(list);
+      });
+    };
+    tick();
+    const h = setInterval(tick, 3000);
+    return () => {
+      active = false;
+      clearInterval(h);
+    };
   }, [user]);
 
   return (

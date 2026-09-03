@@ -120,6 +120,7 @@ export function Profile() {
             <input
               type="number"
               step="0.00001"
+              aria-label="纬度"
               value={p.lat ?? ''}
               onChange={(e) => {
                 setP({ ...p, lat: e.target.value === '' ? null : Number(e.target.value) });
@@ -134,6 +135,7 @@ export function Profile() {
             <input
               type="number"
               step="0.00001"
+              aria-label="经度"
               value={p.lng ?? ''}
               onChange={(e) => {
                 setP({ ...p, lng: e.target.value === '' ? null : Number(e.target.value) });
