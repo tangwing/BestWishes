@@ -17,15 +17,13 @@
 - **技术栈**（已定，ADR 0003）：Web-first PWA（React+TS+Vite / CSS Modules）+ Node+TS（Fastify）+ PostgreSQL（Drizzle）+ pnpm monorepo，领域逻辑在 `packages/domain`。
 - **关键文档**：[docs/product/vision.md](docs/product/vision.md) · [docs/product/use-cases.md](docs/product/use-cases.md) · [docs/architecture/p1-architecture.md](docs/architecture/p1-architecture.md) · [docs/engineering/coding-standards.md](docs/engineering/coding-standards.md) · [openspec/changes/add-p1-text-blessing/](openspec/changes/add-p1-text-blessing/) · 走查原型 [prototype/](prototype/)（`npm run verify`）· 界面画布见 PROMPT_LOG 最新条目的链接。
 - **工作方式**：用户按点评提改动 → 记进本文件 → 持续完成。条件允许时派多 Agent 并行。每轮结束自动 commit + push（`.claude/hooks/auto-commit-push.sh`）。
-- **下一步**：等用户回来验收 PG 数据层 + E2E；决定真实微信授权 / 审核 API 的时机。
+- **下一步**：等用户回来验收 PG 数据层 + E2E；决定真实微信授权 / 审核 API 的时机、是否 `/opsx:archive` 归档 change、是否删 `prototype/`。验收状态文档已对齐 monorepo（[docs/product/p1-acceptance-status.md](docs/product/p1-acceptance-status.md)，B-31）。
 
 ---
 
 ## 刚完成（下轮挪进 CHANGELOG）
 
-- [x] **B-09 界面稿第二轮评审** — 画布 v2 用户确认通过（2026-09-02）。
-- [x] **B-24 PostgreSQL / Drizzle 数据层** — PGlite（WASM Postgres）+ Drizzle schema/迁移 + 全 10 仓储 PG 实现（同 ports）+ 5 个进程内集成测试；`BW_DB` env 选内存 / pglite，内存仍默认。
-- [x] **B-30 Playwright E2E** — 独立 `e2e/`，系统 Chrome，6 个测试（author-flow / moderation / visitor / smoke）；`pnpm test:e2e`。
+- [x] **B-31 更新 p1-acceptance-status.md** — 从对照 `prototype/` 改为对照生产 monorepo：逐用例证据指向 `packages/domain` / `server/` / `client/` / `e2e/` 的真实文件与测试，新增「数据层 / 部署」一节，「待你拍板」更新为当前状态（ADR 0003 已定、openspec 待归档、微信 / 审核 API 接入时机、prototype 移除）。
 
 ## 待办
 
@@ -48,7 +46,6 @@
 - [ ] **B-27 微信 H5 适配 + PWA** — JS-SDK 分享、`manifest.json`、Service Worker。
 - [ ] **B-28 生产静态托管** — `@fastify/static` 服务 `client/dist` + SPA fallback，让单进程也能跑；或分开部署（ADR 0003 D12 推迟项）。B-28 单进程托管已在 iter 6 落地，剩分开部署方案待定。
 - [ ] **B-29 移除 `prototype/`** — monorepo 已功能对齐；确认后删。
-- [ ] **B-31 更新 p1-acceptance-status.md** — 现在对照的是 prototype，改成对照 monorepo。
 - [ ] **B-32 E2E 进 CI** — CI 用较新系统装 `playwright install chromium` + 去掉 `channel: 'chrome'`；`e2e/` 依赖单独缓存。
 
 ### 待澄清 / 需用户或法务

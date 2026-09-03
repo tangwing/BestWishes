@@ -142,3 +142,11 @@
 5. **未做**（用户明确推迟）：真实微信网页授权、真实内容审核 API。
 
 **产物**：`pnpm verify` 绿，**124 测试**（+5 PG 集成）。E2E `cd e2e && npm test` 绿（6 个，真浏览器）。`BW_DB=pglite` 起服务已冒烟验证（迁移 + 范本 seed + 请求）。
+
+## 2026-09-03
+
+### 上下文丢失后恢复：check 进度并推进
+
+> 现在上下文已经丢失，请你 check 当前的进度并继续推进。
+
+**结果**：确认上一轮工作（B-24 PG 数据层 + B-30 E2E + B-09）已由 Stop hook 提交推送（`99f52db`），工作树干净，`pnpm verify` 绿（124 测试）。推进 B-31——把 `docs/product/p1-acceptance-status.md` 从对照 `prototype/` 改为对照生产 monorepo（逐用例证据指向真实文件 / 测试，新增数据层 / 部署一节，刷新「待你拍板」）。a/b/c/d 方向选项（真实微信授权 / 真实审核 API / 界面迭代 / `/opsx:archive` 归档 / 删 `prototype/`）仍等用户定。
