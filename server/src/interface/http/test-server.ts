@@ -5,7 +5,7 @@ import type { Env } from '../../config/env';
 import { makeApp } from '../../application/test-harness';
 import { buildServer } from './server';
 
-const testEnv: Env = { NODE_ENV: 'test', PORT: 0, HOST: '127.0.0.1' };
+const testEnv: Env = { NODE_ENV: 'test', PORT: 0, HOST: '127.0.0.1', BW_DB: 'memory' };
 
 export async function makeServer(opts?: Parameters<typeof makeApp>[0]) {
   const ctx = makeApp(opts);

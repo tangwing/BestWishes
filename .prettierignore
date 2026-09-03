@@ -4,9 +4,12 @@
 **/node_modules/
 pnpm-lock.yaml
 **/package-lock.json
+server/drizzle/
 
-# 走查原型（独立管理）
+# 走查原型 / 端到端（独立管理）
 prototype/
+e2e/test-results/
+e2e/playwright-report/
 
 # 文档、规范、设计稿——手写的，不交给 prettier 重排
 **/*.md

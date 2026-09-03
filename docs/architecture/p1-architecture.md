@@ -130,6 +130,11 @@ P1 的"近实时"实现：`submit` 请求内同步调用 RuleBasedProvider（本
 
 ## 7. 数据模型（P1，PostgreSQL）
 
+> 落地：Drizzle schema `server/src/infrastructure/db/schema.ts`，迁移在 `server/drizzle/`。
+> 开发 / 测试 / 演示跑在 PGlite（Postgres 编译成 WASM，进程内），生产换独立 Postgres 只需换
+> `drizzle-orm` 驱动一层。`blessing_events` 单独一表，读祝福时拼回 `events` 数组。
+> `users` 多一列 `utc_offset_minutes`（坚持记录按作者地区切自然日）。
+
 ```
 users
   id, wx_openid (uniq), wx_unionid (nullable), nickname, avatar_url,

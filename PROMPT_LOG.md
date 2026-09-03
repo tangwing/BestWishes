@@ -120,3 +120,25 @@
 **产物**：`pnpm demo` 单进程跑通 登录→个人空间→协议→撰写→已发送→hold→发布→访客看正文→撤回→占位→坚持记录回撤。**119 测试全绿**，`pnpm verify`（typecheck + depcruise 0 违规 + 测试 + build + eslint + prettier）绿，openspec `validate --strict` 通过。工程规范补 `explicit-function-return-type` / `noUncheckedIndexedAccess` 等在各层的分级校准（严在内层，松在 UI 胶水层），均写进 eslint.config.js 注释。
 
 **待用户定下一步**：真实依赖（PG / 微信授权 / 审核 API）、Playwright E2E（B-30）、界面第二轮评审（B-09）、或 `/opsx:archive` 归档开 P2。
+
+### 夜间无人值守：画布 v2 通过 + PostgreSQL 数据层 + Playwright E2E
+
+> V2 已看，通过（B-09）。B-24（PG/Drizzle）和 B-30（Playwright）"你自己装就行了"。真实授权晚一些。干完能干的就待机。
+
+**结果**：
+
+1. **B-09**：画布 v2 用户确认通过。
+2. **B-24 PostgreSQL / Drizzle 数据层**：本机 Homebrew 装不了 Postgres（`openssl@3: unknown keyword :overwrite`），改用 **PGlite**（Postgres 编译成 WASM，进程内跑，无需本机装）——是真 Postgres、跑真 SQL。
+   - `server/src/infrastructure/db/`：`schema.ts`（10 表 Drizzle schema，约束落库、事件单独存 `blessing_events`）、`client.ts`（`createDb` / `migrateToLatest`）、`migrate.ts`（`db:migrate` 脚本）。`drizzle.config.ts` + `server/drizzle/0000_init.sql`（`db:generate` 生成）。
+   - `server/src/infrastructure/pg/pg-repositories.ts`：全部 10 个仓储接口的 PG 实现，和内存实现同一组 ports；读祝福时从 `blessing_events` 子表拼回 `events` 数组；`streak_days` 用事务整体替换。
+   - `env.ts` 加 `BW_DB`（`memory` 默认 / `pglite`）+ `BW_PGDATA`（落盘目录，不设即纯内存）。`main.ts` 按 env 选数据层，内存仍是默认（demo 不受影响）。
+   - `pg-repositories.test.ts`：整套 application 跑在 PGlite 上，走和 `api-flow` 相同的核心场景（提交→hold→发布→访客、撤回回撤、缺协议、护栏词→队列→通过）。5 个测试，**全程进程内、CI 可跑，无需外部服务**。
+   - 生产换独立 Postgres = 换 `drizzle-orm/postgres-js` 驱动一层的事，schema / 仓储 / 迁移不动。
+3. **B-30 Playwright E2E**：独立 `e2e/`（自己的 npm，不进 workspace）。本机是 macOS 12，新版 Playwright 不再提供 chromium 构建——改用 **系统安装的 Chrome**（`channel: 'chrome'`）。
+   - `playwright.config.ts`：`webServer` 自动构建 client + 起 server（内存、`BW_HOLD_SECONDS=1`），端口 3100。
+   - `tests/`：`author-flow`（登录→个人空间→协议→写祝福[范本禁粘贴、正文自录]→已发送→hold 后自动发布→访客看正文→撤回→访客看占位）、`moderation`（护栏词停校验→审核台通过→送达；高危举报即时下架→审核台驳回→恢复）、`visitor`（未知链接占位、访客页免登录）、`smoke`。**6 个测试全绿**。
+   - `pnpm test:e2e` = `cd e2e && npm test`。不进 `pnpm verify`（要浏览器 + 构建，单独跑）。
+4. **本机限制记录**（写进 BACKLOG「本机限制」）：Homebrew 坏、无法装原生 Postgres → 用 PGlite；macOS 12 → Playwright 用系统 Chrome。CI 用较新系统可换回自带 chromium。
+5. **未做**（用户明确推迟）：真实微信网页授权、真实内容审核 API。
+
+**产物**：`pnpm verify` 绿，**124 测试**（+5 PG 集成）。E2E `cd e2e && npm test` 绿（6 个，真浏览器）。`BW_DB=pglite` 起服务已冒烟验证（迁移 + 范本 seed + 请求）。

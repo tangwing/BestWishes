@@ -1,24 +1,41 @@
 // 组合根：装配依赖、启动、跑扫描任务。这是唯一 new 具体实现的地方。
 
 import { RuleBasedProvider } from '@bestwishes/domain';
-import { loadEnv } from './config/env';
+import { loadEnv, type Env } from './config/env';
 import { loadP1Config } from './config/app-config';
 import { createApplication } from './application';
 import { SystemClock } from './infrastructure/system-clock';
 import { RandomIdGenerator, RandomSlugGenerator } from './infrastructure/ids';
 import { createInMemoryRepositories } from './infrastructure/memory/in-memory-repositories';
+import { createDb, migrateToLatest } from './infrastructure/db/client';
+import { createPgRepositories, seedPgTemplates } from './infrastructure/pg/pg-repositories';
 import { seedTemplates } from './infrastructure/templates-seed';
+import type { Repositories } from './ports/repositories';
 import { buildServer } from './interface/http/server';
+
+async function buildRepos(env: Env): Promise<{ repos: Repositories; close: () => Promise<void> }> {
+  const templates = seedTemplates();
+  const ids = new RandomIdGenerator();
+
+  if (env.BW_DB === 'pglite') {
+    const handle = createDb(env.BW_PGDATA);
+    await migrateToLatest(handle.db);
+    await seedPgTemplates(handle.db, templates);
+    return { repos: createPgRepositories(handle.db, ids), close: handle.close };
+  }
+
+  return {
+    repos: createInMemoryRepositories({ ids, templates }),
+    close: () => Promise.resolve(),
+  };
+}
 
 async function main(): Promise<void> {
   const env = loadEnv();
   const config = loadP1Config();
   const clock = new SystemClock();
 
-  const repos = createInMemoryRepositories({
-    ids: new RandomIdGenerator(),
-    templates: seedTemplates(),
-  });
+  const { repos, close } = await buildRepos(env);
 
   const application = createApplication({
     repos,
@@ -38,6 +55,7 @@ async function main(): Promise<void> {
   scanTimer.unref();
 
   const app = await buildServer({ clock, env, application });
+  app.addHook('onClose', () => close());
   await app.listen({ port: env.PORT, host: env.HOST });
 }
 

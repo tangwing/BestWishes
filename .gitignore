@@ -19,3 +19,7 @@ node_modules/
 dist/
 build/
 *.tsbuildinfo
+
+# 本地 PGlite 落盘目录
+.pgdata/
+*.pgdata/

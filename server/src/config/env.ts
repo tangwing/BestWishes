@@ -6,6 +6,10 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
   HOST: z.string().default('127.0.0.1'),
+  // 数据层：memory = 进程内存（默认，重启即清空）；pglite = WASM Postgres，跑真实 SQL。
+  BW_DB: z.enum(['memory', 'pglite']).default('memory'),
+  // pglite 落盘目录。不设则纯内存。
+  BW_PGDATA: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

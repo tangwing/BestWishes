@@ -13,6 +13,7 @@ export default tseslint.config(
       '**/build/**',
       '**/node_modules/**',
       'prototype/**',
+      'e2e/**',
       'docs/**',
       '**/*.dc.html',
     ],

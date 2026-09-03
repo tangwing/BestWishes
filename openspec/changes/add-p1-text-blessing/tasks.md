@@ -26,10 +26,10 @@
 
 ## 4. 数据层
 
-- [ ] 4.1 PostgreSQL 迁移脚本（Drizzle）—— **推迟到 B-24**（本机无 psql；开发用内存实现）
+- [x] 4.1 PostgreSQL 迁移脚本（Drizzle）—— `drizzle.config.ts` + `server/drizzle/0000_init.sql`（`db:generate` 生成，`db:migrate` 应用）
 - [x] 4.2a `ports/repositories.ts` 定义全部仓储接口 + `Repositories` 聚合；`ports/records.ts` 记录类型；`ports/ids.ts`（IdGenerator / SlugGenerator）
 - [x] 4.2b `infrastructure/memory/` 内存实现（openid 幂等、slug 唯一、读写 clone、工单优先级排序）+ 测试
-- [ ] 4.2c PG 实现（Drizzle）+ testcontainers 集成测试 —— B-24
+- [x] 4.2c PG 实现（Drizzle）+ 集成测试 —— `infrastructure/pg/pg-repositories.ts` 全 10 仓储；`pg-repositories.test.ts` 整套 application 跑在 PGlite 上（5 场景，进程内）；`BW_DB` env 选内存 / pglite
 - [x] 4.3 范本库 seed（`infrastructure/templates-seed.ts`，18 条，每类≥3）+ 护栏词校验；API 测试断言 ≥18 条
 
 ## 5. application 层用例 + 后端 API
@@ -73,5 +73,5 @@
 - [x] 7.3 同上：链接到期 → expired 占位 → 作者续期 → 恢复可见（不重新审核、不加计数）
 - [x] 7.x 单进程 Demo（`pnpm demo`，`@fastify/static` 托管 client/dist + SPA fallback）；`docs/DEMO.md` 走查稿；README「跑 Demo」
 - [ ] 7.4 逐条核对 [use-cases.md](../../../docs/product/use-cases.md) 的 P1 验收标准 —— 更新 [docs/product/p1-acceptance-status.md](../../../docs/product/p1-acceptance-status.md) 为 monorepo 版
-- [ ] 7.5 Playwright E2E（真浏览器点一遍）—— BACKLOG B-30（需要浏览器下载）
+- [x] 7.5 Playwright E2E（真浏览器点一遍）—— `e2e/`，系统 Chrome，6 个测试（author-flow / moderation / visitor / smoke）
 - [x] 7.6 `openspec validate add-p1-text-blessing --strict` 通过；PROMPT_LOG.md、CHANGELOG.md 更新

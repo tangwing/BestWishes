@@ -14,7 +14,7 @@
     "test:arch": "depcruise packages server client --config .dependency-cruiser.cjs && vitest run --project arch",
     "test:unit": "vitest run --project domain --project shared",
     "test:integration": "vitest run --project server",
-    "test:e2e": "echo 'e2e: 待 client/server 就绪后接入 Playwright' ",
+    "test:e2e": "cd e2e && npm test",
     "test": "vitest run",
     "build": "pnpm -r build",
     "dev": "pnpm --parallel -r --if-present dev",
