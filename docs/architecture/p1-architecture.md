@@ -1,47 +1,57 @@
-# P1 架构设计（文本静心祝福）
+# P1 架构设计（陌生人祝福 · 按条件群发）
 
-> 状态：v0 草稿，2026-09-02。依据 [use-cases.md](../product/use-cases.md)、[ADR 0003](../adr/0003-p1-tech-stack-web-first.md)（Proposed）、[调研报告](../research/2026-09-01-funds-ai-licensing.md)。
-> 待用户验收；ADR 0003 若调整，本文件同步。
+> 状态：v1，2026-09-04（按 [ADR 0004](../adr/0004-p1-stranger-broadcast-model.md) 重写）。依据 [use-cases.md](../product/use-cases.md)、[ADR 0003](../adr/0003-p1-tech-stack-web-first.md)、[ADR 0004](../adr/0004-p1-stranger-broadcast-model.md)。
 
 ## 1. 范围
 
-只覆盖 P1：微信登录、授权协议、范本库、撰写文本祝福（含个性化信息）、草稿、自动内容合规检查、"发布即校验、延迟送达"、可分享卡片/落地页、访客免注册查看、作者管理（撤回/删除/续期）、坚持记录、举报、审核队列。
+只覆盖 P1：微信登录、个人画像（位置 / 性别 / 出生年 / 标签）、授权协议、范本库、撰写文本祝福、草稿、**受众筛选 + 预览**、**按条件群发**（人数上限约束）、自动内容合规检查、"发布即校验、延迟送达"、**收件箱 + 站内通知**、**回一段祝福**、公开链接（传播用）+ 访客查看、发件箱管理（撤回 / 重发 / 删除 / 续期）、回响（原坚持记录）、举报、审核队列。
 
-**不在 P1**：音视频、AI 用心评估、祝福请求/匹配/推荐、悬赏与资金、站内收件箱与 user→user 定向发送、合成视频、原生 App。
+**不在 P1**：语音 / 视频祝福（`contentType` 留白）、AI 用心评估、祝福请求 / 匹配 / 推荐、悬赏与资金、逆地理编码、真实推送通道、合成视频、原生 App、距离查询的空间索引。
 
 ## 2. 组件视图
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  Web 前端 (React + TS + Vite, PWA)                        │
-│  - 作者端：登录 → 协议 → 范本 → 撰写 → 校验中 → 分享     │
-│  - 访客端：祝福落地页（按状态渲染）+ 举报                │
-│  - 审核后台（P1 用最简页面，可后续独立）                │
+│  - 发送者：登录 → 画像(位置/标签) → 协议 → 撰写 →         │
+│            受众筛选 + 预览 → 群发 → 校验中                │
+│  - 收件人：收件箱（按状态渲染）+ 通知徽标 + 回一段祝福   │
+│  - 访客：公开链接落地页（传播用）+ 举报                  │
+│  - 审核台（P1 用最简页面）                               │
 └───────────────┬─────────────────────────────────────────┘
                 │ HTTP/JSON
 ┌───────────────┴─────────────────────────────────────────┐
-│  后端 API (Node + TS)                                     │
-│  ┌───────────────┐  ┌──────────────┐  ┌───────────────┐  │
-│  │ auth          │  │ blessing     │  │ moderation    │  │
-│  │ (微信 OAuth)  │  │ (领域核心)   │  │ (队列/复核)   │  │
-│  └───────────────┘  └──────┬───────┘  └───────┬───────┘  │
-│  ┌───────────────┐         │                  │          │
-│  │ consent       │   ┌─────┴──────────────────┴──────┐   │
-│  │ (协议同意)    │   │ ModerationProvider (接口)     │   │
-│  └───────────────┘   │  - RuleBasedProvider (P1)     │   │
-│  ┌───────────────┐   │  - CloudProvider (后续)       │   │
-│  │ streak        │   └──────────────────────────────┘   │
-│  │ (坚持记录)    │                                        │
-│  └───────────────┘                                        │
+│  后端 API (Node + TS + Fastify)  —— 分层 interface/       │
+│  application/infrastructure/ports                         │
+│  ┌────────┐ ┌──────────┐ ┌──────────┐ ┌───────────────┐  │
+│  │ auth   │ │ profile  │ │ audience │ │ blessing      │  │
+│  │        │ │(画像)    │ │(受众解析)│ │(状态机 + 提交)│  │
+│  └────────┘ └──────────┘ └────┬─────┘ └──────┬────────┘  │
+│  ┌────────┐ ┌──────────┐      │              │           │
+│  │consent │ │ inbox    │      │   ┌──────────┴────────┐  │
+│  │        │ │notif.    │      │   │ 投递扇出 (deliver) │  │
+│  └────────┘ └──────────┘      │   │ 到 published 时触发│  │
+│  ┌────────┐ ┌──────────┐      │   │ 幂等: deliveredAt  │  │
+│  │streak  │ │moderation│  ┌───┴───┴───────────────────┐ │
+│  │(回响)  │ │(队列)    │  │ ModerationProvider (接口)  │ │
+│  └────────┘ └──────────┘  │  RuleBased(P1) / Cloud(后) │ │
+│                           │ AudienceMatch: haversine   │ │
+│                           │  (packages/domain)         │ │
+│                           └────────────────────────────┘ │
 └───────────────┬─────────────────────────────────────────┘
                 │
-┌───────────────┴───────────┐   ┌─────────────────────────┐
-│  PostgreSQL               │   │  定时任务 (延迟送达/过期) │
-│  users / blessings /      │   │  - 自动通过后置发布      │
-│  consents / reports /     │   │  - 到期转 expired        │
-│  streak_days / templates  │   │  - hold 超时升级        │
-└───────────────────────────┘   └─────────────────────────┘
+┌───────────────┴───────────────┐  ┌────────────────────────┐
+│  PostgreSQL (Drizzle / PGlite) │  │ 定时任务               │
+│  users / user_profiles /       │  │ - hold 到点发布 + 扇出 │
+│  blessings / blessing_events / │  │ - 到期转 expired       │
+│  consents / reports /          │  │ - hold 超时升级        │
+│  streak_days / inbox_items /   │  └────────────────────────┘
+│  notifications / templates     │
+└────────────────────────────────┘
 ```
+
+受众距离筛选 P1 用**全表扫描 + haversine**（`packages/domain/src/audience.ts`），用户量小足够；
+有真实负载后再上 bounding-box 预筛 / PostGIS / 分片。
 
 ## 3. 领域核心：祝福状态机
 
@@ -84,21 +94,35 @@ taken_down ──appeal_success──▶ published
 
 状态机实现为纯函数模块 `blessing/lifecycle`，不依赖框架、不做 IO，便于单测与跨端复用（ADR 0003 §Consequences）。
 
-## 4. "发布即校验、延迟送达"
+## 4. 受众解析与群发
 
-1. 作者 `submit` → 创建 Blessing（`verifying`）、生成公开短链、清理对应草稿。作者端立即"已发送"。
-2. 同步或近实时调用 `ModerationProvider.check(text, personalization)`：
-   - `pass` → `verifying → published`（`publishedAt = now`，链接有效期 = `publishedAt + TTL`）。
-   - `suspect` → 停留 `verifying`，建 `review` 工单进队列（优先级：疑似）。
-   - `violation` → `verifying → rejected`，记录命中大类。
-3. 访客在校验期访问链接 → 落地页渲染"准备中"占位。
-4. `hold_timeout`（默认 24h，可配）仍无结论 → 升级 + 通知作者，状态不变。
-5. 人工复核结论 → `review_pass` / `review_reject`（见 §6）。
-6. 作者可在校验期 `withdraw`（取消）→ `withdrawn`，同时清除待发布定时与关联的自动疑似工单。
+1. 发送者在撰写页设 `AudienceFilter { radiusKm, ageMin, ageMax, gender, tags }`。
+2. `POST /api/audience/preview`：以发送者经纬度为圆心，对**所有设了经纬度的用户画像**跑
+   `resolveAudience`（`packages/domain/src/audience.ts`：haversine 距离 + 年龄 + 性别 + 标签"命中任一"），
+   排除自己，按距离升序。返回 `{ count, cap, canSend, sample[] }`。
+3. `POST /api/blessings`（`scope=broadcast`）：重跑解析 →
+   - 命中 0 → `audience_empty`；命中 > `cap`（`maxAudienceSize`，默认 10）→ `audience_too_large`；
+   - 否则把命中的 userId 列表**定格**写进 `blessings.recipient_ids`（快照）。
+4. `scope=reply`：忽略筛选，`recipient_ids = [replyToUserId]`，`audience` 存一个退化值。
 
-P1 的"近实时"实现：`submit` 请求内同步调用 RuleBasedProvider（本地、毫秒级）即可给出 `pass/suspect/violation`；真实云 API 接入后改为异步 + 回调，落地页的"准备中"占位已经为异步留好了位。
+## 4b. "发布即校验、延迟送达" + 投递扇出
 
-## 5. 坚持记录（streak）
+1. `submit` → 创建 Blessing（`verifying`）、生成公开 slug、清草稿。发送者端立即"已发送"。
+2. 同步调用 `ModerationProvider.check({ text })`：
+   - `pass` → 设 `hold_until = now + holdSeconds`，停留 `verifying`。
+   - `suspect` → 停留 `verifying`，建 `auto_suspect` 工单进队列。
+   - `violation` → `verifying → rejected`。
+   - `unavailable` → 保守：维持 hold + 进队列。
+3. 定时任务 `publishReady`：`hold_until` 到点且无 open 工单的 `verifying` → `auto_pass → published`。
+4. **投递扇出**：任何转移使祝福**首次**进入 `published` 时（`transitionAndPersist` 内），对
+   `recipient_ids` 每人建一条 `inbox_items` + 一条 `notifications`，然后置 `delivered_at`。
+   `delivered_at` 作幂等标记——`taken_down → published`（申诉恢复）不重复投递。
+5. `hold_timeout`（默认 24h）仍无结论 → 升级标记，状态不变。
+6. 发送者可在校验期 `withdraw` → `withdrawn`，清 hold + 关联工单。
+
+真实云审核 API 接入后改为异步 + 回调，收件箱 / 公开页的"准备中"占位已为异步留好位。
+
+## 5. 回响（原"坚持记录" / streak）
 
 - `streak_days(user_id, local_date, count)`：按作者所在地区自然日聚合"该日进入 `published` 的祝福数"。
 - 祝福首次 `→ published` 时：对应 `local_date` 的 `count += 1`，并在该祝福上标记 `counted = true`。
@@ -113,14 +137,16 @@ P1 的"近实时"实现：`submit` 请求内同步调用 RuleBasedProvider（本
 - `ModerationProvider` 接口：
   ```ts
   interface ModerationProvider {
-    check(input: { text: string; personalization: Personalization }):
-      Promise<{ verdict: 'pass' | 'suspect' | 'violation'; categories: ModerationCategory[]; providerRef?: string }>;
+    check(input: { text: string; occasion?: Occasion }):
+      Promise<{ verdict: 'pass' | 'suspect' | 'violation'; categories: ModerationCategory[]; providerRef?: string; unavailable?: boolean }>;
   }
   ```
-- `RuleBasedProvider`（P1）：
-  - 违禁/敏感关键词表（涉政、色情、仇恨、诈骗、违法）→ `violation`。
-  - **宗教敛财护栏词**（"代祷收费""超度""消灾解厄"…，见调研报告 §1.4）→ `suspect` 或 `violation`（配置）。
-  - 结构规则：长度越界、纯符号/乱码、疑似联系方式导流 → `suspect`。
+- `RuleBasedProvider`（P1）——目标是**过滤无效 / 垃圾 / 违规**，不评"写得好不好"：
+  - 违禁 / 敏感关键词（涉政、色情、仇恨、诈骗、违法）→ `violation`。
+  - 明显无效内容：刷屏（同字符）/ 空 / 全标点 → `violation`（`low_effort`）。
+  - 站外导流（链接、手机号、微信 / QQ 号、"扫码付款""点链接领取"）→ `suspect`（`contact_leak`）。
+  - 拉客 / 敛财话术（"加我微信收费""超度收费""宗教服务费"…）→ `suspect`（`solicitation`，配置可升 `violation`）。
+  - 长度越界 / 乱码占比高 → `suspect`。
   - 无命中 → `pass`。
 - 复核工单 `reports`（统一表，来源 = 举报 / 自动疑似 / 申诉）：
   - 字段：目标祝福、来源、大类、状态（open / in_review / resolved_pass / resolved_takedown / resolved_edit）、处理人、理由、时间线。
@@ -137,51 +163,57 @@ P1 的"近实时"实现：`submit` 请求内同步调用 RuleBasedProvider（本
 
 ```
 users
-  id, wx_openid (uniq), wx_unionid (nullable), nickname, avatar_url,
-  source, created_at
+  id, wx_openid (uniq), wx_unionid, nickname, avatar_url,
+  utc_offset_minutes, source, created_at
 
-user_profiles        -- 个人空间：每次写祝福的默认值 + 偏好
+user_profiles        -- 个人画像：显示默认值 + 受众匹配用画像
   user_id (pk/fk), sender_name (落款), region_city,
-  location_granted (bool, P1 占位), featured_by_default (bool, nullable
-    → null 时用系统默认), updated_at
+  lat (nullable), lng (nullable),           -- 受众距离筛选；两者都有才参与匹配
+  gender (nullable), birth_year (nullable),
+  tags (jsonb string[]),                     -- 被别人的受众筛选命中
+  location_granted (bool), featured_by_default (bool, nullable), updated_at
 
 consents
-  id, user_id, agreement_version, scope_deliver (bool, 恒 true),
-  scope_featured (bool), scope_synthesis (bool), agreed_at
+  id, user_id, agreement_version, scope_deliver, scope_featured, scope_synthesis, agreed_at
 
-templates            -- 范本库，运营维护，只作参考
-  id, category, title, prompt_text, sample_text, sensitive_guard_passed (bool),
-  is_active, sort_order
+templates
+  id, category, title, prompt_text, sample_text, is_active, sort_order
 
 blessing_drafts
-  id, author_id, body, personalization (jsonb), updated_at
+  user_id (pk/fk), body, occasion, audience (jsonb, nullable), updated_at
 
 blessings
-  id, author_id, body, personalization (jsonb), occasion,
+  id, author_id, content_type ('text'|'audio'|'video', P1 恒 text),
+  body, media (jsonb, nullable, P1 恒 null),
+  occasion, scope ('broadcast'|'reply'),
+  audience (jsonb: radiusKm, ageMin, ageMax, gender, tags),
+  reply_to_user_id (nullable),
+  recipient_ids (jsonb string[]),            -- 提交时定格的收件人快照
   state (enum), public_slug (uniq),
-  created_at, published_at (nullable), expires_at (nullable),
-  moderation (jsonb: verdict, categories, provider_ref, hold_ms),
-  renew_count, state_history (jsonb[] 或独立表 blessing_events)
+  created_at, published_at, delivered_at, expires_at, hold_until,
+  moderation (jsonb: verdict, categories, provider_ref),
+  renew_count, counted_in_streak
 
-blessing_events      -- 状态转移审计
-  id, blessing_id, from_state, to_state, trigger, actor (system/author/moderator:id),
-  reason, at
+blessing_events      -- 状态转移审计（独立表）
+  id, blessing_id, from_state, to_state, trigger, actor, reason, at
 
 reports              -- 举报 / 疑似 / 申诉 统一工单
-  id, blessing_id, origin (report/auto_suspect/appeal), category,
-  state, priority, assignee (nullable), resolution_reason,
-  reporter_fingerprint (nullable), created_at, resolved_at
-  + report_events (时间线)
+  id, blessing_id, origin, category, state, priority, assignee,
+  resolution_reason, reporter_fingerprint, count, created_at, resolved_at, timeline (jsonb)
 
 streak_days
-  user_id, local_date, published_count
-  PK (user_id, local_date)
+  user_id, local_date, published_count   PK (user_id, local_date)
 
-inbox_items          -- 收件箱。P1 建表不填充；P2（主动赠送 / 请求）写入
-  id, recipient_id, sender_id, blessing_id, delivered_at
+inbox_items          -- 收件箱条目
+  id, recipient_id, sender_id, blessing_id, delivered_at, read_at (nullable)
+
+notifications        -- 站内通知
+  id, user_id, kind ('blessing_received'), blessing_id, from_user_id,
+  created_at, read_at (nullable)
 ```
 
-`personalization` (jsonb)：`{ toName, fromName?, fromCity? }`。`toName` 必填；`fromName` / `fromCity` 写入时已把个人空间的默认值合并进来（或为空）。不再有 relation / prefix / suffix。
+收件箱 / 通知**只存引用**（blessingId + senderId），正文和当前可见状态读取时从
+`blessings` + `blessing.state` 现算，保证撤回 / 下架 / 过期后收件箱里那条也变占位。
 
 ## 8. API 草图（P1）
 
@@ -196,17 +228,21 @@ inbox_items          -- 收件箱。P1 建表不填充；P2（主动赠送 / 请
 | GET | `/api/agreement/current` | 当前协议版本与条款 | 无 |
 | POST | `/api/consents` | 记录同意（精选展示默认 = 个人偏好 > 系统默认） | 会话 |
 | GET | `/api/templates` | 范本库（只作参考） | 会话 |
-| PUT | `/api/drafts/me` | 保存/更新我的草稿 | 会话 |
-| GET | `/api/drafts/me` | 取我的草稿 | 会话 |
-| POST | `/api/blessings` | 提交祝福（submit）→ 返回 slug + 状态 | 会话 |
-| GET | `/api/records/outbox` | 发件箱（我创作的祝福 + 状态） | 会话 |
-| GET | `/api/records/inbox` | 收件箱（P1 恒为空 + 说明） | 会话 |
+| GET | `/api/tags/suggested` | 建议标签 | 会话 |
+| PUT/GET | `/api/drafts/me` | 我的草稿（正文 + 场景 + 受众） | 会话 |
+| POST | `/api/audience/preview` | 受众预览（命中数 + 上限 + 样本） | 会话 |
+| POST | `/api/blessings` | 提交祝福（`scope=broadcast\|reply`）→ slug + 状态 + recipientCount | 会话 |
+| GET | `/api/records/outbox` | 发件箱（我发出的祝福 + 状态 + 收件人数） | 会话 |
+| GET | `/api/inbox` | 收件箱（收到的祝福，按状态渲染 + 发送者粗粒度信息） | 会话 |
+| POST | `/api/inbox/read` | 收件箱标记已读 | 会话 |
+| GET | `/api/notifications` | 通知列表 + 未读数 | 会话 |
+| POST | `/api/notifications/read` | 通知标记已读 | 会话 |
 | POST | `/api/blessings/:id/withdraw` | 撤回 | 会话（作者） |
 | POST | `/api/blessings/:id/republish` | 重新发布 | 会话（作者） |
 | DELETE | `/api/blessings/:id` | 删除 | 会话（作者） |
 | POST | `/api/blessings/:id/renew` | 续期 | 会话（作者） |
-| GET | `/api/streak/me` | 坚持记录 | 会话 |
-| GET | `/p/:slug` | 访客落地页数据（按状态返回正文或占位类型） | 无 |
+| GET | `/api/streak/me` | 回响（送出祝福的累计记录） | 会话 |
+| GET | `/api/p/:slug` | 公开页数据（按状态返回正文或占位类型；传播用） | 无 |
 | POST | `/api/p/:slug/report` | 举报 | 无（匿名 + 防滥用） |
 | GET | `/api/moderation/queue` | 复核队列 | 审核员 |
 | POST | `/api/moderation/:reportId/resolve` | 复核结论 | 审核员 |
@@ -215,7 +251,7 @@ inbox_items          -- 收件箱。P1 建表不填充；P2（主动赠送 / 请
 
 ## 9. 安全与合规要点（P1）
 
-- 落地页不下发 openid、精确位置、手机号；来源只到"城市 + 昵称"。
+- 公开页 / 收件箱 / 受众预览都不下发 openid、精确经纬度、手机号；发送者信息只到"城市 + 昵称 + 大致距离（四舍五入到 km）"。
 - 协议同意逐版本、逐项留痕；"精选展示"默认开启的合规性待法务确认（见 use-cases 开放问题 1 / 调研 ADR-M），代码层把它做成一个可翻转的默认值配置，不硬编码。
 - 撤回/过期/下架后落地页 60s 内不再返回正文（缓存失效策略需覆盖 CDN/边缘）。
 - 审核所有动作留痕、可追溯；hold 时长记录。

@@ -157,6 +157,22 @@
 
 **结果**：
 - **1+2 是同一个 bug（B-50）**：新用户从导航直接进「写祝福」，没被引导去同意协议；提交打 403 `consent_required`，错误只在长表单最底一行小字，看着像"没反应"；因为没提交成功，发件箱当然空。根因：Compose 用 `GET /api/agreement/current` 判有没有同意，但这个接口永远返回 200。修：`AgreementView` 加 `alreadyConsented` 字段，Compose 进页即判、未同意跳 `/agreement`；submit 收到 `consent_required` 也跳。加了 api-flow 断言 + E2E（去掉修复即失败，已验证）。
-- **3（B-52）**：P1 没有站内 user→user，收件人不"登录"，就是打开分享链接的访客。`Sent.tsx` 补了一句说明。验收方法：复制链接 → 无痕窗口 / 另一浏览器打开。
-- **4（B-51）**：用户选"突出利他 / 善意 / 送人玫瑰手有余香"。「坚持」→「回响」，文案改为"你写给别人的祝福也会回到自己心里"，累计数为主，连续天数降为一句轻描述，去掉打卡压力。仅改 client 文案。
-- `pnpm verify` 绿（**125 测试**），E2E **7 个**全绿。
+- **3（B-52）**：`Sent.tsx` 补了收件人怎么看的说明。
+- **4（B-51）**：「坚持」→「回响」，"送人玫瑰手有余香"调性。
+
+### P1 模型重定：陌生人之间的按条件群发（ADR 0004）
+
+> 我理解你的意思了……实际上这个平台是陌生人之间的平台……我说的通过微信发送，更多的是大家通过微信可以传播我们的产品……应该是有很多用户注册在这个平台上，每个用户有自己的标签、地理位置、性别……发送祝福的人可以通过筛选去群发（周边一公里 / 多少年龄以上的男用户等），筛选结果要少于一定数量（先用 10）才允许群发……所有这些人会在收件箱收到 + 收到通知……不能对话，只能通过发送祝福的方式……祝福未来会从文本变成音频 / 视频，现在就要留白……审查更多是过滤无效 / 垃圾 / 违规信息。请基于以上描述更改 / 新增 Spec，重新设计界面并完成功能，通过 Loop 自主推进，最终交付完整修改后的 P1 Demo。（我要睡了，不用等审批。全部完成或 token 用尽时把 mac 睡眠。）
+
+**结果**（自主完成，`/loop` 驱动，无人值守）：
+
+1. **[ADR 0004](docs/adr/0004-p1-stranger-broadcast-model.md)** 记录整个重定决策 + 不变的部分 + 移出 P1 的部分。
+2. **领域层**：新增 `packages/domain/src/audience.ts`（haversine 距离 + `matchesAudience` + `resolveAudience`，纯函数）；`Blessing` 加 `contentType` / `media` / `scope` / `audience` / `replyToUserId` / `recipientIds` / `deliveredAt`；moderation 词表 + `ruleBased` 重写（刷屏 / 空 / 乱码 → violation；链接 / 联系方式 / 拉客话术 → suspect）；config 加 `maxAudienceSize`（10）等。
+3. **数据层**：`user_profiles` 加 `lat` / `lng` / `gender` / `birth_year` / `tags`；`blessings` 加上述字段；新增 `notifications` 表；`inbox_items` 加 `read_at`。迁移重生成。内存 + PGlite 两套仓储同步（`ProfileRepository.listCandidates`、`NotificationRepository`、`inbox.markAllRead`）。
+4. **应用层**：新增 `AudienceService`（preview + 人数上限判定 + resolveRecipients）、`InboxService`（按 blessing 当前状态现算 + 发送者粗粒度信息）、`NotificationService`；`BlessingService.submit` 重写（解析受众 / 定格快照 / reply 模式 / contentType 校验）；**投递扇出**放在 `blessing-write.ts` 的 `transitionAndPersist` 里——祝福首次到 `published` 时对 `recipientIds` 每人建收件箱条目 + 通知，置 `deliveredAt`（幂等）。
+5. **HTTP**：`POST /api/audience/preview`、`GET/POST /api/inbox`(+`/read`)、`GET/POST /api/notifications`(+`/read`)、`GET /api/tags/suggested`；`POST /api/blessings` 新 body（contentType / scope / audience / replyToUserId）。
+6. **前端**：个人空间加位置（浏览器定位 + 手填 lat/lng）/ 性别 / 出生年 / 标签 chips；撰写页去掉"给谁"，加形态 tab（文字 / 语音·视频置灰）+ 受众筛选（距离滑块 / 年龄 / 性别 / 标签）+「预览收件人」（人数 + 上限 + 样本）+ 回复模式（`?replyTo=`）；新增收件箱页（3s 轮询、回一段祝福）；顶栏收件箱未读徽标；Sent / Records / Home / Agreement / PublicPage 文案改。
+7. **测试**：domain `audience.test.ts`（10）；`blessing-flow.test.ts` / `api-flow.test.ts` 改为多用户群发（seed 带位置的用户、预览、收件箱、通知、回复、审核）；`pg-repositories.test.ts` 在 PGlite 上同链路；E2E 9 个用多 `browser.newContext()` 模拟发送者 / 收件人，每个测试用相距很远的地理"区域"避免共享内存 server 交叉污染。**修了一个真 bug**：收件箱是一次性 fetch，异步发布（auto_pass → scan）的祝福不刷新 → 改成 3s 轮询。
+8. **文档 + openspec**：use-cases.md（v1）、p1-architecture.md（v1）、concept.md、DEMO.md、p1-acceptance-status.md、AGENTS.md §1 全部重写 / 同步；openspec change proposal / specs 重写，新增 `blessing-audience` / `notification` 两个能力 spec，`validate --strict` 通过。
+
+**产物**：`pnpm verify` 绿（**137 测试**）；`pnpm test:e2e` 绿（**9**，真 Chrome）；`pnpm demo` 单进程跑通"登录 → 画像 → 协议 → 写祝福 → 受众筛选 → 预览 → 群发 → 校验中 → 收件人收件箱 + 通知 → 回一段祝福"。

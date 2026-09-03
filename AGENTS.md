@@ -8,11 +8,13 @@
 
 ## 1. 项目状态
 
-产品概念与北极星已立（[docs/product/vision.md](docs/product/vision.md)）。当前在做 **P1（文本静心祝福）** 的需求拆分与实现准备。
+产品概念与北极星已立（[docs/product/vision.md](docs/product/vision.md)）。**P1（陌生人祝福 · 按条件群发）** 的可运行 Demo 已完成——`pnpm demo` 跑通完整链路，`pnpm verify` 绿，`pnpm test:e2e` 绿。
 
-P1 技术栈已定（[ADR 0003](docs/adr/0003-p1-tech-stack-web-first.md)）：**Web-first PWA（React + TypeScript + Vite）+ Node.js + TypeScript（Fastify）+ PostgreSQL + pnpm monorepo**，领域逻辑放 `packages/domain` 前后端共享。所有代码必须遵循 [docs/engineering/coding-standards.md](docs/engineering/coding-standards.md)。
+P1 模型见 [ADR 0004](docs/adr/0004-p1-stranger-broadcast-model.md)：注册用户有画像（位置 / 性别 / 年龄 / 标签）→ 写文本祝福 → 按条件（距离 / 年龄 / 性别 / 标签）群发给附近陌生人（人数上限约束）→ 收件人在收件箱收到 + 通知 → 只能回一段祝福，不能对话。音视频形态已在类型层留白（`contentType`），功能 P2。
 
-P2 及以后的技术决策（音视频管线、AI/ML 服务、多端原生）仍未定，不要提前假设。
+P1 技术栈（[ADR 0003](docs/adr/0003-p1-tech-stack-web-first.md)）：**Web-first PWA（React + TS + Vite）+ Node.js + TS（Fastify）+ PostgreSQL（Drizzle / PGlite）+ pnpm monorepo**，领域逻辑放 `packages/domain` 前后端共享。所有代码必须遵循 [docs/engineering/coding-standards.md](docs/engineering/coding-standards.md)。
+
+P2 及以后的技术决策（音视频管线、AI/ML 服务、祝福请求 / 匹配、多端原生）仍未定，不要提前假设。
 
 ## 2. 质量标准
 

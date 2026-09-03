@@ -4,6 +4,23 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Changed — P1 重定为「陌生人祝福 · 按条件群发」（B-60, [ADR 0004](docs/adr/0004-p1-stranger-broadcast-model.md)）
+
+- **模型**：P1 从"作者写给认识的人 → 生成分享链接 → 微信发给 TA"重做为"注册用户按条件群发给附近的陌生人 → 收件箱 + 通知 → 只能回一段祝福，不能对话"。原"祝福请求 / 匹配"整块移至 P2。
+- **个人画像**：`user_profiles` 增经纬度（浏览器 Geolocation 或手填）、性别、出生年、标签。位置齐备才 `canBroadcast`，才被别人的受众筛选命中；对外只暴露城市 + 四舍五入到公里的距离。
+- **受众筛选 + 预览**（新能力 `blessing-audience`）：距离半径 + 年龄区间 + 性别 + 标签（命中任一）。`packages/domain/src/audience.ts`（haversine + 匹配，纯函数）。`POST /api/audience/preview` 返回命中数 + 上限 + 距离最近的样本。
+- **群发人数上限**：命中人数 ∈ [1, `maxAudienceSize`]（默认 10，`BW_MAX_AUDIENCE` 可调）才允许群发；0 → `audience_empty`，超上限 → `audience_too_large`。提交时定格收件人快照（`blessings.recipient_ids`），后加入 / 退出范围的人不影响。
+- **投递扇出 + 收件箱**：祝福首次进入 `published` 时（`transitionAndPersist` 内），对每个快照收件人建 `inbox_items` + `notifications`，置 `delivered_at`（幂等，申诉恢复不重复）。收件箱按关联祝福**当前**状态实时渲染（撤回 / 下架 / 过期后收件箱里那条也变占位），每 3 秒自动刷新。
+- **站内通知**（新能力 `notification`）：`blessing_received` + 未读数徽标（顶栏 4 秒轮询）。P1 无真实推送通道。
+- **回一段祝福**：`scope=reply`，受众恒为对方一人，同样过校验。没有聊天 / 会话线程。
+- **内容形态留白**：`blessings.content_type`（`text` / `audio` / `video`）+ `media` jsonb。P1 只创作 `text`，撰写页 `audio` / `video` tab 灰置"即将支持"。
+- **审核目标调整**：从"宗教敛财护栏"为主改为过滤无效 / 垃圾 / 违规为主——刷屏 / 空 / 全标点 → `violation`（`low_effort`）；站外链接 / 联系方式 / 拉客敛财话术 → `suspect`（`contact_leak` / `solicitation`）；不评"写得好不好"。
+- **公开链接降级**：`/p/:slug` 从"送达机制"改为"传播用"（转发带人来平台）。
+- **数据层**：schema 增上述字段，新增 `notifications` 表，`inbox_items` 增 `read_at`；迁移重生成（P1 未上线，无数据迁移）；内存 + PGlite 两套实现同步更新。
+- **前端**：个人空间加位置 / 性别 / 年龄 / 标签；撰写页加受众筛选 + 预览 + 形态 tab + 回复模式；新增收件箱页；顶栏通知徽标；Sent / Records / Home / Agreement 文案随之改。
+- **测试**：domain `audience.test.ts`（10）+ moderation 重写；application `blessing-flow.test.ts` 与 `api-flow.test.ts` 改为多用户群发链路；`pg-repositories.test.ts` 在 PGlite 上同链路；E2E 9 个用多浏览器上下文模拟发送者 / 收件人。`pnpm verify` 绿（**137 测试**），`pnpm test:e2e` 绿（**9**），openspec `validate --strict` 通过。
+- **文档**：新增 [ADR 0004](docs/adr/0004-p1-stranger-broadcast-model.md)；[use-cases.md](docs/product/use-cases.md)、[p1-architecture.md](docs/architecture/p1-architecture.md)、[concept.md](docs/product/concept.md)、[DEMO.md](docs/DEMO.md)、[p1-acceptance-status.md](docs/product/p1-acceptance-status.md)、AGENTS.md §1 同步；openspec change 的 proposal / specs 重写（新增 `blessing-audience` / `notification` 能力）。
+
 ### Fixed
 
 - Consent gate before composing (B-50): a new user who opened 写祝福 from the nav was never routed through the agreement page — `GET /api/agreement/current` always returns 200, so Compose's consent check never fired, and submit failed with a 403 whose message was a small line at the bottom of a long form (looked like nothing happened). `AgreementView` now carries `alreadyConsented`; Compose redirects to `/agreement` on entry when it's false, and also on a `consent_required` error from submit. Covered by a new api-flow assertion and an E2E test (verified to fail without the fix).

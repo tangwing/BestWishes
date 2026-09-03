@@ -6,7 +6,7 @@
 
 ### Requirement: 可插拔的内容审核接口
 
-系统 SHALL 通过一个统一接口 `ModerationProvider` 做内容审核，输入为祝福正文与个性化字段，输出为三档结论（`pass` / `suspect` / `violation`）与命中大类。审核实现 MUST 可替换（P1 用规则实现，真实内容安全 API 作为后续实现），替换 MUST NOT 改变调用方契约。
+系统 SHALL 通过一个统一接口 `ModerationProvider` 做内容审核，输入为祝福文本（音视频形态传转写），输出为三档结论（`pass` / `suspect` / `violation`）与命中大类。审核实现 MUST 可替换（P1 用规则实现，真实内容安全 API 作为后续实现），替换 MUST NOT 改变调用方契约。
 
 #### Scenario: 更换审核实现
 
@@ -15,17 +15,22 @@
 
 ### Requirement: 自动检查的三档判定
 
-自动检查 MUST 把每条待发布祝福判为三档之一并驱动 `blessing-delivery` 的状态转移：`pass` → 送达；`suspect` → 保持校验中并建复核工单；`violation` → 驳回。命中违禁 / 敏感（涉政、色情、仇恨、诈骗、违法）MUST 判 `violation`。命中"宗教敛财护栏词"MUST 至少判 `suspect`。审核服务超时 / 不可用 MUST 采取保守策略（维持 hold + 进人工队列），MUST NOT 默认放行。
+自动检查 MUST 把每条待发布祝福判为三档之一并驱动 `blessing-delivery` 的状态转移：`pass` → 投递；`suspect` → 保持校验中并建复核工单；`violation` → 驳回。命中违禁 / 敏感（涉政、色情、仇恨、诈骗、违法）MUST 判 `violation`；明显无效内容（刷屏、空、全标点）MUST 判 `violation`。站外导流（链接、联系方式）与拉客 / 敛财话术 MUST 至少判 `suspect`。审核服务超时 / 不可用 MUST 采取保守策略（维持 hold + 进人工队列），MUST NOT 默认放行。审核只判安全 / 有效性，MUST NOT 评判祝福"写得好不好"。
 
 #### Scenario: 命中违禁词
 
 - **WHEN** 一条祝福正文命中违禁词表
 - **THEN** 检查结论为 `violation`，祝福被驳回
 
-#### Scenario: 命中宗教敛财护栏词
+#### Scenario: 命中拉客 / 敛财护栏词
 
-- **WHEN** 一条祝福出现"超度收费"类表述
+- **WHEN** 一条祝福出现"超度收费""加我微信"类导流 / 敛财表述
 - **THEN** 检查结论至少为 `suspect`，祝福保持校验中并进入人工复核队列
+
+#### Scenario: 明显无效内容
+
+- **WHEN** 一条祝福正文是同一个字刷屏或全是标点
+- **THEN** 检查结论为 `violation`，祝福被驳回，不占用人工队列
 
 #### Scenario: 审核服务不可用
 

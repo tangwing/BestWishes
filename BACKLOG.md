@@ -8,22 +8,24 @@
 
 ## 恢复点（先读这段）
 
-- **阶段**：P1「文本静心祝福」**初版 Demo 完成 + PostgreSQL 数据层 + Playwright E2E**。`pnpm demo` 起单进程走完整链路。`pnpm verify` 绿，**124 测试**（含 7 个 `app.inject` 端到端 + 5 个 PGlite 集成）。`cd e2e && npm test` 绿（6 个真浏览器）。openspec `validate --strict` 通过。
-- **代码**：`packages/domain`（纯领域逻辑）· `packages/shared`（Zod / 错误码）· `server/`（Fastify，分层 interface/application/infrastructure/ports；数据层 **内存 + PGlite 两套同 ports 实现**，`BW_DB` 切换；扫描任务 + 静态托管）· `client/`（React + Vite + CSS Modules，10 页）· `arch/`（架构测试）· `e2e/`（Playwright，独立 npm）。
-- **走查**：见 [docs/DEMO.md](docs/DEMO.md)。
-- **实现计划**：[openspec/changes/add-p1-text-blessing/tasks.md](openspec/changes/add-p1-text-blessing/tasks.md)。§1-§6 基本勾完，§7 端到端测试到位。
-- **下一步选项**（等用户定）：(a) 真实微信网页授权（用户说"晚一些"）；(b) 真实内容审核 API（D10=B，收尾 / P2）；(c) 界面继续迭代（B-04b 等）；(d) `/opsx:archive` 归档这个 change 并开 P2。
-- **本机限制**：① Homebrew 坏（`openssl@3: unknown keyword :overwrite`），装不了原生 Postgres → 数据层用 **PGlite**（WASM Postgres，进程内，真 SQL）；生产换独立 PG = 换 `drizzle-orm/postgres-js` 驱动一层。② macOS 12，新版 Playwright 无 chromium 构建 → E2E 用**系统 Chrome**（`channel: 'chrome'`）；CI 用较新系统可换回自带 chromium。
-- **技术栈**（已定，ADR 0003）：Web-first PWA（React+TS+Vite / CSS Modules）+ Node+TS（Fastify）+ PostgreSQL（Drizzle）+ pnpm monorepo，领域逻辑在 `packages/domain`。
-- **关键文档**：[docs/product/vision.md](docs/product/vision.md) · [docs/product/use-cases.md](docs/product/use-cases.md) · [docs/architecture/p1-architecture.md](docs/architecture/p1-architecture.md) · [docs/engineering/coding-standards.md](docs/engineering/coding-standards.md) · [openspec/changes/add-p1-text-blessing/](openspec/changes/add-p1-text-blessing/) · 走查原型 [prototype/](prototype/)（`npm run verify`）· 界面画布见 PROMPT_LOG 最新条目的链接。
-- **工作方式**：用户按点评提改动 → 记进本文件 → 持续完成。条件允许时派多 Agent 并行。每轮结束自动 commit + push（`.claude/hooks/auto-commit-push.sh`）。
-- **下一步**：等用户回来验收 PG 数据层 + E2E；决定真实微信授权 / 审核 API 的时机、是否 `/opsx:archive` 归档 change、是否删 `prototype/`。验收状态文档已对齐 monorepo（[docs/product/p1-acceptance-status.md](docs/product/p1-acceptance-status.md)，B-31）。
+- **阶段**：P1 **已按 [ADR 0004](docs/adr/0004-p1-stranger-broadcast-model.md) 重定为「陌生人祝福 · 按条件群发」并整套实现完成**。`pnpm demo` 起单进程走完整链路。`pnpm verify` 绿，**137 测试**（8 个 `app.inject` 端到端 + 5 个 PGlite 集成 + domain audience/moderation/lifecycle 等）。`pnpm test:e2e` 绿（**9 个真浏览器**，多上下文模拟发送者 / 收件人）。openspec `validate --strict` 通过。
+- **新模型一句话**：注册用户有画像（经纬度位置 / 性别 / 出生年 / 标签）→ 写文本祝福（`contentType` 给音视频留白）→ 选受众（距离 / 年龄 / 性别 / 标签）→ 预览命中人数 → 命中 ∈ [1, `maxAudienceSize`=10] 才可群发 → 收件人在**收件箱**收到 + **通知**（未读徽标）→ 只能**回一段祝福**，不能对话。公开链接 `/p/:slug` 降级为"传播用"。审核目标改为过滤无效 / 垃圾 / 违规。
+- **代码**：`packages/domain`（+ `audience.ts` haversine 匹配）· `packages/shared` · `server/`（+ `audience-service` / `inbox-service` / `notification-service`；投递扇出在 `blessing-write.ts` 的 `transitionAndPersist` 里到 `published` 时触发，幂等 `deliveredAt`；数据层内存 + PGlite 两套同 ports，11 张表）· `client/`（+ Inbox 页 + 通知徽标；Profile / Compose 重做）· `arch/` · `e2e/`。
+- **走查**：见 [docs/DEMO.md](docs/DEMO.md)（已重写，需两个账号：发送者 + 收件人）。
+- **实现计划**：[openspec/changes/add-p1-text-blessing/tasks.md](openspec/changes/add-p1-text-blessing/tasks.md)（§0 记录了重定）。
+- **本机限制**：① 数据层用 **PGlite**（WASM Postgres，进程内，真 SQL）；生产换独立 PG = 换 `drizzle-orm/postgres-js` 驱动一层。② macOS 12 → E2E 用**系统 Chrome**（`channel: 'chrome'`）。
+- **技术栈**（ADR 0003）：Web-first PWA + Node/TS（Fastify）+ PostgreSQL（Drizzle / PGlite）+ pnpm monorepo。
+- **关键文档**：[ADR 0004](docs/adr/0004-p1-stranger-broadcast-model.md) · [docs/product/use-cases.md](docs/product/use-cases.md)（v1）· [docs/architecture/p1-architecture.md](docs/architecture/p1-architecture.md)（v1）· [docs/product/p1-acceptance-status.md](docs/product/p1-acceptance-status.md) · [openspec/changes/add-p1-text-blessing/](openspec/changes/add-p1-text-blessing/)。
+- **工作方式**：用户按点评提改动 → 记进本文件 → 持续完成。每轮结束自动 commit + push。
+- **下一步**：等用户验收重定后的 Demo（两个账号走群发 → 收件箱 → 回信）。之后：真实微信授权 / 审核 API 时机、逆地理编码、真实推送、`/opsx:archive` 归档、删 `prototype/`、i18n（B-26）、PWA（B-27）。
 
 ---
 
 ## 刚完成（下轮挪进 CHANGELOG）
 
-- [x] **B-31 更新 p1-acceptance-status.md** — 从对照 `prototype/` 改为对照生产 monorepo：逐用例证据指向 `packages/domain` / `server/` / `client/` / `e2e/` 的真实文件与测试，新增「数据层 / 部署」一节，「待你拍板」更新为当前状态（ADR 0003 已定、openspec 待归档、微信 / 审核 API 接入时机、prototype 移除）。
+- [x] **B-31 更新 p1-acceptance-status.md** — 对齐 monorepo（本轮又按新模型重写）。
+- [x] **B-50 consent gate 修复** / **B-51 「坚持」→「回响」** / **B-52 送达页说清收件人** — 见 CHANGELOG。
+- [x] **B-60 P1 模型重定为「陌生人群发」（ADR 0004）** — 全栈实现 + 全套测试重写 + 文档 + openspec 同步。详见 CHANGELOG / PROMPT_LOG。
 
 ## 待办
 

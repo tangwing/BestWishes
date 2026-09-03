@@ -1,3 +1,14 @@
+## 0. 模型重定（2026-09-04，ADR 0004）
+
+- [x] 0.1 P1 从"定向送达给认识的人 + 分享链接"重定为"按条件群发给陌生人 + 收件箱 + 通知"。proposal / specs 已同步。
+- [x] 0.2 新增能力 `blessing-audience`（受众筛选 + 预览 + 人数上限 + 收件人快照）、`notification`（站内通知）。
+- [x] 0.3 `user-profile` 加经纬度 / 性别 / 出生年 / 标签；`blessing-authoring` 加 `contentType`（text + audio/video 留白）、去掉"给谁"；`blessing-delivery` 加投递扇出 / 收件箱按状态渲染 / 回一段祝福；`blessing-records` 收件箱从空状态改为真实；`content-moderation` 目标改为过滤无效 / 垃圾 / 违规。
+- [x] 0.4 领域层加 `audience.ts`（haversine + 匹配）；moderation 词表 / 规则重写。
+- [x] 0.5 数据层：`user_profiles` / `blessings` 加字段，新增 `notifications` 表，`inbox_items` 加 `read_at`；迁移重生成（P1 未上线，无数据迁移）。
+- [x] 0.6 应用层加 `AudienceService` / `InboxService` / `NotificationService`；`BlessingService.submit` 重写；投递扇出在 `transitionAndPersist` 里到 `published` 时触发（幂等 `deliveredAt`）。
+- [x] 0.7 前端：个人空间加位置 / 性别 / 年龄 / 标签；撰写页加受众筛选 + 预览 + 形态 tab + 回复模式；新增收件箱页 + 通知徽标。
+- [x] 0.8 测试全部改写（domain audience、application 多用户群发、api-flow、pg、e2e 多上下文）；`pnpm verify` 绿（137 测试），`pnpm test:e2e` 绿（9）。
+
 ## 1. 项目脚手架与依赖
 
 - [x] 1.1 建立 pnpm monorepo：`packages/domain` `packages/shared` + `server/`（Node + TS + Fastify）+ `client/`（React + TS + Vite）+ `arch/`；`pnpm install` 成功，各包 `build` 通过（`packages/config` 暂不建，配置放各处；见 BACKLOG）
