@@ -55,9 +55,7 @@ export function Sent() {
         <p className={s.blessing} style={{ fontSize: 16 }}>
           {item.bodyPreview}
         </p>
-        <p className={s.meta}>
-          {item.scope === 'reply' ? '回复给一个人' : `群发 · ${n} 人`}
-        </p>
+        <p className={s.meta}>{item.scope === 'reply' ? '回复给一个人' : `群发 · ${n} 人`}</p>
       </div>
 
       <div className={s.card}>

@@ -94,7 +94,9 @@ export function createBlessingService(deps: AppDeps) {
   async function resolveRecipients(
     userId: string,
     input: SubmitInput,
-  ): Promise<Result<{ recipientIds: string[]; audience: AudienceFilter; replyToUserId: string | null }>> {
+  ): Promise<
+    Result<{ recipientIds: string[]; audience: AudienceFilter; replyToUserId: string | null }>
+  > {
     if (input.scope === 'reply') {
       if (!input.replyToUserId) {
         return err(appError('validation_failed', 'replyToUserId required', '缺少回复对象'));
@@ -106,7 +108,11 @@ export function createBlessingService(deps: AppDeps) {
       if (!target) {
         return err(appError('not_found', 'reply target missing', '找不到这个人'));
       }
-      return ok({ recipientIds: [input.replyToUserId], audience: REPLY_AUDIENCE, replyToUserId: input.replyToUserId });
+      return ok({
+        recipientIds: [input.replyToUserId],
+        audience: REPLY_AUDIENCE,
+        replyToUserId: input.replyToUserId,
+      });
     }
 
     if (!input.audience) {
@@ -129,19 +135,31 @@ export function createBlessingService(deps: AppDeps) {
 
       if (input.contentType !== 'text') {
         return err(
-          appError('validation_failed', 'non-text not supported in P1', '语音 / 视频祝福即将支持，先用文字写一段'),
+          appError(
+            'validation_failed',
+            'non-text not supported in P1',
+            '语音 / 视频祝福即将支持，先用文字写一段',
+          ),
         );
       }
 
       const len = charCount(input.body);
       if (len < deps.config.bodyMinLen) {
         return err(
-          appError('validation_failed', 'body too short', `再多写一点吧（至少 ${String(deps.config.bodyMinLen)} 字）`),
+          appError(
+            'validation_failed',
+            'body too short',
+            `再多写一点吧（至少 ${String(deps.config.bodyMinLen)} 字）`,
+          ),
         );
       }
       if (len > deps.config.bodyMaxLen) {
         return err(
-          appError('validation_failed', 'body too long', `有点长了，精简到 ${String(deps.config.bodyMaxLen)} 字以内`),
+          appError(
+            'validation_failed',
+            'body too long',
+            `有点长了，精简到 ${String(deps.config.bodyMaxLen)} 字以内`,
+          ),
         );
       }
 
@@ -183,7 +201,10 @@ export function createBlessingService(deps: AppDeps) {
       if (!submitted.ok) return submitted;
       await deps.repos.drafts.clear(userId);
 
-      const moderation = await deps.moderation.check({ text: draftRecord.body, occasion: input.occasion });
+      const moderation = await deps.moderation.check({
+        text: draftRecord.body,
+        occasion: input.occasion,
+      });
       const outcome = outcomeFor(moderation);
 
       let current: BlessingRecord = { ...submitted.value, moderation };
@@ -276,7 +297,8 @@ export function createBlessingService(deps: AppDeps) {
         }));
     },
 
-    withdraw: (userId: string, id: string) => manage(deps, userId, id, 'withdraw', '作者撤回', true),
+    withdraw: (userId: string, id: string) =>
+      manage(deps, userId, id, 'withdraw', '作者撤回', true),
     delete: (userId: string, id: string) => manage(deps, userId, id, 'delete', '作者删除', false),
     renew: (userId: string, id: string) => manage(deps, userId, id, 'renew', '作者续期', false),
 

@@ -6,7 +6,7 @@ describe('server 骨架', () => {
     const { server } = await makeServer();
     const res = await server.inject({ method: 'GET', url: '/healthz' });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ ok: true, at: '2026-09-02T00:00:00.000Z' });
+    expect(res.json()).toEqual({ ok: true, at: '2026-09-04T00:00:00.000Z' });
     await server.close();
   });
 

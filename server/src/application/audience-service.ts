@@ -34,7 +34,7 @@ export interface AudiencePreview {
 export function createAudienceService(deps: AppDeps) {
   async function originFor(userId: string): Promise<GeoPoint | null> {
     const p = await deps.repos.profiles.get(userId);
-    if (!p || p.lat === null || p.lng === null) return null;
+    if (p?.lat == null || p.lng == null) return null;
     return { lat: p.lat, lng: p.lng };
   }
 
@@ -45,7 +45,11 @@ export function createAudienceService(deps: AppDeps) {
     const origin = await originFor(userId);
     if (!origin) {
       return err(
-        appError('location_required', 'sender has no location', '先在个人空间设置你的位置，才能群发'),
+        appError(
+          'location_required',
+          'sender has no location',
+          '先在个人空间设置你的位置，才能群发',
+        ),
       );
     }
     const candidates = await deps.repos.profiles.listCandidates();
@@ -77,10 +81,7 @@ export function createAudienceService(deps: AppDeps) {
     },
 
     /** 群发前定格收件人列表。命中 0 或超过上限都拒绝。 */
-    async resolveRecipients(
-      userId: string,
-      filter: AudienceFilter,
-    ): Promise<Result<string[]>> {
+    async resolveRecipients(userId: string, filter: AudienceFilter): Promise<Result<string[]>> {
       const r = await resolve(userId, filter);
       if (!r.ok) return r;
       const cap = deps.config.maxAudienceSize;

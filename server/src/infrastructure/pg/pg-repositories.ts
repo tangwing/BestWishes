@@ -1,11 +1,7 @@
 // PostgreSQL 仓储实现（Drizzle + PGlite）。和内存实现是同一组 ports，
 // application 层不感知用的是哪个。祝福事件单独存 blessing_events，读祝福时再拼回 events 数组。
 
-import {
-  type AudienceCandidate,
-  type BlessingState,
-  type GeoPoint,
-} from '@bestwishes/domain';
+import { type AudienceCandidate, type BlessingState, type GeoPoint } from '@bestwishes/domain';
 import { and, asc, count, desc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import type { IdGenerator } from '../../ports/ids';
 import type {
@@ -238,7 +234,10 @@ class PgProfileRepository implements ProfileRepository {
     return row ? toProfile(row) : null;
   }
 
-  async upsert(userId: string, patch: Partial<Omit<ProfileRecord, 'userId'>>): Promise<ProfileRecord> {
+  async upsert(
+    userId: string,
+    patch: Partial<Omit<ProfileRecord, 'userId'>>,
+  ): Promise<ProfileRecord> {
     const current: ProfileRecord = (await this.get(userId)) ?? {
       userId,
       senderName: null,

@@ -239,7 +239,10 @@ class InMemoryReportRepository implements ReportRepository {
     this.byId.set(record.id, clone(record));
     return Promise.resolve();
   }
-  findOpenReportByFingerprint(blessingId: string, fingerprint: string): Promise<ReportRecord | null> {
+  findOpenReportByFingerprint(
+    blessingId: string,
+    fingerprint: string,
+  ): Promise<ReportRecord | null> {
     const rec = [...this.byId.values()].find(
       (r) =>
         r.blessingId === blessingId &&
@@ -317,9 +320,7 @@ class InMemoryNotificationRepository implements NotificationRepository {
     );
   }
   unreadCount(userId: string): Promise<number> {
-    return Promise.resolve(
-      this.all.filter((n) => n.userId === userId && n.readAt === null).length,
-    );
+    return Promise.resolve(this.all.filter((n) => n.userId === userId && n.readAt === null).length);
   }
   markAllRead(userId: string): Promise<void> {
     const at = new Date().toISOString();

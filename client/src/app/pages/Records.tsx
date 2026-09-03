@@ -98,7 +98,9 @@ export function Records() {
               <button
                 className="link"
                 onClick={() => {
-                  if (confirm('删除后不可恢复。已送达的祝福，对方收件箱里的那份不受影响。确定删除？')) {
+                  if (
+                    confirm('删除后不可恢复。已送达的祝福，对方收件箱里的那份不受影响。确定删除？')
+                  ) {
                     act(api.remove(b.id));
                   }
                 }}

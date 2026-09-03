@@ -38,7 +38,7 @@ function round1(n: number): number {
 export function createInboxService(deps: AppDeps) {
   async function pointFor(userId: string): Promise<GeoPoint | null> {
     const p = await deps.repos.profiles.get(userId);
-    if (!p || p.lat === null || p.lng === null) return null;
+    if (p?.lat == null || p.lng == null) return null;
     return { lat: p.lat, lng: p.lng };
   }
 
@@ -57,7 +57,7 @@ export function createInboxService(deps: AppDeps) {
           deps.repos.profiles.get(item.senderId),
         ]);
         let distanceKm: number | null = null;
-        if (myPoint && senderProfile && senderProfile.lat !== null && senderProfile.lng !== null) {
+        if (myPoint && senderProfile?.lat != null && senderProfile.lng != null) {
           distanceKm = round1(
             haversineKm(myPoint, { lat: senderProfile.lat, lng: senderProfile.lng }),
           );
@@ -77,8 +77,7 @@ export function createInboxService(deps: AppDeps) {
           read: item.readAt !== null,
           status,
           body: status === 'content' ? b.body : null,
-          placeholderText:
-            status === 'content' ? null : PLACEHOLDER_TEXT[status],
+          placeholderText: status === 'content' ? null : PLACEHOLDER_TEXT[status],
           canReply: true,
         });
       }

@@ -44,9 +44,7 @@ export function Inbox() {
       {items.length === 0 && (
         <div className={s.card}>
           <p className={s.lead}>还没有收到祝福。</p>
-          <p className={s.hint}>
-            把个人空间的位置、标签填清楚，别人按条件群发时就更可能筛到你。
-          </p>
+          <p className={s.hint}>把个人空间的位置、标签填清楚，别人按条件群发时就更可能筛到你。</p>
         </div>
       )}
 

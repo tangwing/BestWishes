@@ -2,11 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { RuleBasedProvider, UnavailableProvider } from './ruleBased';
 import type { ModerationInput, ModerationProvider } from '../types';
 
-function input(
-  text: string,
-  over: Partial<ModerationInput['personalization']> = {},
-): ModerationInput {
-  return { text, personalization: { toName: '小明', ...over } };
+function input(text: string): ModerationInput {
+  return { text };
 }
 
 const p = new RuleBasedProvider();
@@ -18,10 +15,10 @@ describe('RuleBasedProvider — 三档判定', () => {
     expect(r.categories).toContain('fraud');
   });
 
-  it('命中宗教敛财护栏词 → 至少 suspect', async () => {
+  it('命中拉客 / 敛财护栏词 → 至少 suspect', async () => {
     const r = await p.check(input('愿你平安喜乐，需要超度收费请联系我们'));
     expect(r.verdict).toBe('suspect');
-    expect(r.categories).toContain('religious_solicitation');
+    expect(r.categories).toContain('solicitation');
   });
 
   it('护栏词可配置为 violation', async () => {
@@ -30,16 +27,28 @@ describe('RuleBasedProvider — 三档判定', () => {
     expect(r.verdict).toBe('violation');
   });
 
-  it('疑似联系方式导流 → suspect', async () => {
+  it('疑似联系方式 / 站外导流 → suspect(contact_leak)', async () => {
     const r = await p.check(input('祝福你，加我微信 blessing_shop_888 领礼物'));
     expect(r.verdict).toBe('suspect');
     expect(r.categories).toContain('contact_leak');
   });
 
-  it('正文过短 → suspect(malformed)', async () => {
+  it('带链接的广告 → suspect(contact_leak)', async () => {
+    const r = await p.check(input('祝你好运，更多惊喜见 www.example-shop.com 快去看看吧'));
+    expect(r.verdict).toBe('suspect');
+    expect(r.categories).toContain('contact_leak');
+  });
+
+  it('正文过短 → suspect(low_effort)', async () => {
     const r = await p.check(input('祝好'));
     expect(r.verdict).toBe('suspect');
-    expect(r.categories).toContain('malformed');
+    expect(r.categories).toContain('low_effort');
+  });
+
+  it('刷屏 / 无效内容 → violation(low_effort)', async () => {
+    const r = await p.check(input('啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊'));
+    expect(r.verdict).toBe('violation');
+    expect(r.categories).toContain('low_effort');
   });
 
   it('平淡但合规 → pass（审核不评质量）', async () => {
@@ -48,17 +57,9 @@ describe('RuleBasedProvider — 三档判定', () => {
     expect(r.categories).toEqual([]);
   });
 
-  it('乱码正文 → suspect(malformed)', async () => {
+  it('乱码正文 → violation 或 suspect（不放行）', async () => {
     const r = await p.check(input('@@@###$$$%%%^^^&&&***(((]]][[[///\\\\\\'));
-    expect(r.verdict).toBe('suspect');
-    expect(r.categories).toContain('malformed');
-  });
-
-  it('也检查个性化字段（落款里的违禁词）', async () => {
-    const r = await p.check(
-      input('愿你被这个世界温柔以待，平安喜乐每一天。', { fromName: '内部中奖速来' }),
-    );
-    expect(r.verdict).toBe('violation');
+    expect(r.verdict).not.toBe('pass');
   });
 });
 

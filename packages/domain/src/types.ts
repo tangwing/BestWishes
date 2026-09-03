@@ -32,17 +32,10 @@ export type LifecycleTrigger =
   | 'delete';
 
 export type LifecycleActor =
-  | { kind: 'system' }
-  | { kind: 'author'; userId: string }
-  | { kind: 'moderator'; userId: string };
+  { kind: 'system' } | { kind: 'author'; userId: string } | { kind: 'moderator'; userId: string };
 
 export type Occasion =
-  | 'birthday'
-  | 'festival'
-  | 'encouragement'
-  | 'recovery'
-  | 'remembrance'
-  | 'daily';
+  'birthday' | 'festival' | 'encouragement' | 'recovery' | 'remembrance' | 'daily';
 
 /** 用户自报的性别。受众筛选里可选 'any' 表示不限。 */
 export type Gender = 'male' | 'female' | 'other';
@@ -141,19 +134,10 @@ export interface ModerationProvider {
 export type ReportOrigin = 'report' | 'auto_suspect' | 'appeal';
 
 export type ReportState =
-  | 'open'
-  | 'in_review'
-  | 'resolved_pass'
-  | 'resolved_takedown'
-  | 'resolved_edit';
+  'open' | 'in_review' | 'resolved_pass' | 'resolved_takedown' | 'resolved_edit';
 
 export type ReportCategory =
-  | 'spam'
-  | 'offensive'
-  | 'harassment'
-  | 'illegal'
-  | 'other'
-  | ModerationCategory;
+  'spam' | 'offensive' | 'harassment' | 'illegal' | 'other' | ModerationCategory;
 
 export interface Blessing {
   id: string;

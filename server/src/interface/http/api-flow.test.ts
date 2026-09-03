@@ -4,118 +4,155 @@ import { makeServer } from './test-server';
 
 const GOOD_BODY = '愿你被这个世界温柔以待，平安喜乐每一天，一切都顺遂。';
 
-async function loggedInServer() {
-  const ctx = await makeServer({ templates: seedTemplates() });
-  const login = await ctx.server.inject({
+const CENTER = { lat: 30.2741, lng: 120.1551 };
+const NEAR_A = { lat: 30.28, lng: 120.16 };
+const NEAR_B = { lat: 30.27, lng: 120.15 };
+
+const WIDE = { radiusKm: 10, ageMin: null, ageMax: null, gender: 'any', tags: [] };
+
+type Server = Awaited<ReturnType<typeof makeServer>>['server'];
+
+async function login(server: Server, nickname: string): Promise<{ cookie: string }> {
+  const res = await server.inject({
     method: 'POST',
     url: '/api/auth/stub-login',
-    payload: { nickname: '小林' },
+    payload: { nickname },
   });
-  const cookie = login.cookies.find((c) => c.name === 'bw_uid');
-  if (!cookie) throw new Error('no session cookie');
-  const auth = { cookie: `bw_uid=${cookie.value}` };
-  await ctx.server.inject({
+  const c = res.cookies.find((x) => x.name === 'bw_uid');
+  if (!c) throw new Error('no session cookie');
+  return { cookie: `bw_uid=${c.value}` };
+}
+
+async function setProfile(
+  server: Server,
+  auth: { cookie: string },
+  patch: Record<string, unknown>,
+): Promise<void> {
+  await server.inject({ method: 'PUT', url: '/api/profile/me', headers: auth, payload: patch });
+}
+
+async function agree(server: Server, auth: { cookie: string }): Promise<void> {
+  await server.inject({
     method: 'POST',
     url: '/api/consents',
     headers: auth,
     payload: { scopeDeliver: true, scopeFeatured: true, scopeSynthesis: false },
   });
-  return { ...ctx, auth };
 }
 
-describe('HTTP 端到端：核心流程', () => {
-  it('登录 → 协议 → 提交 → 校验中占位 → hold 后发布 → 访客看正文', async () => {
-    const ctx = await loggedInServer();
+describe('HTTP 端到端：群发到陌生人', () => {
+  it('登录 → 设位置 → 协议 → 预览受众 → 提交 → hold 后发布 → 收件人收件箱 + 通知', async () => {
+    const ctx = await makeServer({ templates: seedTemplates() });
+    const sender = await login(ctx.server, '发送者');
+    await setProfile(ctx.server, sender, CENTER);
+    await agree(ctx.server, sender);
+
+    const alice = await login(ctx.server, '阿离');
+    await setProfile(ctx.server, alice, NEAR_A);
+    const bob = await login(ctx.server, '阿波');
+    await setProfile(ctx.server, bob, NEAR_B);
+
+    const preview = await ctx.server.inject({
+      method: 'POST',
+      url: '/api/audience/preview',
+      headers: sender,
+      payload: WIDE,
+    });
+    expect(preview.statusCode).toBe(200);
+    expect(preview.json<{ count: number; canSend: boolean }>().count).toBe(2);
 
     const submit = await ctx.server.inject({
       method: 'POST',
       url: '/api/blessings',
-      headers: ctx.auth,
+      headers: sender,
       payload: {
+        contentType: 'text',
         body: GOOD_BODY,
         occasion: 'daily',
-        personalization: { toName: '阿明', fromCity: '杭州' },
+        scope: 'broadcast',
+        audience: WIDE,
       },
     });
     expect(submit.statusCode).toBe(200);
-    const { slug } = submit.json<{ slug: string }>();
+    expect(submit.json<{ recipientCount: number }>().recipientCount).toBe(2);
 
-    const preparing = await ctx.server.inject({ method: 'GET', url: `/api/p/${slug}` });
-    expect(preparing.json<{ type: string }>().type).toBe('preparing');
+    // hold 期间收件箱为空
+    const early = await ctx.server.inject({ method: 'GET', url: '/api/inbox', headers: alice });
+    expect(early.json<unknown[]>()).toHaveLength(0);
 
     ctx.clock.advance(6000);
     await ctx.app.scans.publishReady();
 
-    const page = await ctx.server.inject({ method: 'GET', url: `/api/p/${slug}` });
-    const body = page.json<{ type: string; content?: { body: string; fromLine: string } }>();
-    expect(body.type).toBe('content');
-    expect(body.content?.body).toContain('温柔以待');
-    expect(body.content?.fromLine).toContain('杭州');
+    const inbox = await ctx.server.inject({ method: 'GET', url: '/api/inbox', headers: alice });
+    const items = inbox.json<{ status: string; body: string; from: { nickname: string } }[]>();
+    expect(items).toHaveLength(1);
+    expect(items[0]?.status).toBe('content');
+    expect(items[0]?.body).toContain('温柔以待');
+    expect(items[0]?.from.nickname).toBe('发送者');
 
-    const streak = await ctx.server.inject({
+    const notif = await ctx.server.inject({
       method: 'GET',
-      url: '/api/streak/me',
-      headers: ctx.auth,
+      url: '/api/notifications',
+      headers: bob,
     });
-    expect(streak.json<{ total: number }>().total).toBe(1);
+    expect(notif.json<{ unread: number }>().unread).toBe(1);
 
     await ctx.server.close();
   });
 
-  it('撤回 → 访客看到占位 → 坚持记录回撤', async () => {
-    const ctx = await loggedInServer();
-    const submit = await ctx.server.inject({
+  it('没设位置 → 提交 422 location_required', async () => {
+    const ctx = await makeServer();
+    const sender = await login(ctx.server, '没位置');
+    await agree(ctx.server, sender);
+    const res = await ctx.server.inject({
       method: 'POST',
       url: '/api/blessings',
-      headers: ctx.auth,
-      payload: { body: GOOD_BODY, occasion: 'daily', personalization: { toName: '阿明' } },
+      headers: sender,
+      payload: {
+        contentType: 'text',
+        body: GOOD_BODY,
+        occasion: 'daily',
+        scope: 'broadcast',
+        audience: WIDE,
+      },
     });
-    const { id, slug } = submit.json<{ id: string; slug: string }>();
-    ctx.clock.advance(6000);
-    await ctx.app.scans.publishReady();
+    expect(res.statusCode).toBe(422);
+    expect(res.json<{ error: string }>().error).toBe('location_required');
+    await ctx.server.close();
+  });
 
-    const w = await ctx.server.inject({
+  it('缺协议 → 提交 403 consent_required', async () => {
+    const ctx = await makeServer();
+    const sender = await login(ctx.server, '没协议');
+    await setProfile(ctx.server, sender, CENTER);
+    await login(ctx.server, '阿离').then((a) => setProfile(ctx.server, a, NEAR_A));
+    const res = await ctx.server.inject({
       method: 'POST',
-      url: `/api/blessings/${id}/withdraw`,
-      headers: ctx.auth,
+      url: '/api/blessings',
+      headers: sender,
+      payload: {
+        contentType: 'text',
+        body: GOOD_BODY,
+        occasion: 'daily',
+        scope: 'broadcast',
+        audience: WIDE,
+      },
     });
-    expect(w.statusCode).toBe(200);
-
-    const page = await ctx.server.inject({ method: 'GET', url: `/api/p/${slug}` });
-    expect(page.json<{ type: string }>().type).toBe('withdrawn');
-    const streak = await ctx.server.inject({
-      method: 'GET',
-      url: '/api/streak/me',
-      headers: ctx.auth,
-    });
-    expect(streak.json<{ total: number }>().total).toBe(0);
+    expect(res.statusCode).toBe(403);
+    expect(res.json<{ error: string }>().error).toBe('consent_required');
     await ctx.server.close();
   });
 
   it('协议接口回报是否已同意：同意前 false，同意后 true', async () => {
     const ctx = await makeServer();
-    const login = await ctx.server.inject({
-      method: 'POST',
-      url: '/api/auth/stub-login',
-      payload: { nickname: '待同意' },
-    });
-    const c = login.cookies.find((x) => x.name === 'bw_uid');
-    const auth = { cookie: `bw_uid=${c?.value ?? ''}` };
-
+    const auth = await login(ctx.server, '待同意');
     const before = await ctx.server.inject({
       method: 'GET',
       url: '/api/agreement/current',
       headers: auth,
     });
     expect(before.json<{ alreadyConsented: boolean }>().alreadyConsented).toBe(false);
-
-    await ctx.server.inject({
-      method: 'POST',
-      url: '/api/consents',
-      headers: auth,
-      payload: { scopeDeliver: true, scopeFeatured: false, scopeSynthesis: false },
-    });
-
+    await agree(ctx.server, auth);
     const after = await ctx.server.inject({
       method: 'GET',
       url: '/api/agreement/current',
@@ -125,44 +162,77 @@ describe('HTTP 端到端：核心流程', () => {
     await ctx.server.close();
   });
 
-  it('缺协议 → 提交 403 consent_required', async () => {
-    const ctx = await makeServer();
-    const login = await ctx.server.inject({
-      method: 'POST',
-      url: '/api/auth/stub-login',
-      payload: { nickname: '无协议' },
-    });
-    const c = login.cookies.find((x) => x.name === 'bw_uid');
-    const res = await ctx.server.inject({
+  it('范本接口返回参考范本（每类≥3）', async () => {
+    const ctx = await makeServer({ templates: seedTemplates() });
+    const res = await ctx.server.inject({ method: 'GET', url: '/api/templates' });
+    expect(res.json<unknown[]>().length).toBeGreaterThanOrEqual(18);
+    await ctx.server.close();
+  });
+
+  it('命中拉客护栏 → suspect → 进队列 → 人工通过 → 投递到收件箱', async () => {
+    const ctx = await makeServer({ templates: seedTemplates() });
+    const sender = await login(ctx.server, '发送者');
+    await setProfile(ctx.server, sender, CENTER);
+    await agree(ctx.server, sender);
+    const alice = await login(ctx.server, '阿离');
+    await setProfile(ctx.server, alice, NEAR_A);
+
+    await ctx.server.inject({
       method: 'POST',
       url: '/api/blessings',
-      headers: { cookie: `bw_uid=${c?.value ?? ''}` },
-      payload: { body: GOOD_BODY, occasion: 'daily', personalization: { toName: '阿明' } },
+      headers: sender,
+      payload: {
+        contentType: 'text',
+        body: '愿你安好，如需超度收费请私信我们，价格公道，服务周到。',
+        occasion: 'remembrance',
+        scope: 'broadcast',
+        audience: WIDE,
+      },
     });
-    expect(res.statusCode).toBe(403);
-    expect(res.json<{ error: string }>().error).toBe('consent_required');
+    ctx.clock.advance(60000);
+    await ctx.app.scans.publishReady();
+    expect(
+      (await ctx.server.inject({ method: 'GET', url: '/api/inbox', headers: alice })).json<
+        unknown[]
+      >(),
+    ).toHaveLength(0);
+
+    const queue = (
+      await ctx.server.inject({ method: 'GET', url: '/api/moderation/queue', headers: sender })
+    ).json<{ id: string; origin: string }[]>();
+    expect(queue.some((q) => q.origin === 'auto_suspect')).toBe(true);
+
+    await ctx.server.inject({
+      method: 'POST',
+      url: `/api/moderation/${queue[0]?.id ?? ''}/resolve`,
+      headers: sender,
+      payload: { action: 'pass', reason: '常见悼念用语' },
+    });
+    const inbox = (
+      await ctx.server.inject({ method: 'GET', url: '/api/inbox', headers: alice })
+    ).json<{ status: string }[]>();
+    expect(inbox[0]?.status).toBe('content');
     await ctx.server.close();
   });
 
-  it('范本接口返回参考范本（每类≥3）', async () => {
-    const ctx = await loggedInServer();
-    const res = await ctx.server.inject({
-      method: 'GET',
-      url: '/api/templates',
-      headers: ctx.auth,
-    });
-    const list = res.json<{ category: string }[]>();
-    expect(list.length).toBeGreaterThanOrEqual(18);
-    await ctx.server.close();
-  });
+  it('访客举报高危 → 公开页即时占位 + 进队列', async () => {
+    const ctx = await makeServer({ templates: seedTemplates() });
+    const sender = await login(ctx.server, '发送者');
+    await setProfile(ctx.server, sender, CENTER);
+    await agree(ctx.server, sender);
+    await login(ctx.server, '阿离').then((a) => setProfile(ctx.server, a, NEAR_A));
 
-  it('举报高危 → 即时占位 + 进审核队列 → 人工通过恢复', async () => {
-    const ctx = await loggedInServer();
     const submit = await ctx.server.inject({
       method: 'POST',
       url: '/api/blessings',
-      headers: ctx.auth,
-      payload: { body: GOOD_BODY, occasion: 'daily', personalization: { toName: '阿明' } },
+      headers: sender,
+      payload: {
+        contentType: 'text',
+        body: GOOD_BODY,
+        occasion: 'daily',
+        scope: 'broadcast',
+        audience: WIDE,
+      },
     });
     const { slug } = submit.json<{ slug: string }>();
     ctx.clock.advance(6000);
@@ -178,98 +248,10 @@ describe('HTTP 端到端：核心流程', () => {
         .type,
     ).toBe('taken_down');
 
-    const queue = await ctx.server.inject({
-      method: 'GET',
-      url: '/api/moderation/queue',
-      headers: ctx.auth,
-    });
-    const items = queue.json<{ id: string; priority: number }[]>();
-    expect(items[0]?.priority).toBe(90);
-
-    await ctx.server.inject({
-      method: 'POST',
-      url: `/api/moderation/${items[0]?.id ?? ''}/resolve`,
-      headers: ctx.auth,
-      payload: { action: 'pass', reason: '误报' },
-    });
-    expect(
-      (await ctx.server.inject({ method: 'GET', url: `/api/p/${slug}` })).json<{ type: string }>()
-        .type,
-    ).toBe('content');
-    await ctx.server.close();
-  });
-
-  it('命中护栏词 → suspect → 进队列 → 人工通过 → 送达（§7.2）', async () => {
-    const ctx = await loggedInServer();
-    const r = await ctx.server.inject({
-      method: 'POST',
-      url: '/api/blessings',
-      headers: ctx.auth,
-      payload: {
-        body: '愿你平安，如需超度收费请私信我们，价格公道，服务周到。',
-        occasion: 'remembrance',
-        personalization: { toName: '故人' },
-      },
-    });
-    const { slug } = r.json<{ slug: string }>();
-    ctx.clock.advance(60000);
-    await ctx.app.scans.publishReady();
-    expect(
-      (await ctx.server.inject({ method: 'GET', url: `/api/p/${slug}` })).json<{ type: string }>()
-        .type,
-    ).toBe('preparing');
-
     const queue = (
-      await ctx.server.inject({ method: 'GET', url: '/api/moderation/queue', headers: ctx.auth })
-    ).json<{ id: string; origin: string }[]>();
-    expect(queue.some((q) => q.origin === 'auto_suspect')).toBe(true);
-
-    await ctx.server.inject({
-      method: 'POST',
-      url: `/api/moderation/${queue[0]?.id ?? ''}/resolve`,
-      headers: ctx.auth,
-      payload: { action: 'pass', reason: '常见悼念用语' },
-    });
-    expect(
-      (await ctx.server.inject({ method: 'GET', url: `/api/p/${slug}` })).json<{ type: string }>()
-        .type,
-    ).toBe('content');
-    await ctx.server.close();
-  });
-
-  it('链接到期 → expired 占位 → 续期 → 恢复可见（不重新审核）（§7.3）', async () => {
-    const ctx = await loggedInServer();
-    const r = await ctx.server.inject({
-      method: 'POST',
-      url: '/api/blessings',
-      headers: ctx.auth,
-      payload: { body: GOOD_BODY, occasion: 'birthday', personalization: { toName: '阿明' } },
-    });
-    const { id, slug } = r.json<{ id: string; slug: string }>();
-    ctx.clock.advance(6000);
-    await ctx.app.scans.publishReady();
-
-    ctx.clock.advance(121 * 86_400_000);
-    await ctx.app.scans.expire();
-    expect(
-      (await ctx.server.inject({ method: 'GET', url: `/api/p/${slug}` })).json<{ type: string }>()
-        .type,
-    ).toBe('expired');
-
-    await ctx.server.inject({
-      method: 'POST',
-      url: `/api/blessings/${id}/renew`,
-      headers: ctx.auth,
-    });
-    expect(
-      (await ctx.server.inject({ method: 'GET', url: `/api/p/${slug}` })).json<{ type: string }>()
-        .type,
-    ).toBe('content');
-    // 续期不重复加计数
-    const streak = (
-      await ctx.server.inject({ method: 'GET', url: '/api/streak/me', headers: ctx.auth })
-    ).json<{ total: number }>();
-    expect(streak.total).toBe(1);
+      await ctx.server.inject({ method: 'GET', url: '/api/moderation/queue', headers: sender })
+    ).json<{ priority: number }[]>();
+    expect(queue[0]?.priority).toBe(90);
     await ctx.server.close();
   });
 });

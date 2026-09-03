@@ -16,8 +16,7 @@ export function haversineKm(a: GeoPoint, b: GeoPoint): number {
   const dLng = toRad(b.lng - a.lng);
   const lat1 = toRad(a.lat);
   const lat2 = toRad(b.lat);
-  const h =
-    Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
   return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
@@ -64,9 +63,11 @@ export function resolveAudience(
   now: Date,
   excludeUserId: string,
 ): AudienceMatch[] {
-  return candidates
-    .filter((c) => c.userId !== excludeUserId && c.point !== null)
-    .map((c) => ({ candidate: c, distanceKm: haversineKm(origin, c.point as GeoPoint) }))
-    .filter((m) => matchesAudience(m.candidate, filter, origin, now))
-    .sort((a, b) => a.distanceKm - b.distanceKm);
+  const out: AudienceMatch[] = [];
+  for (const c of candidates) {
+    if (c.userId === excludeUserId || c.point === null) continue;
+    if (!matchesAudience(c, filter, origin, now)) continue;
+    out.push({ candidate: c, distanceKm: haversineKm(origin, c.point) });
+  }
+  return out.sort((a, b) => a.distanceKm - b.distanceKm);
 }

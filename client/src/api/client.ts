@@ -109,12 +109,7 @@ export interface OutboxItem {
 }
 
 export type BlessingStatus =
-  | 'content'
-  | 'preparing'
-  | 'withdrawn'
-  | 'taken_down'
-  | 'expired'
-  | 'not_found';
+  'content' | 'preparing' | 'withdrawn' | 'taken_down' | 'expired' | 'not_found';
 
 export interface InboxItem {
   id: string;
@@ -191,8 +186,11 @@ export const api = {
   suggestedTags: () => call<{ tags: string[] }>('GET', '/api/tags/suggested'),
 
   agreement: () => call<AgreementView>('GET', '/api/agreement/current'),
-  recordConsent: (scopes: { scopeDeliver: boolean; scopeFeatured: boolean; scopeSynthesis: boolean }) =>
-    call<{ ok: true }>('POST', '/api/consents', scopes),
+  recordConsent: (scopes: {
+    scopeDeliver: boolean;
+    scopeFeatured: boolean;
+    scopeSynthesis: boolean;
+  }) => call<{ ok: true }>('POST', '/api/consents', scopes),
 
   templates: () => call<Template[]>('GET', '/api/templates'),
   getDraft: () =>
@@ -212,7 +210,8 @@ export const api = {
   inbox: () => call<InboxItem[]>('GET', '/api/inbox'),
   markInboxRead: () => call<{ ok: true }>('POST', '/api/inbox/read'),
 
-  notifications: () => call<{ items: NotificationItem[]; unread: number }>('GET', '/api/notifications'),
+  notifications: () =>
+    call<{ items: NotificationItem[]; unread: number }>('GET', '/api/notifications'),
   markNotificationsRead: () => call<{ ok: true }>('POST', '/api/notifications/read'),
 
   withdraw: (id: string) => call<{ state: string }>('POST', `/api/blessings/${id}/withdraw`),

@@ -65,7 +65,10 @@ export interface ReportRepository {
   add(record: ReportRecord): Promise<void>;
   findById(id: string): Promise<ReportRecord | null>;
   save(record: ReportRecord): Promise<void>;
-  findOpenReportByFingerprint(blessingId: string, fingerprint: string): Promise<ReportRecord | null>;
+  findOpenReportByFingerprint(
+    blessingId: string,
+    fingerprint: string,
+  ): Promise<ReportRecord | null>;
   findOpenAutoSuspect(blessingId: string): Promise<ReportRecord | null>;
   listOpen(): Promise<ReportRecord[]>;
 }

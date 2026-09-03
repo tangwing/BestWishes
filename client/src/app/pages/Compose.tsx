@@ -129,8 +129,7 @@ export function Compose() {
       });
   }
 
-  const canSubmit =
-    bodyLen >= 15 && (isReply || (preview !== null && preview.canSend));
+  const canSubmit = bodyLen >= 15 && (isReply || (preview?.canSend ?? false));
 
   return (
     <div className={s.page}>
@@ -301,7 +300,11 @@ export function Compose() {
             </div>
 
             <div style={{ marginTop: 14 }}>
-              <button className="ghost" disabled={previewBusy || !canBroadcast} onClick={runPreview}>
+              <button
+                className="ghost"
+                disabled={previewBusy || !canBroadcast}
+                onClick={runPreview}
+              >
                 {previewBusy ? '查询中…' : '预览收件人'}
               </button>
             </div>

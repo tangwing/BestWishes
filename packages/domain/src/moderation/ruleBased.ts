@@ -8,13 +8,7 @@ import type {
 } from '../types';
 import type { P1Config } from '../config';
 import { DEFAULT_CONFIG } from '../config';
-import {
-  BANNED,
-  CONTACT_PATTERNS,
-  SOLICITATION_GUARD,
-  isLowEffort,
-  looksGarbled,
-} from './words';
+import { BANNED, CONTACT_PATTERNS, SOLICITATION_GUARD, isLowEffort, looksGarbled } from './words';
 
 export interface RuleBasedOptions {
   config?: P1Config;
@@ -50,7 +44,11 @@ export class RuleBasedProvider implements ModerationProvider {
       violationCats.push('low_effort');
     }
     if (violationCats.length > 0) {
-      return { verdict: 'violation', categories: [...new Set(violationCats)], providerRef: this.name };
+      return {
+        verdict: 'violation',
+        categories: [...new Set(violationCats)],
+        providerRef: this.name,
+      };
     }
 
     const suspectCats: ModerationCategory[] = [];

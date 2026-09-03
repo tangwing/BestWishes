@@ -70,7 +70,8 @@ export function createProfileService(deps: AppDeps) {
       if (patch.birthYear !== undefined) toWrite.birthYear = patch.birthYear;
       if (patch.tags !== undefined) toWrite.tags = [...new Set(patch.tags)];
       if (patch.locationGranted !== undefined) toWrite.locationGranted = patch.locationGranted;
-      if (patch.featuredByDefault !== undefined) toWrite.featuredByDefault = patch.featuredByDefault;
+      if (patch.featuredByDefault !== undefined)
+        toWrite.featuredByDefault = patch.featuredByDefault;
       await deps.repos.profiles.upsert(userId, toWrite);
       return view(userId);
     },
