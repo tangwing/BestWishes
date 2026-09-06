@@ -8,18 +8,30 @@
 
 ## 恢复点（先读这段）
 
-- **阶段**：P1 **已按 [ADR 0004](docs/adr/0004-p1-stranger-broadcast-model.md) 重定为「陌生人祝福 · 按条件群发」，整套实现完成，openspec change 已 apply + archive**。`pnpm demo` 起单进程走完整链路。`pnpm verify` 绿，**139 测试**（8 个 `app.inject` 端到端 + 5 个 PGlite 集成 + domain audience/moderation/lifecycle 等）。`pnpm test:e2e` 绿（**10 个真浏览器**，多上下文模拟发送者 / 收件人）。openspec `validate --strict` 通过（1 个进行中 change `add-moderation-rbac` + 10 个主 spec）。**P1 到此告一段落，下一步是 P2。**
-- **新模型一句话**：注册用户有画像（经纬度位置 / 性别 / 出生年 / 标签）→ 写文本祝福（`contentType` 给音视频留白）→ 选受众（距离 / 年龄 / 性别 / 标签）→ 预览命中人数 → 命中 ∈ [1, `maxAudienceSize`=10] 才可群发 → 收件人在**收件箱**收到 + **通知**（未读徽标）→ 只能**回一段祝福**，不能对话。公开链接 `/p/:slug` 降级为"传播用"。审核目标改为过滤无效 / 垃圾 / 违规。
-- **代码**：`packages/domain`（+ `audience.ts` haversine 匹配）· `packages/shared` · `server/`（+ `audience-service` / `inbox-service` / `notification-service`；投递扇出在 `blessing-write.ts` 的 `transitionAndPersist` 里到 `published` 时触发，幂等 `deliveredAt`；数据层内存 + PGlite 两套同 ports，11 张表）· `client/`（+ Inbox 页 + 通知徽标；Profile / Compose 重做）· `arch/` · `e2e/`。
-- **走查**：见 [docs/DEMO.md](docs/DEMO.md)（已重写，需两个账号：发送者 + 收件人）。
-- **实现计划**：`add-p1-text-blessing` 已归档，见 [openspec/changes/archive/2026-09-06-add-p1-text-blessing/tasks.md](openspec/changes/archive/2026-09-06-add-p1-text-blessing/tasks.md)（§0 记录了重定）；当前权威行为描述在 [openspec/specs/](openspec/specs/)（10 个能力，随代码保持同步，见 AGENTS.md §2「spec 同步检查」）。
-- **本机限制**：① 数据层用 **PGlite**（WASM Postgres，进程内，真 SQL）；生产换独立 PG = 换 `drizzle-orm/postgres-js` 驱动一层。② macOS 12 → E2E 用**系统 Chrome**（`channel: 'chrome'`）。
-- **技术栈**（ADR 0003）：Web-first PWA + Node/TS（Fastify）+ PostgreSQL（Drizzle / PGlite）+ pnpm monorepo。
-- **关键文档**：[ADR 0004](docs/adr/0004-p1-stranger-broadcast-model.md) · [docs/product/use-cases.md](docs/product/use-cases.md)（v1）· [docs/architecture/p1-architecture.md](docs/architecture/p1-architecture.md)（v1）· [docs/product/p1-acceptance-status.md](docs/product/p1-acceptance-status.md) · [openspec/specs/](openspec/specs/)（归档后的主 spec）。
+- **阶段**：**P1 已完成并归档**（详见下方"P1 存档"）。**P2 启动**：用户选定 P2 第一批范围 = 祝福请求 + 匹配、音频祝福（录制 + 打分），视频推到 P3。openspec change `add-p2-wish-request-audio` 已写好 proposal/design/specs/tasks（`validate --strict` 通过），用户要求"出完 spec 后自动持续推进"，**当前正在按 tasks.md 自主实现中**，用户次日早晨审阅。
+- **B-68 add-p2-wish-request-audio 实现进度**：见 [openspec/changes/add-p2-wish-request-audio/tasks.md](openspec/changes/add-p2-wish-request-audio/tasks.md) 的勾选状态就是最新进度，这里不重复列。design.md 里"打分管线"一节是核心——ASR/强制对齐/信号工程/LLM 真诚度评估/挑战式真人校验，全部通过可插拔接口注入，P2 默认接 `RuleBasedAudioScoringProvider`（不需要真实云账号即可跑通、可测、可 demo，同 P1 `RuleBasedProvider`/PGlite 的套路）。真人校验 MVP 用挑战式（下发随机验证词），不做声纹/深伪检测（研究报告：那是"军备竞赛"，不能当唯一闸门）。评分输出恒为多维标签 + 置信度，绝不是单一分数（vision.md 硬约束）。
+- **技术栈**（ADR 0003）：Web-first PWA + Node/TS（Fastify）+ PostgreSQL（Drizzle / PGlite）+ pnpm monorepo；音频新增 `@fastify/multipart` 依赖 + 本机文件落盘（生产换对象存储时同 PGlite→postgres-js 的"换驱动不换契约"模式）。
 - **工作方式**：用户按点评提改动 → 记进本文件 → 持续完成。每轮结束自动 commit + push。
-- **下一步**：`openspec/changes/add-moderation-rbac` 已有完整 proposal/design/specs/tasks（`openspec validate --strict` 通过），等用户评审后 `/opsx:apply`（见 B-65）。之后：真实微信授权 / 审核 API 时机、逆地理编码、真实推送、删 `prototype/`、i18n（B-26）、PWA（B-27）。
+- **下一步**：完成 `add-p2-wish-request-audio` 的实现 + 测试 + demo 走查，等用户次日审阅反馈。`add-moderation-rbac` 仍按用户要求"先放着"（B-65）。
+
+<details>
+<summary>P1 存档（点开查看）</summary>
+
+- P1 **已按 [ADR 0004](docs/adr/0004-p1-stranger-broadcast-model.md) 重定为「陌生人祝福 · 按条件群发」，整套实现完成，openspec change 已 apply + archive**。`pnpm demo` 起单进程走完整链路。`pnpm verify` 绿，**139 测试**（8 个 `app.inject` 端到端 + 5 个 PGlite 集成 + domain audience/moderation/lifecycle 等）。`pnpm test:e2e` 绿（**10 个真浏览器**，多上下文模拟发送者 / 收件人）。
+- **模型一句话**：注册用户有画像（经纬度位置 / 性别 / 出生年 / 标签）→ 写文本祝福（`contentType` 给音视频留白）→ 选受众（距离 / 年龄 / 性别 / 标签）→ 预览命中人数 → 命中 ∈ [1, `maxAudienceSize`=10] 才可群发 → 收件人在**收件箱**收到 + **通知**（未读徽标）→ 只能**回一段祝福**，不能对话。公开链接 `/p/:slug` 降级为"传播用"。审核目标改为过滤无效 / 垃圾 / 违规。
+- **代码**：`packages/domain`（+ `audience.ts` haversine 匹配）· `packages/shared` · `server/`（+ `audience-service` / `inbox-service` / `notification-service`；投递扇出在 `blessing-write.ts` 的 `transitionAndPersist` 里到 `published` 时触发，幂等 `deliveredAt`；数据层内存 + PGlite 两套同 ports，11 张表）· `client/`（+ Inbox 页 + 通知徽标；Profile / Compose 重做）· `arch/` · `e2e/`。
+- **走查**：见 [docs/DEMO.md](docs/DEMO.md)。
+- **实现计划**：已归档，见 [openspec/changes/archive/2026-09-06-add-p1-text-blessing/tasks.md](openspec/changes/archive/2026-09-06-add-p1-text-blessing/tasks.md)；当前权威行为描述在 [openspec/specs/](openspec/specs/)（10 个能力，随代码保持同步，见 AGENTS.md §2「spec 同步检查」）。
+- **本机限制**：① 数据层用 **PGlite**（WASM Postgres，进程内，真 SQL）；生产换独立 PG = 换 `drizzle-orm/postgres-js` 驱动一层。② macOS 12 → E2E 用**系统 Chrome**（`channel: 'chrome'`）。
+- **关键文档**：[ADR 0004](docs/adr/0004-p1-stranger-broadcast-model.md) · [docs/product/use-cases.md](docs/product/use-cases.md)（v1）· [docs/architecture/p1-architecture.md](docs/architecture/p1-architecture.md)（v1）· [docs/product/p1-acceptance-status.md](docs/product/p1-acceptance-status.md)。
+
+</details>
 
 ---
+
+## 进行中
+
+- [~] **B-68 P2 第一批：祝福请求 + 匹配 + 音频打分**（`add-p2-wish-request-audio`）— proposal/design/specs/tasks 已完成并 `validate --strict` 通过；正按 `openspec/changes/add-p2-wish-request-audio/tasks.md` 自主实现，进度以该文件勾选状态为准。用户要求"出完 spec 自动持续推进，次日审阅"。核心技术决策见该 change 的 design.md：`WishRequest` 独立聚合、`Blessing.scope` 加 `wish_response`、音频打分管线全部可插拔且 P2 默认用不依赖真实云账号的 `RuleBasedAudioScoringProvider`、真人校验用挑战式（不做声纹/深伪检测）、评分输出恒为多维标签而非单一分数。
 
 ## 刚完成（下轮挪进 CHANGELOG）
 
