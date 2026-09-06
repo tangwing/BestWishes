@@ -5,14 +5,14 @@
 
 ## 一句话结论
 
-P1「陌生人祝福 · 按条件群发」的核心链路已在生产分层代码里实现：`pnpm verify` 绿（**137 进程内测试**，含 8 个 Fastify HTTP 端到端 + 5 个跑真实 SQL 的 PGlite 集成 + domain 的 audience/moderation/lifecycle 纯函数测试），`pnpm test:e2e` 绿（**9 个真浏览器 Playwright**，多浏览器上下文模拟发送者 / 收件人）。数据层内存 + PGlite 两套同 ports 实现。外部依赖（微信授权、真实内容安全 API、逆地理编码、真实推送）按接口留位，P1 用 stub / 规则实现。
+P1「陌生人祝福 · 按条件群发」的核心链路已在生产分层代码里实现：`pnpm verify` 绿（**139 进程内测试**，含 8 个 Fastify HTTP 端到端 + 5 个跑真实 SQL 的 PGlite 集成 + domain 的 audience/moderation/lifecycle 纯函数测试），`pnpm test:e2e` 绿（**9 个真浏览器 Playwright**，多浏览器上下文模拟发送者 / 收件人）。数据层内存 + PGlite 两套同 ports 实现。外部依赖（微信授权、真实内容安全 API、逆地理编码、真实推送）按接口留位，P1 用 stub / 规则实现。
 
 ## 逐用例
 
 | UC | 状态 | 证据 |
 |---|---|---|
 | UC-01 微信登录 | ✅ / ⬜真实授权 | `auth-service.ts`（openid 幂等）；`in-memory-repositories.test.ts`、`pg-repositories.test.ts` |
-| UC-02 完善画像（位置/性别/年龄/标签） | ✅ | `profile-service.ts`（`canBroadcast`）；`client/.../Profile.tsx`（Geolocation + 手填 + 标签 chips）；`api-flow.test.ts` setProfile |
+| UC-02 完善画像（位置/性别/年龄/标签） | ✅ | `profile-service.ts`（`canBroadcast`）；`client/.../Profile.tsx`（Geolocation + 手填 + 标签 chips，支持从建议标签选或自定义输入）；`api-flow.test.ts` setProfile |
 | UC-03 同意协议 | ✅ | `consent-service.ts`（`alreadyConsented`）；`Compose.tsx` 进页即判、submit 撞 `consent_required` 也跳；`api-flow.test.ts`「同意前 false / 同意后 true」+ E2E「新用户进 /compose → 跳 /agreement」 |
 | UC-04 范本参考 | ✅ | `templates-seed.ts`（18 条，每类 ≥3）；`api-flow.test.ts`；`Compose.tsx` 无一键填入、`user-select:none` |
 | UC-05 撰写（含 contentType 留白） | ✅ | `blessing-service.ts`（`contentType != text` 拒绝、字数校验）；`blessing-flow.test.ts`「语音 / 视频暂不支持」「正文太短」；`Compose.tsx` 形式 tab |
@@ -22,8 +22,8 @@ P1「陌生人祝福 · 按条件群发」的核心链路已在生产分层代�
 | UC-09 发布即校验 / 延迟送达 | ✅ | `blessing-write.ts`（`transitionAndPersist` + `deliverIfNeeded` 幂等）、`scans.ts`、`moderation/apply.ts`；`blessing-flow.test.ts` 三档各一条、`pg-repositories.test.ts` 同链路真 SQL |
 | UC-10 收件箱 | ✅ | `inbox-service.ts`（按 `blessing.state` 现算、发送者粗粒度信息、距离四舍五入）；`Inbox.tsx`（3s 轮询）；`blessing-flow.test.ts`「撤回后收件人看占位」、E2E「群发 → 收件箱收到」「撤回 → 占位」 |
 | UC-11 站内通知 | ✅ / ⬜真实推送 | `notification-service.ts`；`App.tsx` 未读徽标（4s 轮询）；`blessing-flow.test.ts`「未读通知」、`api-flow.test.ts` `/api/notifications` |
-| UC-12 回一段祝福 | ✅ | `blessing-service.submit`（`scope=reply`）；`blessing-flow.test.ts`「收件人回一段 → 原发送者收件箱出现」「不能回复自己」；E2E 回信链路 |
-| UC-13 发件箱管理 | ✅ | `blessing-service.ts`（withdraw/republish/delete/renew）；`Records.tsx`；`blessing-flow.test.ts` / `api-flow.test.ts` / `pg` 撤回 + 回响回撤、到期 + 续期 |
+| UC-12 回一段祝福（含关联原信） | ✅ | `blessing-service.submit`（`scope=reply` + `replyToBlessingId`，校验回复者确是原信收件人）；`inbox-service.ts`（`inReplyTo` 预览）；`blessing-flow.test.ts`「收件人回一段 → 原发送者收件箱出现」「回信关联原祝福」「伪造关联被忽略」「不能回复自己」；E2E 回信链路 + 关联展示 |
+| UC-13 发件箱管理 | ✅ | `blessing-service.ts`（withdraw/delete/renew；撤回是终态，不再有 republish，改「复制以供编辑」另发新草稿）；`Records.tsx`；`blessing-flow.test.ts`「撤回后没有重新发送的路子」/ `api-flow.test.ts` / `pg` 撤回 + 回响回撤、到期 + 续期 |
 | UC-14 公开链接 + 访客查看 | ✅ | `blessing-service.getPublicPage`（非 content 只回占位枚举）；`PublicPage.tsx`；`visitor.spec.ts` |
 | UC-15 举报 | ✅ | `report-service.ts`（匿名 / 指纹 / 同源合并 / 高危即时下架）；`api-flow.test.ts`「举报高危 → 即时占位 + 优先级 90」；`moderation.spec.ts` |
 | UC-16 审核队列 | ✅ / ⬜角色鉴权 | `moderation-queue-service.ts`；`Moderation.tsx`；`api-flow.test.ts`「护栏词 → 队列 → 通过 → 投递」、`moderation.spec.ts` 两条 |

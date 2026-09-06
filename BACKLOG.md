@@ -12,12 +12,12 @@
 - **新模型一句话**：注册用户有画像（经纬度位置 / 性别 / 出生年 / 标签）→ 写文本祝福（`contentType` 给音视频留白）→ 选受众（距离 / 年龄 / 性别 / 标签）→ 预览命中人数 → 命中 ∈ [1, `maxAudienceSize`=10] 才可群发 → 收件人在**收件箱**收到 + **通知**（未读徽标）→ 只能**回一段祝福**，不能对话。公开链接 `/p/:slug` 降级为"传播用"。审核目标改为过滤无效 / 垃圾 / 违规。
 - **代码**：`packages/domain`（+ `audience.ts` haversine 匹配）· `packages/shared` · `server/`（+ `audience-service` / `inbox-service` / `notification-service`；投递扇出在 `blessing-write.ts` 的 `transitionAndPersist` 里到 `published` 时触发，幂等 `deliveredAt`；数据层内存 + PGlite 两套同 ports，11 张表）· `client/`（+ Inbox 页 + 通知徽标；Profile / Compose 重做）· `arch/` · `e2e/`。
 - **走查**：见 [docs/DEMO.md](docs/DEMO.md)（已重写，需两个账号：发送者 + 收件人）。
-- **实现计划**：[openspec/changes/add-p1-text-blessing/tasks.md](openspec/changes/add-p1-text-blessing/tasks.md)（§0 记录了重定）。
+- **实现计划**：`add-p1-text-blessing` 已归档，见 [openspec/changes/archive/2026-09-06-add-p1-text-blessing/tasks.md](openspec/changes/archive/2026-09-06-add-p1-text-blessing/tasks.md)（§0 记录了重定）；当前权威行为描述在 [openspec/specs/](openspec/specs/)（10 个能力，随代码保持同步，见 AGENTS.md §2「spec 同步检查」）。
 - **本机限制**：① 数据层用 **PGlite**（WASM Postgres，进程内，真 SQL）；生产换独立 PG = 换 `drizzle-orm/postgres-js` 驱动一层。② macOS 12 → E2E 用**系统 Chrome**（`channel: 'chrome'`）。
 - **技术栈**（ADR 0003）：Web-first PWA + Node/TS（Fastify）+ PostgreSQL（Drizzle / PGlite）+ pnpm monorepo。
-- **关键文档**：[ADR 0004](docs/adr/0004-p1-stranger-broadcast-model.md) · [docs/product/use-cases.md](docs/product/use-cases.md)（v1）· [docs/architecture/p1-architecture.md](docs/architecture/p1-architecture.md)（v1）· [docs/product/p1-acceptance-status.md](docs/product/p1-acceptance-status.md) · [openspec/changes/add-p1-text-blessing/](openspec/changes/add-p1-text-blessing/)。
+- **关键文档**：[ADR 0004](docs/adr/0004-p1-stranger-broadcast-model.md) · [docs/product/use-cases.md](docs/product/use-cases.md)（v1）· [docs/architecture/p1-architecture.md](docs/architecture/p1-architecture.md)（v1）· [docs/product/p1-acceptance-status.md](docs/product/p1-acceptance-status.md) · [openspec/specs/](openspec/specs/)（归档后的主 spec）。
 - **工作方式**：用户按点评提改动 → 记进本文件 → 持续完成。每轮结束自动 commit + push。
-- **下一步**：`openspec/changes/add-moderation-rbac` 已有完整 proposal/design/specs/tasks（`openspec validate --strict` 通过），等用户评审后 `/opsx:apply`（见 B-65）。之后：真实微信授权 / 审核 API 时机、逆地理编码、真实推送、`/opsx:archive` 归档、删 `prototype/`、i18n（B-26）、PWA（B-27）。
+- **下一步**：`openspec/changes/add-moderation-rbac` 已有完整 proposal/design/specs/tasks（`openspec validate --strict` 通过），等用户评审后 `/opsx:apply`（见 B-65）。之后：真实微信授权 / 审核 API 时机、逆地理编码、真实推送、删 `prototype/`、i18n（B-26）、PWA（B-27）。
 
 ---
 
@@ -27,6 +27,7 @@
 - [x] **B-50 consent gate 修复** / **B-51 「坚持」→「回响」** / **B-52 送达页说清收件人** — 见 CHANGELOG。
 - [x] **B-60 P1 模型重定为「陌生人群发」（ADR 0004）** — 全栈实现 + 全套测试重写 + 文档 + openspec 同步。详见 CHANGELOG / PROMPT_LOG。
 - [x] **B-61 标签支持自定义** / **B-62 正文下限 15→5** / **B-63 撤回后误重投 bug（移除 republish，改复制编辑）** / **B-64 回信关联原祝福** — 见 CHANGELOG。
+- [x] **B-67 回补 `add-p1-text-blessing` 的 spec 并归档** — B-62/63/64/61 四处改动此前只进了 BACKLOG/CHANGELOG，没人回头改 openspec delta；用 `/opsx:update` 回补 `blessing-authoring`（字数 5）/ `blessing-delivery`（去 republish、加回信关联）/ `blessing-records`（发件箱按钮文案）三个能力的 spec + 校正 tasks.md 里几处过时描述，`validate --strict` 通过后 `/opsx:archive`，10 个能力主 spec 现在活在 `openspec/specs/`。同时在 AGENTS.md §2 加了"spec 同步检查"这条规则，防止再次出现"代码改了、spec 没跟"。
 
 ## 待办
 

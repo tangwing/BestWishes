@@ -4,6 +4,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Docs
+
+- 回补 `add-p1-text-blessing` 的 openspec delta 并归档（B-67）：该 change 实现完成后一直没归档，中间几轮点状修复（B-61/62/63/64）都只进了 BACKLOG/CHANGELOG，从没回头改它的 spec——归档前发现 spec 描述的还是"字数下限 15""撤回可重新发布""标签只能预设"这些过时行为。用 `/opsx:update` 逐条核对代码校正 `blessing-authoring` / `blessing-delivery` / `blessing-records` 三个能力的 delta（含两个新 scenario：撤回后不能重新发布、回信关联原祝福），顺带清理 `tasks.md` 里几处过时的复核项，`validate --strict` 通过后 `/opsx:archive`——10 个能力的主 spec 现在活在 `openspec/specs/`，是当前行为的权威来源。同步刷新 `docs/product/p1-acceptance-status.md` 的测试数与受影响用例证据。
+- AGENTS.md §2 新增"spec 同步检查"：动手前判断改动是否触及某个 openspec 能力已描述的行为，触及则同一轮工作里同步改 spec，不能只记 BACKLOG/CHANGELOG——防止本轮"代码改了、spec 没跟"的情况重演。
+
 ### Added
 
 - 标签支持自定义（B-61）：个人空间画像标签、写祝福页的受众筛选标签，此前只能从建议标签里点选。后端 schema（`audienceFilterSchema` / `profileUpdateSchema`）本就是自由字符串（≤20 字，≤10/12 个），只是客户端缺输入框。`Profile.tsx` / `Compose.tsx` 各加一个文本框 + 「添加」按钮（回车也可），复用现有标签 pill 渲染。

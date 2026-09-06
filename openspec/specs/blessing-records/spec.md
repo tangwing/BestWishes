@@ -1,12 +1,14 @@
+# Blessing Records Specification
+
 ## Purpose
 
 给用户一个"收发记录"：**发件箱**（我群发 / 回复出去的祝福 + 状态）和**收件箱**（陌生人送给我的祝福）。收件箱的详细行为见 `blessing-delivery`；这里定义发件箱。
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 发件箱
 
-发件箱 SHALL 展示当前用户发出的全部祝福（不含已删除），每条带状态、场景、`scope`（群发 / 回复）、收件人数、时间。用户 MUST 能从发件箱对每条祝福执行 `blessing-delivery` 定义的管理操作（撤回 / 校验期取消 / 重新发布 / 删除 / 续期）。
+发件箱 SHALL 展示当前用户发出的全部祝福（不含已删除），每条带状态、场景、`scope`（群发 / 回复）、收件人数、时间。用户 MUST 能从发件箱对每条祝福执行 `blessing-delivery` 定义的管理操作（撤回 / 校验期取消 / 删除 / 续期）；对已撤回的祝福，发件箱 SHALL 提供"复制以供编辑"，而不是重新发布已撤回的记录。
 
 #### Scenario: 查看发件箱
 

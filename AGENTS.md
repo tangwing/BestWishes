@@ -21,8 +21,12 @@ P2 及以后的技术决策（音视频管线、AI/ML 服务、祝福请求 / �
 - **目标驱动**：不做无法验证的工作。开始前明确验收标准。README 的 Goal 一节是当前最高层目标；模糊需求先澄清，不要猜测后静默执行。
 - **最简方案**：用最少的活动部件解决问题。不为假设中的未来需求做设计。
 - **可追溯性**：每个推动项目演变的用户 prompt 记录在 [PROMPT_LOG.md](PROMPT_LOG.md)。重大架构决策记录为 [docs/adr/](docs/adr/) 下的 ADR。
-- **完成 = 已同步**：代码写完、文档更新、CHANGELOG 记录、commit 完毕，才算完成。未提交的工作是未完成的工作。
+- **完成 = 已同步**：代码写完、文档更新、CHANGELOG 记录、commit 完毕，才算完成。未提交的工作是未完成的工作。**改到了某个 openspec 能力已描述的行为，spec 也算在"已同步"之内**——不能只靠 BACKLOG/CHANGELOG。
 - **待办进 [BACKLOG.md](BACKLOG.md)，完成的进 [CHANGELOG.md](CHANGELOG.md)。** 用户按点评方式提改动时，先记进 BACKLOG，再逐条做。每轮结束把做完的从 BACKLOG 挪到 CHANGELOG。BACKLOG 要随时能当作恢复点。
+- **spec 同步检查（动手前问一遍）**：这次改动触及的行为，在 `openspec/specs/<capability>/spec.md`（已归档）或某个未归档 change 的 `specs/<capability>/spec.md` 里有没有对应 Requirement？
+  - **有** → 同一轮工作里把该 delta / 主 spec 一并改掉（已归档的直接改主 spec；未归档的改那个 change 自己的 delta），不能只记 BACKLOG/CHANGELOG 完事——CHANGELOG 说"发生了什么"，spec 才是"系统现在应该怎样"的权威描述，两者得同时对。
+  - **没有** → 照旧走 BACKLOG → CHANGELOG，不必为一个小改动专门开 change。
+  - 2026-09-06 的教训：`add-p1-text-blessing` 实现完之后一直没归档，中间好几轮点状修复（字数下限、撤回重发 bug、回信关联、标签自定义）都只进了 BACKLOG，没人回头补它的 delta spec——归档前才发现 spec 和代码对不上。**功能上线后尽快 `/opsx:archive`**，别让"已实现但未归档"的中间态拖太久，这是本条规则形同虚设的最大原因。
 
 ## 3. 协作模型
 

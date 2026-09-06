@@ -25,15 +25,15 @@
 - [x] 2.3 `isPubliclyVisible` / `placeholderType` —— 迁移，16 测试
 - [x] 2.4 / 2.5 坚持记录 `streak`（+1 / 回撤 / 归零中断 / 续期不加 / 跨时区）—— 迁移，12 测试
 - [x] 2.6 审核判定映射 `outcomeFor`（三档 + 超时保守）—— 迁移，6 测试
-- [ ] 2.7 补 spec 迭代新增但 domain 层还没覆盖的：链接过期不回撤（这条在 application 层验证，见 §5.5）
+- [x] 2.7 补 spec 迭代新增但 domain 层还没覆盖的：链接过期不回撤（这条在 application 层验证，见 §5.5a，`blessing-flow.test.ts`「链接到期 → 续期恢复可见，不重复计数」覆盖）
 
 ## 3. 内容审核
 
 - [x] 3.1 `ModerationProvider` 接口（在 `domain/types.ts`）+ 契约测试 —— 迁移
 - [x] 3.2 `RuleBasedProvider`（违禁→violation / 护栏词→suspect / 结构规则→suspect / 无命中→pass）—— 迁移，11 测试
 - [x] 3.3 `UnavailableProvider` + `outcomeFor` 的保守分支 —— 迁移
-- [ ] 3.4 复核工单模型 —— `ReportRecord` + `InMemoryReportRepository`（优先级排序、同源合并查询、终态）已建；工单编排（application 层）在 §5
-- [ ] 3.5 复核动作驱动状态机 —— application 层，见 §5.9
+- [x] 3.4 复核工单模型 —— `ReportRecord` + `InMemoryReportRepository`（优先级排序、同源合并查询、终态）已建；工单编排（application 层）见 §5.9，已实现
+- [x] 3.5 复核动作驱动状态机 —— application 层，见 §5.9，已实现
 
 ## 4. 数据层
 
@@ -51,15 +51,16 @@
 - [x] 5.2a `ProfileService`（view / update，城市粒度靠 Zod max、定位开关、精选偏好，个人偏好 > 系统默认）
 - [x] 5.3a `ConsentService`（`agreement` / `hasValidConsent` / `record`，必选项拒绝，默认值来源优先级）
 - [x] 5.4a `DraftService`（get / save，不触发审核 / 不生成链接）
-- [x] 5.5a `BlessingService`（`submit`：受理即返回、同步规则审核落状态、合并个人空间默认值、字数校验、consent 校验；`withdraw` / `republish` / `delete` / `renew`；`outbox`；`inbox` 空状态）
+- [x] 5.5a `BlessingService`（`submit`：受理即返回、同步规则审核落状态、合并个人空间默认值、字数校验、consent 校验、`replyToBlessingId` 关联校验；`withdraw`（终态）/ `delete` / `renew`；`outbox`；`inbox` 空状态）
 - [x] 5.6a `BlessingService.getPublicPage`：仅 `published` 且未过期返回正文，其它只返回占位类型
 - [x] 5.8a `StreakService.view`：仅本人、与有效集合一致、跨时区
 - [x] 5.10a `Scans`（`publishReady` 延迟送达、`expire` 到期、`escalateStuck` hold 超时）+ 可注入 `FakeClock`
 - [x] 5.1b…5.10b Fastify 路由（`interface/http/routes.ts`，薄 handler + Zod parse + cookie 会话 + AppException→status 映射）；`interface/http/api-flow.test.ts` 用 `app.inject` 覆盖核心链路 + 举报 + 审核台
 - [x] 5.7 举报 `ReportService`（匿名、指纹、同源合并、高危 illegal/offensive 即时临时下架）+ `POST /api/p/:slug/report`
-- [x] 5.9 审核队列 `ModerationQueueService`（优先级排序、`pass/takedown/request_edit` 驱动状态机、留痕）+ `GET /api/moderation/queue` `POST /api/moderation/:id/resolve`（demo 任意会话；真实按角色）
+- [x] 5.9 审核队列 `ModerationQueueService`（优先级排序、`pass/takedown/request_edit` 驱动状态机、留痕）+ `GET /api/moderation/queue` `POST /api/moderation/:id/resolve`（demo 任意会话可进；角色鉴权已开新 change `add-moderation-rbac`，见 BACKLOG B-65）
 - [x] 5.x 组合根 `main.ts` 装配内存实现 + 范本 seed + 扫描 setInterval；`pnpm --filter @bestwishes/server start` 实测走通 登录→协议→提交→hold→发布→访客看正文→outbox→streak
-- [ ] 5.真实微信授权路由（`/api/auth/wx/*`）、真实审核 API、PG 实现 —— apply 后续 / B-24
+- [x] 5.11 PGlite 数据层实现（`drizzle-orm/pglite`，真实 SQL、11 张表）与内存实现同 ports；`pg-repositories.test.ts`（5，含群发全链路）
+- [ ] 5.12 真实微信授权路由（`/api/auth/wx/*`）、真实审核 API、生产 Postgres 驱动切换（`drizzle-orm/postgres-js` + `DATABASE_URL`，schema/仓储/迁移不动）—— BACKLOG B-24b
 
 ## 6. 前端（`client/`，React + Vite + CSS Modules）
 
@@ -72,7 +73,7 @@
 - [x] 6.7 已发送页：轮询 outbox 拿状态、显示"心意正在送往 XX"、可分享链接 + 复制
 - [x] 6.8 分享：复制外链（微信分享 SDK 待真实端接）
 - [x] 6.9 访客落地页 `/p/:slug`：按占位类型渲染 + 3s 轮询 + 举报入口 + "我也写一段"
-- [x] 6.10 收发记录页：送出的 / 收到的两 tab；发件箱撤回/取消/重新发布/删除/续期；收件箱空状态
+- [x] 6.10 收发记录页：送出的 / 收到的两 tab；发件箱撤回/取消/删除/续期，撤回后提供"复制以供编辑"（不再是重新发布）；收件箱空状态
 - [x] 6.11 坚持记录页：温和文案、仅本人、无排行无积分
 - [x] 6.12 审核台页面：队列（优先级）+ 通过/下架/要求修改 + 留痕展示
 - [ ] 6.13 i18n 抽取（现为字面中文）—— BACKLOG B-26；微信 H5 环境适配、PWA manifest —— B-27
@@ -83,6 +84,10 @@
 - [x] 7.2 同上：命中护栏词 → suspect → 进队列 → 人工通过 → 送达；命中违禁词 → rejected → 访客占位
 - [x] 7.3 同上：链接到期 → expired 占位 → 作者续期 → 恢复可见（不重新审核、不加计数）
 - [x] 7.x 单进程 Demo（`pnpm demo`，`@fastify/static` 托管 client/dist + SPA fallback）；`docs/DEMO.md` 走查稿；README「跑 Demo」
-- [ ] 7.4 逐条核对 [use-cases.md](../../../docs/product/use-cases.md) 的 P1 验收标准 —— 更新 [docs/product/p1-acceptance-status.md](../../../docs/product/p1-acceptance-status.md) 为 monorepo 版
-- [x] 7.5 Playwright E2E（真浏览器点一遍）—— `e2e/`，系统 Chrome，6 个测试（author-flow / moderation / visitor / smoke）
+- [x] 7.4 逐条核对 [use-cases.md](../../../docs/product/use-cases.md) 的 P1 验收标准 —— 更新 [docs/product/p1-acceptance-status.md](../../../docs/product/p1-acceptance-status.md) 为 monorepo 版（BACKLOG B-31，后续随 B-62/63/64 再次刷新证据）
+- [x] 7.5 Playwright E2E（真浏览器点一遍）—— `e2e/`，系统 Chrome，10 个测试（author-flow / moderation / visitor / smoke）
 - [x] 7.6 `openspec validate add-p1-text-blessing --strict` 通过；PROMPT_LOG.md、CHANGELOG.md 更新
+- [x] 7.7 标签支持自定义输入（此前 spec 已写"从建议标签里选或自定义"，`Profile.tsx` / `Compose.tsx` 客户端补上输入框才补齐；BACKLOG B-61）
+- [x] 7.8 正文字数下限 15 → 5（`packages/domain/src/config.ts` `DEFAULT_CONFIG.bodyMinLen`；BACKLOG B-62）
+- [x] 7.9 修复"撤回后重新发布，对方收不到但发送者以为已送达"的 bug —— 根因是投递幂等标记 `deliveredAt` 撤回时不清空、`republish` 复用同一条记录被幂等 guard 挡住扇出；处理方式是移除 `republish`（撤回变终态），改「复制以供编辑」另发新草稿。domain 状态机 + 2 个集成测试 + 1 个 e2e 覆盖（BACKLOG B-63）
+- [x] 7.10 回信关联原祝福：`replyToBlessingId` + 收件箱 `inReplyTo` 预览，校验回复者确是原信收件人防伪造。2 个集成测试 + 1 个 e2e 断言覆盖（BACKLOG B-64）

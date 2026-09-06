@@ -209,3 +209,19 @@
 5. **审核台权限（RBAC）**：用户明确要求"新功能先出 Spec，想清楚再干"——调用 `/opsx:propose` 开新 change `add-moderation-rbac`（不并入已完成的 `add-p1-text-blessing`），产出完整 proposal / design / specs（新能力 `access-control`）/ tasks，`validate --strict` 通过。核心方案：`users.role`（`user`/`admin`）+ 登录时按 `BW_ADMIN_NICKNAMES` 配置授予/收回（stub 登录阶段的过渡方案）+ 后端 `requireAdmin` 门禁 + 前端隐藏入口。**未实现代码**，等用户评审后 `/opsx:apply`（B-65）。
 
 **产物**：`pnpm verify` 绿（**139 测试**，+2）；`pnpm test:e2e` 绿（**10**，+1）；`pnpm demo` 手动截图验证三项修复；`openspec validate add-moderation-rbac --strict` 通过。
+
+### 好奇问一句：spec 会不会自动同步？
+
+> 好奇问一句，你每次我加的这些调整和改动会同步到Open Spec吗？如何保证产品与文档完全对齐
+
+**结果**：如实回答不会自动同步——今天只有 RBAC 那项走了 spec（因为用户明确要求"新功能先出 Spec"），其余四项点状修复（B-61/62/63/64）都只进了 BACKLOG/CHANGELOG。指出真实缺口：`add-p1-text-blessing` 早就实现完成，却一直没有 `/opsx:archive`，导致它的 delta spec 停在"实现时的设计"、和已发生的四处后续修复完全脱节——如果照原样归档，会把过时行为（字数下限 15、撤回可重新发布、标签只能预设）錯当成权威写进主 spec。给了两个选项：(1) 先回补 delta spec 再归档，(2) 承认 spec 只是历史快照、以代码 + 测试为准，不回补。
+
+### 选择1，并建立机制
+
+> 选择1　并建立机制　确保所有改动有迹可循
+
+**结果**：
+1. **回补 + 归档**（B-67）：用 `/opsx:update` 走查 `add-p1-text-blessing` 的 10 个 delta spec，对照实际代码（`packages/domain/src/config.ts`、`lifecycle.ts`、`types.ts`、`inbox-service.ts`、`Records.tsx`）逐条核对，修正 `blessing-authoring`（字数 5）、`blessing-delivery`（去掉 republish、`作者管理祝福`要求改写为"撤回是终态"+新增"复制正文另行提交"场景、新增"回信关联原祝福"整条 requirement）、`blessing-records`（发件箱按钮文案）三个能力；顺带把 `tasks.md` 里几处过时的复核项（2.7/3.4/3.5/7.4）核实后打勾，PG 数据层已完成但被误标"待做"的一行也拆开改正。`openspec validate --strict` 通过后，走 `openspec-sync-specs` 把全部 10 个能力从 delta 合并进 `openspec/specs/`（此前是空目录，纯创建），再 `/opsx:archive` 移进 `openspec/changes/archive/2026-09-06-add-p1-text-blessing/`。同步刷新 `docs/product/p1-acceptance-status.md` 的测试数和几条受影响用例的证据。
+2. **机制**（AGENTS.md §2 新增"spec 同步检查"）：动手前先问——这次改动触及的行为，在已归档主 spec 或某个未归档 change 的 delta 里有没有对应 Requirement？有，就得在同一轮工作里把 spec 一并改掉，不能只记 BACKLOG/CHANGELOG；没有，照旧走 BACKLOG→CHANGELOG，不必为小改动开新 change。同时写明今天问题的根因——`add-p1-text-blessing` 实现完之后一直没归档，长期停留在"已实现但未归档"的中间态，才让好几轮点状修复都绕过了它——所以规则里特别强调"功能上线后尽快归档"。
+
+**产物**：`openspec validate --strict` 全仓通过（1 个进行中 change `add-moderation-rbac` + 10 个主 spec）；BACKLOG/CHANGELOG/AGENTS.md 同步更新。
