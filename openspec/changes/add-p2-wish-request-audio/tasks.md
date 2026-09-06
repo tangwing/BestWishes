@@ -20,18 +20,25 @@
 
 ## 4. 音频存储
 
-- [ ] 4.1 新增 `AudioStoragePort` 接口（`save(id, buffer) -> url`、`read(id) -> buffer`）；本机落盘实现（存到配置目录，同 PGlite 的"先落盘、生产再换驱动"策略）
-- [ ] 4.2 新增依赖 `@fastify/multipart`，音频上传路由接收 `multipart/form-data`，校验文件大小与时长（时长校验需要解出音频元数据，找一个轻量方案，如读 WebM 容器头或限制客户端必须同时提交时长字段并服务端做合理性校验，不追求frame-accurate）
+- [x] 4.1 `AudioStoragePort`（`ports/audio-storage.ts`）+ `LocalAudioStorage`（本机落盘，`server/src/infrastructure/audio/local-audio-storage.ts`）
+- [~] 4.2 依赖 `@fastify/multipart` 已装；上传路由本身在 §6.3 一起做（路由层 + 校验逻辑放一起更连贯，不拆两处改）
 
 ## 5. 打分管线编排
 
-- [ ] 5.1 定义 `AsrProvider` 可插拔接口（输入音频、输出转写文本 + 词级时间戳 + 置信度），仿 `ModerationProvider` 的可插拔模式
-- [ ] 5.2 定义 `SincerityEvaluator` 可插拔接口（输入转写文本 + 请求原文，输出真诚度/个性化标签 + 置信度，内建双采样不一致转低置信度的逻辑）
-- [ ] 5.3 实现 `RuleBasedAudioScoringProvider`（P2 默认、开发/测试/演示用）：`AsrProvider` 返回一个可配置的假转写（测试注入固定文本，或对音频做最基础的静音比例分析）；`SincerityEvaluator` 用简单规则（如是否包含请求原文中的关键词）模拟"个性化"判定 —— 目的是让整条链路在没有真实云账号的情况下可跑通、可测试、可 demo，接口契约与未来接真实云 API 完全一致
-- [ ] 5.4 挑战式真人校验：请求录音前下发随机验证词（短语/数字），打分管线校验转写文本中是否出现该验证词及大致时序
-- [ ] 5.5 `audio-scoring-service` 编排以上环节：转写 → 安全检查（复用 `ModerationProvider`，命中 violation 直接驳回、suspect 转现有人工队列）→ 完整性 → 专注度 → 真诚度/个性化 → 真人校验 → 汇总为多维标签输出，不产出单一分数
+- [x] 5.1 `AsrProvider` 接口（`ports/asr.ts`）：`transcribe(audio, durationSec, hint?)`，`hint.clientTranscript` 是一个明确写在代码注释里的信任边界——P2 规则实现采信客户端提供的转写（如浏览器 Web Speech API 的实时识别结果），真实云 ASR 接入后会改成服务端自己转写、不再采信这个字段
+- [x] 5.2 `SincerityEvaluator` 接口（`ports/sincerity-evaluator.ts`）：`evaluate(transcript, requestContext)` 输出真诚度/个性化标签 + 置信度
+- [x] 5.3 `RuleBasedAsrProvider` + `RuleBasedSincerityEvaluator`（`infrastructure/audio/`）：前者按 `hint.clientTranscript` 把词时间戳按时长均匀铺开（近似估计，非真实对齐）；后者用有意义字符的集合重合度判个性化、按重合度+长度判真诚度。都有单测（7 测试）
+- [x] 5.4 挑战式真人校验（`infrastructure/audio/liveness-challenge.ts`）：`issueChallenge`/`verifyChallengeToken` 用 HMAC 签名做无状态校验（不用额外建表存"发出去的挑战"），三位随机数字短语，`transcriptContainsPhrase` 检查转写是否包含。单测覆盖签发/校验/过期/错误密钥/格式错误（7 测试，含一个真 bug：拼接字段最初用 `:` 分隔，和 ISO 时间戳自带的冒号冲突导致解析错位，改用 `|`）
+- [ ] 5.5 `audio-scoring-service` 编排以上环节 + 与 `blessing-service`/`transitionAndPersist`/现有审核工单机制对接——**下一步优先做这个**，见下方"设计备忘"
 - [ ] 5.6 超时保守处理：复用 `scans.ts` 的定时扫描模式，配置 `audioScoringTimeoutSeconds`，超时未出结果转人工复核队列，回应者侧显示"评估中"占位
-- [ ] 5.7 集成测试：用 `RuleBasedAudioScoringProvider` 覆盖 spec 里的关键场景——命中 violation 驳回、suspect 转人工队列、有稿子完整/部分朗读、无稿子自由表达、验证词缺失转人工、评估结果不一致转人工、超时转人工、多维标签不含单一分数
+- [ ] 5.7 集成测试：覆盖 spec 里的关键场景——命中 violation 驳回、suspect 转人工队列、有稿子完整/部分朗读、无稿子自由表达、验证词缺失转人工、评估结果不一致转人工、超时转人工、多维标签不含单一分数
+
+**5.5 设计备忘（继续实现时先读这个，避免重新想一遍）**：
+- 音频响应不走 `blessing-service.submit()` 现成的"先落 body 再同步查 moderation"路径（音频没有 body，要先转写才有文本）。做法：`audio-scoring-service` 自己组一条 `draftRecord`（`contentType='audio'`, `scope='wish_response'`, `body=''`, `media.transcript=null`）→ `transitionAndPersist(..., 'submit', ...)` 进 `verifying`（复用状态机，不重新发明）→ 转写 → 把 transcript 写进 `media.transcript` → `moderation.check({text: transcript, occasion})`（复用现成 `ModerationProvider`，同文本流程）。
+- **命中 violation**：`transitionAndPersist(..., 'auto_violation', ...)`，不跑后续打分、不建 `audio_scores` 记录（spec 明确要求）。
+- **命中 suspect 或 pass**：都继续跑完整性/专注度/真诚度/真人校验，写一条 `audio_scores` 记录（这几项是"内容质量反馈"，跟"安全不安全"是两回事，不用等人工过审）。然后 suspect 走现有的建工单逻辑（照抄 `blessing-service.submit` 里 `outcome.createTicket` 那段，走 `reports` 仓储，不新建复核机制）；pass 走 `transitionAndPersist(..., 'auto_pass', ...)` + 设 `holdUntil`（沿用文本的 hold 节奏，走同一个 `scans.publishReady` 扫描发布）。
+- 真人校验（liveness）不通过时：spec 要求"转人工复核，不直接驳回"——处理成跟 suspect 同一条路径（建工单），不是单独一套。
+- 这几步和 `blessing-service.submit()` 现有的 outcome 分支高度相似但不完全复用同一个函数（`submit()` 是同步定式，这里转写是"已经发生"的既定输入，不需要重新校验字数下限等文本专属规则）——参照抄写为主，不用抽象出共享函数（现在只有两个调用点，抽象为时尚早，YAGNI）。
 
 ## 6. 服务端应用层 + 路由
 
