@@ -102,6 +102,7 @@ export const blessings = pgTable('blessings', {
   scope: text('scope').$type<BlessingScope>().notNull().default('broadcast'),
   audience: jsonb('audience').$type<AudienceFilter>().notNull(),
   replyToUserId: text('reply_to_user_id'),
+  replyToBlessingId: text('reply_to_blessing_id'),
   recipientIds: jsonb('recipient_ids').$type<string[]>().notNull().default([]),
   state: text('state').$type<BlessingState>().notNull(),
   publicSlug: text('public_slug').notNull().unique(),

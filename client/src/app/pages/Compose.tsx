@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import type { Occasion } from '@bestwishes/shared';
 import {
   api,
@@ -45,18 +45,26 @@ const DEFAULT_FILTER: AudienceFilter = {
 const MAX_FILTER_TAGS = 10;
 const MAX_TAG_LEN = 20;
 
+interface ComposeNavState {
+  copyBody?: string;
+  copyOccasion?: Occasion;
+}
+
 export function Compose() {
   const { user, loading } = useSession();
   const nav = useNavigate();
+  const location = useLocation();
   const [params] = useSearchParams();
   const replyToUserId = params.get('replyTo');
+  const replyToBlessingId = params.get('replyBlessing') ?? undefined;
   const replyToName = params.get('to') ?? '这位朋友';
   const isReply = Boolean(replyToUserId);
+  const copyState = !isReply ? (location.state as ComposeNavState | null) : null;
 
   const [templates, setTemplates] = useState<Template[]>([]);
   const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
-  const [occasion, setOccasion] = useState<Occasion>('daily');
-  const [body, setBody] = useState('');
+  const [occasion, setOccasion] = useState<Occasion>(copyState?.copyOccasion ?? 'daily');
+  const [body, setBody] = useState(copyState?.copyBody ?? '');
   const [filter, setFilter] = useState<AudienceFilter>(DEFAULT_FILTER);
   const [preview, setPreview] = useState<AudiencePreview | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
@@ -122,7 +130,14 @@ export function Compose() {
     void api
       .submit(
         isReply && replyToUserId
-          ? { contentType: 'text', body, occasion, scope: 'reply', replyToUserId }
+          ? {
+              contentType: 'text',
+              body,
+              occasion,
+              scope: 'reply',
+              replyToUserId,
+              ...(replyToBlessingId ? { replyToBlessingId } : {}),
+            }
           : { contentType: 'text', body, occasion, scope: 'broadcast', audience: filter },
       )
       .then((r) => {
@@ -140,7 +155,7 @@ export function Compose() {
       });
   }
 
-  const canSubmit = bodyLen >= 15 && (isReply || (preview?.canSend ?? false));
+  const canSubmit = bodyLen >= 5 && (isReply || (preview?.canSend ?? false));
 
   return (
     <div className={s.page}>
@@ -207,7 +222,7 @@ export function Compose() {
         placeholder="慢慢写，写给一个具体的人。"
         style={{ minHeight: 150, fontFamily: 'var(--serif)', fontSize: 16 }}
       />
-      <div className={s.count}>{bodyLen} 字 · 建议 15–500</div>
+      <div className={s.count}>{bodyLen} 字 · 建议 5–500</div>
       {pasteBlocked && (
         <p
           className={s.error}

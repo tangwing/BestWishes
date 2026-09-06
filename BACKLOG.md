@@ -17,7 +17,7 @@
 - **技术栈**（ADR 0003）：Web-first PWA + Node/TS（Fastify）+ PostgreSQL（Drizzle / PGlite）+ pnpm monorepo。
 - **关键文档**：[ADR 0004](docs/adr/0004-p1-stranger-broadcast-model.md) · [docs/product/use-cases.md](docs/product/use-cases.md)（v1）· [docs/architecture/p1-architecture.md](docs/architecture/p1-architecture.md)（v1）· [docs/product/p1-acceptance-status.md](docs/product/p1-acceptance-status.md) · [openspec/changes/add-p1-text-blessing/](openspec/changes/add-p1-text-blessing/)。
 - **工作方式**：用户按点评提改动 → 记进本文件 → 持续完成。每轮结束自动 commit + push。
-- **下一步**：等用户验收重定后的 Demo（两个账号走群发 → 收件箱 → 回信）。之后：真实微信授权 / 审核 API 时机、逆地理编码、真实推送、`/opsx:archive` 归档、删 `prototype/`、i18n（B-26）、PWA（B-27）。
+- **下一步**：`openspec/changes/add-moderation-rbac` 已有完整 proposal/design/specs/tasks（`openspec validate --strict` 通过），等用户评审后 `/opsx:apply`（见 B-65）。之后：真实微信授权 / 审核 API 时机、逆地理编码、真实推送、`/opsx:archive` 归档、删 `prototype/`、i18n（B-26）、PWA（B-27）。
 
 ---
 
@@ -26,6 +26,7 @@
 - [x] **B-31 更新 p1-acceptance-status.md** — 对齐 monorepo（本轮又按新模型重写）。
 - [x] **B-50 consent gate 修复** / **B-51 「坚持」→「回响」** / **B-52 送达页说清收件人** — 见 CHANGELOG。
 - [x] **B-60 P1 模型重定为「陌生人群发」（ADR 0004）** — 全栈实现 + 全套测试重写 + 文档 + openspec 同步。详见 CHANGELOG / PROMPT_LOG。
+- [x] **B-61 标签支持自定义** / **B-62 正文下限 15→5** / **B-63 撤回后误重投 bug（移除 republish，改复制编辑）** / **B-64 回信关联原祝福** — 见 CHANGELOG。
 
 ## 待办
 
@@ -40,6 +41,8 @@
 - [ ] **B-04b 发心 / 送达文案打磨** — 引导框和送达页的连接感文案已就位，措辞还可以再走一遍（B-04 的框架已落地）。
 - [ ] **B-05 定位自动获取城市** — 个人空间开定位授权 → 自动填城市。P1 占位；实现待定（浏览器 Geolocation + 逆地理编码，粒度到城市）。
 - [ ] **B-06 复查"禁止粘贴"的取舍** — 无障碍（读屏 / 语音输入不受影响，辅助粘贴会）、正常用户改错想重贴一小段。可能退化为"拦大段 / 拦命中范本的粘贴"。B-03 已上简单版。
+- [ ] **B-65 审核台权限管理（RBAC）** — 现在任何登录用户都能进审核台（`routes.ts` 里明确写着"demo：任何会话都能进；真实按角色鉴权"）。已按用户要求开新 openspec change `add-moderation-rbac`，proposal/design/specs/tasks 齐全、`validate --strict` 通过：核心方案是 `users` 表加 `role` 字段（`user`/`admin`），登录时按 `BW_ADMIN_NICKNAMES` 配置授予/收回管理员角色（stub 登录阶段的过渡方案，P2 真实登录落地后替换"角色怎么来"这一步即可），审核台两个接口加 `requireAdmin` 门禁，前端隐藏入口 + 无权限提示。等用户评审 → `/opsx:apply`。
+- [ ] **B-66 标签 / 当前状态拆分** — 用户指出首页"送给正在熬夜的人"这类例子本质不是标签而是**当前状态**（伤心、熬夜……），和"打工人""养宠物"这类长期静态标签该分开。初步方向：新增 `currentStatuses` 字段（结构同 `tags`），带短时效自动过期（如 24–48 小时），避免"上周伤心"还在被匹配。开放问题：过期时长多少、由用户手动设置还是系统按行为推断——需要单独讨论想清楚再定 spec，不在标签自定义（B-61）这轮里做。
 
 ### 工程 / apply 阶段
 

@@ -104,6 +104,8 @@ export interface OutboxItem {
   scope: 'broadcast' | 'reply';
   recipientCount: number;
   bodyPreview: string;
+  /** 完整正文，用于「复制以供编辑」——只回给作者本人，不受 bodyPreview 的截断限制。 */
+  body: string;
   renewCount: number;
   createdAt: string;
 }
@@ -123,6 +125,7 @@ export interface InboxItem {
   body: string | null;
   placeholderText: string | null;
   canReply: boolean;
+  inReplyTo: { blessingId: string; bodyPreview: string } | null;
 }
 
 export interface NotificationItem {
@@ -173,6 +176,7 @@ export interface SubmitBlessingInput {
   occasion: Occasion;
   scope: 'broadcast' | 'reply';
   replyToUserId?: string;
+  replyToBlessingId?: string;
   audience?: AudienceFilter;
 }
 
@@ -215,7 +219,6 @@ export const api = {
   markNotificationsRead: () => call<{ ok: true }>('POST', '/api/notifications/read'),
 
   withdraw: (id: string) => call<{ state: string }>('POST', `/api/blessings/${id}/withdraw`),
-  republish: (id: string) => call<{ state: string }>('POST', `/api/blessings/${id}/republish`),
   remove: (id: string) => call<{ state: string }>('DELETE', `/api/blessings/${id}`),
   renew: (id: string) => call<{ state: string }>('POST', `/api/blessings/${id}/renew`),
 

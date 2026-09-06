@@ -13,6 +13,7 @@ function base(over: Partial<Blessing> = {}): Blessing {
     scope: 'broadcast',
     audience: { radiusKm: 5, ageMin: null, ageMax: null, gender: 'any', tags: [] },
     replyToUserId: null,
+    replyToBlessingId: null,
     recipientIds: ['u2'],
     state: 'verifying',
     slug: 's1',

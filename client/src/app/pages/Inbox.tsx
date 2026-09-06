@@ -66,6 +66,9 @@ export function Inbox() {
             {it.from.city ? ` · ${it.from.city}` : ''}
             {distanceLabel(it.from.distanceKm)} · {OCC[it.occasion] ?? it.occasion}
           </p>
+          {it.inReplyTo && (
+            <p className={s.hint}>回的是你那条：「{it.inReplyTo.bodyPreview}」</p>
+          )}
           {it.status === 'content' && it.body ? (
             <p className={s.blessing}>{it.body}</p>
           ) : (
@@ -79,7 +82,7 @@ export function Inbox() {
                   nav(
                     `/compose?replyTo=${encodeURIComponent(it.from.userId)}&to=${encodeURIComponent(
                       it.from.nickname,
-                    )}`,
+                    )}&replyBlessing=${encodeURIComponent(it.blessingId)}`,
                   );
                 }}
               >

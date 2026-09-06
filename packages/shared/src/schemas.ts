@@ -55,6 +55,8 @@ export const submitBlessingSchema = z.object({
   occasion: occasionSchema,
   scope: blessingScopeSchema.default('broadcast'),
   replyToUserId: z.string().min(1).optional(),
+  /** 被回复的原始祝福 id，用于把回信关联回去。找不到 / 不是该收件人的祝福时后端会忽略。 */
+  replyToBlessingId: z.string().min(1).optional(),
   /** broadcast 必填；reply 忽略。 */
   audience: audienceFilterSchema.optional(),
 });

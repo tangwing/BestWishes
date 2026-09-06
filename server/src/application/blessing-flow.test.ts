@@ -273,6 +273,93 @@ describe('回复（不能对话，只能回一段祝福）', () => {
     expect(senderInbox[0]?.from.nickname).toBe('阿离');
   });
 
+  it('回信带上 replyToBlessingId → 原发送者能看到关联的原信预览', async () => {
+    const ctx = makeApp();
+    const sender = await seedUser(ctx, {
+      nickname: '发送者',
+      consent: true,
+      lat: CENTER.lat,
+      lng: CENTER.lng,
+    });
+    const alice = await seedUser(ctx, {
+      nickname: '阿离',
+      consent: true,
+      lat: NEAR_A.lat,
+      lng: NEAR_A.lng,
+    });
+
+    const original = await ctx.app.blessings.submit(sender, {
+      contentType: 'text',
+      body: GOOD_BODY,
+      occasion: 'daily',
+      scope: 'broadcast',
+      audience: WIDE,
+    });
+    if (!original.ok) throw new Error('submit failed');
+    ctx.clock.advance(6000);
+    await ctx.app.scans.publishReady();
+
+    const reply = await ctx.app.blessings.submit(alice, {
+      contentType: 'text',
+      body: '谢谢你的祝福，也愿你被温柔以待，一切都好。',
+      occasion: 'daily',
+      scope: 'reply',
+      replyToUserId: sender,
+      replyToBlessingId: original.value.id,
+    });
+    expect(reply.ok).toBe(true);
+    ctx.clock.advance(6000);
+    await ctx.app.scans.publishReady();
+
+    const senderInbox = await ctx.app.inbox.list(sender);
+    expect(senderInbox[0]?.inReplyTo).toEqual({
+      blessingId: original.value.id,
+      bodyPreview: GOOD_BODY.slice(0, 40),
+    });
+  });
+
+  it('伪造一个不属于自己的 replyToBlessingId → 后端忽略，不关联', async () => {
+    const ctx = makeApp();
+    const sender = await seedUser(ctx, {
+      nickname: '发送者',
+      consent: true,
+      lat: CENTER.lat,
+      lng: CENTER.lng,
+    });
+    const alice = await seedUser(ctx, {
+      nickname: '阿离',
+      consent: true,
+      lat: NEAR_A.lat,
+      lng: NEAR_A.lng,
+    });
+    const bob = await seedUser(ctx, { nickname: '阿波', lat: NEAR_B.lat, lng: NEAR_B.lng });
+
+    // 一条从来没送到过 alice 的祝福（收件人是 bob）
+    const notForAlice = await ctx.app.blessings.submit(sender, {
+      contentType: 'text',
+      body: GOOD_BODY,
+      occasion: 'daily',
+      scope: 'reply',
+      replyToUserId: bob,
+    });
+    if (!notForAlice.ok) throw new Error('submit failed');
+
+    const reply = await ctx.app.blessings.submit(alice, {
+      contentType: 'text',
+      body: '谢谢你的祝福，也愿你被温柔以待，一切都好。',
+      occasion: 'daily',
+      scope: 'reply',
+      replyToUserId: sender,
+      replyToBlessingId: notForAlice.value.id,
+    });
+    expect(reply.ok).toBe(true);
+    ctx.clock.advance(6000);
+    await ctx.app.scans.publishReady();
+
+    const senderInbox = await ctx.app.inbox.list(sender);
+    expect(senderInbox[0]?.inReplyTo).toBeNull();
+  });
+
   it('不能回复自己', async () => {
     const ctx = makeApp();
     const me = await seedUser(ctx, {
@@ -319,6 +406,51 @@ describe('作者管理 + 回响回撤', () => {
     expect(inbox[0]?.status).toBe('withdrawn');
     expect(inbox[0]?.body).toBeNull();
     expect((await ctx.app.streak.view(sender))?.total).toBe(0);
+  });
+
+  it('撤回后没有重新发送的路子 —— 只能复制正文另投一条新的，且新的一条能正常送达', async () => {
+    const ctx = makeApp();
+    const sender = await seedUser(ctx, {
+      nickname: '发送者',
+      consent: true,
+      lat: CENTER.lat,
+      lng: CENTER.lng,
+    });
+    const alice = await seedUser(ctx, { nickname: '阿离', lat: NEAR_A.lat, lng: NEAR_A.lng });
+
+    const first = await ctx.app.blessings.submit(sender, {
+      contentType: 'text',
+      body: GOOD_BODY,
+      occasion: 'daily',
+      scope: 'broadcast',
+      audience: WIDE,
+    });
+    if (!first.ok) throw new Error('submit failed');
+    ctx.clock.advance(6000);
+    await ctx.app.scans.publishReady();
+    expect(await ctx.app.inbox.list(alice)).toHaveLength(1);
+
+    await ctx.app.blessings.withdraw(sender, first.value.id);
+    expect((await ctx.app.inbox.list(alice))[0]?.status).toBe('withdrawn');
+
+    // application 层已经没有 republish 方法 —— 唯一路径是复制正文，另提交一条新的
+    expect('republish' in ctx.app.blessings).toBe(false);
+
+    const second = await ctx.app.blessings.submit(sender, {
+      contentType: 'text',
+      body: GOOD_BODY,
+      occasion: 'daily',
+      scope: 'broadcast',
+      audience: WIDE,
+    });
+    expect(second.ok).toBe(true);
+    ctx.clock.advance(6000);
+    await ctx.app.scans.publishReady();
+
+    // 新的一条正常送达（不会被旧那条的 deliveredAt 幂等标记误伤）
+    const inboxAfter = await ctx.app.inbox.list(alice);
+    expect(inboxAfter).toHaveLength(2);
+    expect(inboxAfter.filter((i) => i.status === 'content')).toHaveLength(1);
   });
 
   it('链接到期 → 续期恢复可见，不重复计数', async () => {

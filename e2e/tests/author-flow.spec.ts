@@ -54,6 +54,7 @@ test('群发给附近的陌生人 → 对方收件箱收到 → 对方回一段�
   await expect(page.getByText('谢谢你的祝福，也愿你一切都顺，平安喜乐安稳。')).toBeVisible({
     timeout: 20_000,
   });
+  await expect(page.getByText(`回的是你那条：「${GOOD_BODY}」`)).toBeVisible();
 
   await recipientCtx.close();
 });
@@ -90,6 +91,44 @@ test('撤回后收件人看到占位', async ({ page, browser }) => {
   await page.getByRole('button', { name: '撤回' }).first().click();
   await expect(page.getByText('已撤回')).toBeVisible();
 
+  await rPage.goto('/inbox');
+  await expect(rPage.getByText('这份祝福已被收回')).toBeVisible({ timeout: 20_000 });
+
+  await recipientCtx.close();
+});
+
+test('撤回后没有「重新发布」按钮，只能「复制以供编辑」；复制不会让对方重新收到旧的那条', async ({
+  page,
+  browser,
+}) => {
+  const r = region(15.0, -40.0);
+
+  const recipientCtx = await browser.newContext();
+  const rPage = await recipientCtx.newPage();
+  await login(rPage, 'af5-阿离');
+  await setLocation(rPage, r.recipient);
+
+  await login(page, 'af5-发送者');
+  await setLocation(page, r.sender);
+  await agree(page);
+  await broadcast(page, { body: GOOD_BODY });
+
+  await rPage.goto('/inbox');
+  await expect(rPage.getByText(GOOD_BODY)).toBeVisible({ timeout: 20_000 });
+
+  await page.goto('/records');
+  await page.getByRole('button', { name: '撤回' }).first().click();
+  await expect(page.getByText('已撤回')).toBeVisible();
+
+  // 没有重新发布的路子了
+  await expect(page.getByRole('button', { name: '重新发布' })).toHaveCount(0);
+
+  // 只能复制正文去编辑；跳转到写祝福页，正文已预填，但没有重新触发投递
+  await page.getByRole('button', { name: '复制以供编辑' }).click();
+  await page.waitForURL('**/compose');
+  await expect(page.getByPlaceholder('慢慢写，写给一个具体的人。')).toHaveValue(GOOD_BODY);
+
+  // 撤回的那条对收件人仍然是占位，没有因为「复制」而重新送达
   await rPage.goto('/inbox');
   await expect(rPage.getByText('这份祝福已被收回')).toBeVisible({ timeout: 20_000 });
 

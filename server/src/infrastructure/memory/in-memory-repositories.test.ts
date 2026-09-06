@@ -20,6 +20,7 @@ function blessing(over: Partial<BlessingRecord> = {}): BlessingRecord {
     scope: 'broadcast',
     audience: { radiusKm: 5, ageMin: null, ageMax: null, gender: 'any', tags: [] },
     replyToUserId: null,
+    replyToBlessingId: null,
     recipientIds: ['usr_2'],
     state: 'verifying',
     slug: 'slug1',

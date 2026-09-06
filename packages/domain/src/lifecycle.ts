@@ -32,7 +32,6 @@ const TRANSITIONS: TransitionTable = {
     delete: 'deleted',
   },
   withdrawn: {
-    republish: 'verifying',
     delete: 'deleted',
   },
   expired: {

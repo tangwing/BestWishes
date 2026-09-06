@@ -66,7 +66,7 @@ BW_DB=pglite BW_PGDATA=./.pgdata BW_HOLD_SECONDS=8 pnpm --filter @bestwishes/ser
 
 ## 试试这些内容
 
-- 正常祝福（≥15 字）→ hold 后投递到收件箱。
+- 正常祝福（≥5 字）→ hold 后投递到收件箱。
 - 含"超度收费" / "加我微信" → 判 suspect，停在校验中、进审核台，人工"通过"后才投递。
 - 含"刷单返利" / 刷屏（"啊啊啊啊啊……"）→ 判 violation，直接"未通过"，不投递。
 - 正文写"祝好"（太短）→ 提交被拒。

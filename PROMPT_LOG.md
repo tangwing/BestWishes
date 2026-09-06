@@ -176,3 +176,36 @@
 8. **文档 + openspec**：use-cases.md（v1）、p1-architecture.md（v1）、concept.md、DEMO.md、p1-acceptance-status.md、AGENTS.md §1 全部重写 / 同步；openspec change proposal / specs 重写，新增 `blessing-audience` / `notification` 两个能力 spec，`validate --strict` 通过。
 
 **产物**：`pnpm verify` 绿（**137 测试**）；`pnpm test:e2e` 绿（**9**，真 Chrome）；`pnpm demo` 单进程跑通"登录 → 画像 → 协议 → 写祝福 → 受众筛选 → 预览 → 群发 → 校验中 → 收件人收件箱 + 通知 → 回一段祝福"。
+
+## 2026-09-06
+
+### launch and test the demo
+
+> launch and test the demo
+
+**结果**：`pnpm demo` 起服务，Playwright 驱两个浏览器上下文（发送者 + 收件人）走完 DEMO.md 全流程，截图存档，8 步全过，收尾清理临时脚本 + 关服务。
+
+### 标签自定义 + "用户串了"疑问
+
+> 标签要需要能支持自定义。这两个标签页分别两个人登录……发现只筛除了自己，并且无法点击发送。感觉好像是用户串了。
+
+**结果**：
+- **标签自定义**：后端 schema 本就是自由字符串，只是 UI 只有预设 pill、没有输入框。`Profile.tsx` / `Compose.tsx` 各加自定义标签输入框 + 添加按钮。
+- **"串了"是误会，不是 bug**：派 subagent 查会话机制——登录是纯 `bw_uid` httpOnly cookie，服务端每次请求现读，没有全局单例状态。两个**标签页**共享同一个浏览器 cookie jar，第二个标签登录会把第一个标签也"顶"成同一个账号，于是筛受众时"只排除自己"其实是排除了真实的当前登录者。DEMO.md 本就写明要用两个**独立浏览器窗口**（或一个正常 + 一个无痕），不是同一浏览器的两个标签页。
+
+### 字数下限调整 + 撤回重发 bug + 回复未关联 + 标签深化 + 审核台权限
+
+> 把字数限制从15变成5~500。福撤回之后，有一个重新发送的按钮……对方并没有重新收到，只是显示祝福正在准备中，但是从发送人角度又已经发送了……已经撤回的祝福就不允许再重新发送了，但是可以复制以供编辑
+>
+> （中途插入）标签的功能我们做一层深……送给正在熬夜的人……本质上不是一个标签，而是一个状态……可以把它两者分开，一个是长期的这种静态的标签，另一个是当前的状态
+>
+> （中途插入）回复祝福这件事，收到的回复里面并没有关联原来的祝福……最好能够关联一下。审核台的这个功能应该不是对所有人开放的。可以专门给一个管理员账号吧？做好不同账号的权限管理。这个功能如果认为是一个新功能的话，可以生成Spec，想清楚再干。
+
+**结果**：
+1. **字数下限 5–500**（B-62）：`DEFAULT_CONFIG.bodyMinLen` 15→5，同步 Compose 提示文案、DEMO.md。
+2. **撤回后误重投 bug**（B-63）：根因是 `deliverIfNeeded` 的幂等标记 `deliveredAt` 撤回时不清空，`republish`（withdrawn→verifying→published）复用同一条记录导致状态变了但扇出被幂等guard 跳过——这条路径此前零测试覆盖。没有"清空 deliveredAt 再投一次"式修复，而是采纳撤回即终态：移除 `republish`（状态机 / 类型 / 路由 / 前端按钮），改「发出的」页撤回条目提供"复制以供编辑"（预填正文到写祝福页，新记录、新 id，不会被旧幂等标记误伤）。补 domain + 集成 + e2e 测试。
+3. **回信关联原祝福**（B-64）：`Blessing` 加 `replyToBlessingId`（校验当事人确是该祝福收件人之一，防伪造），`InboxView` 加 `inReplyTo` 预览，收件箱页展示"回的是你那条：「...」"。需要一条 PGlite 迁移。
+4. **标签 / 状态拆分**：认可这个区分很有价值（"熬夜"是有时效的状态，不是稳定属性），给了初步方向（`currentStatuses` 字段 + 短时效过期）但没有直接动手实现——过期时长 / 谁来设置是需要讨论的产品决策，记入 BACKLOG B-66 待后续单独出 spec。
+5. **审核台权限（RBAC）**：用户明确要求"新功能先出 Spec，想清楚再干"——调用 `/opsx:propose` 开新 change `add-moderation-rbac`（不并入已完成的 `add-p1-text-blessing`），产出完整 proposal / design / specs（新能力 `access-control`）/ tasks，`validate --strict` 通过。核心方案：`users.role`（`user`/`admin`）+ 登录时按 `BW_ADMIN_NICKNAMES` 配置授予/收回（stub 登录阶段的过渡方案）+ 后端 `requireAdmin` 门禁 + 前端隐藏入口。**未实现代码**，等用户评审后 `/opsx:apply`（B-65）。
+
+**产物**：`pnpm verify` 绿（**139 测试**，+2）；`pnpm test:e2e` 绿（**10**，+1）；`pnpm demo` 手动截图验证三项修复；`openspec validate add-moderation-rbac --strict` 通过。

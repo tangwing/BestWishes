@@ -79,10 +79,10 @@ export function Records() {
                 <button
                   className="ghost"
                   onClick={() => {
-                    act(api.republish(b.id));
+                    nav('/compose', { state: { copyBody: b.body, copyOccasion: b.occasion } });
                   }}
                 >
-                  重新发布
+                  复制以供编辑
                 </button>
               )}
               {b.state === 'expired' && (

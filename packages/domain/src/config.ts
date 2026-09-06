@@ -27,7 +27,7 @@ export interface P1Config {
 
 export const DEFAULT_CONFIG: P1Config = {
   featuredDefaultOn: true,
-  bodyMinLen: 15,
+  bodyMinLen: 5,
   bodyMaxLen: 500,
   linkTtlDays: 120,
   holdSeconds: 180,

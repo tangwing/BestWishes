@@ -4,6 +4,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+
+- 标签支持自定义（B-61）：个人空间画像标签、写祝福页的受众筛选标签，此前只能从建议标签里点选。后端 schema（`audienceFilterSchema` / `profileUpdateSchema`）本就是自由字符串（≤20 字，≤10/12 个），只是客户端缺输入框。`Profile.tsx` / `Compose.tsx` 各加一个文本框 + 「添加」按钮（回车也可），复用现有标签 pill 渲染。
+- 回信关联原祝福（B-64）：此前"回一段祝福"只记`replyToUserId`，不记是回哪一条——收件箱消息一多，发送者分不清一条回信对应自己群发出去的哪条祝福。`Blessing` 加 `replyToBlessingId`（提交时校验：该祝福必须存在且当事人确实是其收件人之一，否则后端忽略、不关联，防止伪造）；`InboxView` 加 `inReplyTo: { blessingId, bodyPreview }`；收件箱页在回信上方展示"回的是你那条：「...」"。落到 PGlite 需要新增一列（`drizzle/0001_chunky_maria_hill.sql`）。覆盖：domain/server 集成测试（含伪造 id 被忽略的用例）+ e2e。
+
+### Fixed
+
+- 撤回后点「重新发布」，对方收不到但发送者以为已发出（B-63）：根因是投递扇出的幂等标记 `deliveredAt` 只在首次发布时置位、撤回时不清空——`withdrawn → verifying → published` 的重新发布路径复用了同一条记录，`deliverIfNeeded` 一看 `deliveredAt` 已经有值就直接跳过扇出，状态却正常流转到 `published`，UI 显示"已送达"。这条路径此前完全没有测试覆盖。
+  处理方式：不是"清空 deliveredAt 再投一次"式的修复，而是接受"撤回即终态"——撤回后唯一出路是删除，或复制正文另发一条全新的（新 id、`deliveredAt` 从 null 开始，天然不会被旧记录的幂等标记误伤）。移除 `republish` 触发器（`packages/domain` 状态机 / 类型）、application 方法、HTTP 路由；「发出的」页对已撤回条目从"重新发布"按钮改为"复制以供编辑"（跳转到写祝福页并预填正文，不触碰旧记录）。覆盖：domain 状态机测试（撤回只剩 `delete` 一条出边）+ 2 个新集成测试（旧记录不会被复制路径污染 / 新记录正常送达）+ 1 个新 e2e（撤回后确认没有重新发布按钮、复制预填正确、旧记录仍是占位）。
+
+### Changed
+
+- 祝福正文字数下限从 15 降到 5（B-62）：`packages/domain` `DEFAULT_CONFIG.bodyMinLen`；同步改 Compose 页提示文案与 DEMO.md 示例。上限仍是 500，`BW_BODY_MIN_LEN` 环境变量覆盖方式不变。
+
 ### Changed — P1 重定为「陌生人祝福 · 按条件群发」（B-60, [ADR 0004](docs/adr/0004-p1-stranger-broadcast-model.md)）
 
 - **模型**：P1 从"作者写给认识的人 → 生成分享链接 → 微信发给 TA"重做为"注册用户按条件群发给附近的陌生人 → 收件箱 + 通知 → 只能回一段祝福，不能对话"。原"祝福请求 / 匹配"整块移至 P2。

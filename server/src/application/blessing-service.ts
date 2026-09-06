@@ -26,6 +26,7 @@ export interface SubmitInput {
   occasion: Occasion;
   scope: 'broadcast' | 'reply';
   replyToUserId?: string | undefined;
+  replyToBlessingId?: string | undefined;
   audience?: AudienceFilterDto | undefined;
 }
 
@@ -56,6 +57,7 @@ export interface OutboxItem {
   scope: 'broadcast' | 'reply';
   recipientCount: number;
   bodyPreview: string;
+  body: string;
   renewCount: number;
   createdAt: string;
 }
@@ -95,7 +97,12 @@ export function createBlessingService(deps: AppDeps) {
     userId: string,
     input: SubmitInput,
   ): Promise<
-    Result<{ recipientIds: string[]; audience: AudienceFilter; replyToUserId: string | null }>
+    Result<{
+      recipientIds: string[];
+      audience: AudienceFilter;
+      replyToUserId: string | null;
+      replyToBlessingId: string | null;
+    }>
   > {
     if (input.scope === 'reply') {
       if (!input.replyToUserId) {
@@ -108,10 +115,18 @@ export function createBlessingService(deps: AppDeps) {
       if (!target) {
         return err(appError('not_found', 'reply target missing', '找不到这个人'));
       }
+      let replyToBlessingId: string | null = null;
+      if (input.replyToBlessingId) {
+        const original = await deps.repos.blessings.findById(input.replyToBlessingId);
+        if (original && original.recipientIds.includes(userId)) {
+          replyToBlessingId = original.id;
+        }
+      }
       return ok({
         recipientIds: [input.replyToUserId],
         audience: REPLY_AUDIENCE,
         replyToUserId: input.replyToUserId,
+        replyToBlessingId,
       });
     }
 
@@ -121,7 +136,12 @@ export function createBlessingService(deps: AppDeps) {
     const filter = toAudienceFilter(input.audience);
     const resolved = await audience.resolveRecipients(userId, filter);
     if (!resolved.ok) return resolved;
-    return ok({ recipientIds: resolved.value, audience: filter, replyToUserId: null });
+    return ok({
+      recipientIds: resolved.value,
+      audience: filter,
+      replyToUserId: null,
+      replyToBlessingId: null,
+    });
   }
 
   return {
@@ -177,6 +197,7 @@ export function createBlessingService(deps: AppDeps) {
         scope: input.scope,
         audience: recipients.value.audience,
         replyToUserId: recipients.value.replyToUserId,
+        replyToBlessingId: recipients.value.replyToBlessingId,
         recipientIds: recipients.value.recipientIds,
         state: 'draft',
         slug: deps.slugs.next(),
@@ -292,6 +313,7 @@ export function createBlessingService(deps: AppDeps) {
           scope: b.scope,
           recipientCount: b.recipientIds.length,
           bodyPreview: b.body.slice(0, 40),
+          body: b.body,
           renewCount: b.renewCount,
           createdAt: b.createdAt,
         }));
@@ -301,46 +323,6 @@ export function createBlessingService(deps: AppDeps) {
       manage(deps, userId, id, 'withdraw', '作者撤回', true),
     delete: (userId: string, id: string) => manage(deps, userId, id, 'delete', '作者删除', false),
     renew: (userId: string, id: string) => manage(deps, userId, id, 'renew', '作者续期', false),
-
-    async republish(userId: string, id: string): Promise<Result<{ state: string }>> {
-      const owned = await findOwn(deps, userId, id);
-      if (!owned.ok) return owned;
-      const back = await transitionAndPersist(
-        deps,
-        owned.value,
-        'republish',
-        { kind: 'author', userId },
-        '作者重新发布',
-        null,
-      );
-      if (!back.ok) return back;
-      const moderation = await deps.moderation.check({
-        text: back.value.body,
-        occasion: back.value.occasion,
-      });
-      const outcome = outcomeFor(moderation);
-      let current: BlessingRecord = { ...back.value, moderation };
-      await deps.repos.blessings.save(current);
-      if (outcome.trigger === 'auto_violation') {
-        const rej = await transitionAndPersist(
-          deps,
-          current,
-          'auto_violation',
-          { kind: 'system' },
-          '重新发布命中违规',
-        );
-        if (rej.ok) current = rej.value;
-      } else if (outcome.trigger === 'auto_pass') {
-        current = {
-          ...current,
-          holdUntil: new Date(
-            deps.clock.now().getTime() + deps.config.holdSeconds * 1000,
-          ).toISOString(),
-        };
-        await deps.repos.blessings.save(current);
-      }
-      return ok({ state: current.state });
-    },
   };
 }
 

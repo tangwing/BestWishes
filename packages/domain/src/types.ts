@@ -24,7 +24,6 @@ export type LifecycleTrigger =
   | 'review_takedown'
   | 'report_takedown'
   | 'withdraw'
-  | 'republish'
   | 'expire'
   | 'renew'
   | 'edit_resubmit'
@@ -151,6 +150,8 @@ export interface Blessing {
   audience: AudienceFilter;
   /** scope='reply' 时的对象；否则 null。 */
   replyToUserId: string | null;
+  /** scope='reply' 时，被回复的那条原始祝福 id；否则 null。用于把回信和原信关联起来。 */
+  replyToBlessingId: string | null;
   /** 提交时定格的收件人快照——后加入范围的人不会收到，退出的人也不影响已定格。 */
   recipientIds: string[];
   state: BlessingState;

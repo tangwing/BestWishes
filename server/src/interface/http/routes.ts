@@ -150,10 +150,6 @@ export function registerRoutes(app: FastifyInstance, application: Application): 
     const { id } = parse(idParam, request.params);
     return unwrap(await application.blessings.withdraw(requireUserId(request), id));
   });
-  app.post('/api/blessings/:id/republish', async (request) => {
-    const { id } = parse(idParam, request.params);
-    return unwrap(await application.blessings.republish(requireUserId(request), id));
-  });
   app.delete('/api/blessings/:id', async (request) => {
     const { id } = parse(idParam, request.params);
     return unwrap(await application.blessings.delete(requireUserId(request), id));

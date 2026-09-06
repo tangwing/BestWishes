@@ -1,0 +1,1 @@
+ALTER TABLE "blessings" ADD COLUMN "reply_to_blessing_id" text;

@@ -17,7 +17,6 @@ describe('祝福状态机 — 合法转移', () => {
     ['published', 'review_takedown', 'taken_down'],
     ['published', 'report_takedown', 'taken_down'],
     ['published', 'delete', 'deleted'],
-    ['withdrawn', 'republish', 'verifying'],
     ['withdrawn', 'delete', 'deleted'],
     ['expired', 'renew', 'published'],
     ['expired', 'delete', 'deleted'],
@@ -66,10 +65,8 @@ describe('祝福状态机 — 非法转移被拒绝', () => {
     if (r.ok) expect(r.next).toBe('published');
   });
 
-  it('撤回后重新发布要重新走校验（回 verifying）', () => {
-    const r = applyTrigger('withdrawn', 'republish');
-    expect(r.ok).toBe(true);
-    if (r.ok) expect(r.next).toBe('verifying');
+  it('撤回后不允许重新发布 —— 撤回是终态（只能删除，或复制内容另发一条新的）', () => {
+    expect(allowedTriggers('withdrawn')).toEqual(['delete']);
   });
 });
 
