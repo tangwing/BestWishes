@@ -8,7 +8,7 @@
 
 ## 恢复点（先读这段）
 
-- **阶段**：P1 **已按 [ADR 0004](docs/adr/0004-p1-stranger-broadcast-model.md) 重定为「陌生人祝福 · 按条件群发」并整套实现完成**。`pnpm demo` 起单进程走完整链路。`pnpm verify` 绿，**137 测试**（8 个 `app.inject` 端到端 + 5 个 PGlite 集成 + domain audience/moderation/lifecycle 等）。`pnpm test:e2e` 绿（**9 个真浏览器**，多上下文模拟发送者 / 收件人）。openspec `validate --strict` 通过。
+- **阶段**：P1 **已按 [ADR 0004](docs/adr/0004-p1-stranger-broadcast-model.md) 重定为「陌生人祝福 · 按条件群发」，整套实现完成，openspec change 已 apply + archive**。`pnpm demo` 起单进程走完整链路。`pnpm verify` 绿，**139 测试**（8 个 `app.inject` 端到端 + 5 个 PGlite 集成 + domain audience/moderation/lifecycle 等）。`pnpm test:e2e` 绿（**10 个真浏览器**，多上下文模拟发送者 / 收件人）。openspec `validate --strict` 通过（1 个进行中 change `add-moderation-rbac` + 10 个主 spec）。**P1 到此告一段落，下一步是 P2。**
 - **新模型一句话**：注册用户有画像（经纬度位置 / 性别 / 出生年 / 标签）→ 写文本祝福（`contentType` 给音视频留白）→ 选受众（距离 / 年龄 / 性别 / 标签）→ 预览命中人数 → 命中 ∈ [1, `maxAudienceSize`=10] 才可群发 → 收件人在**收件箱**收到 + **通知**（未读徽标）→ 只能**回一段祝福**，不能对话。公开链接 `/p/:slug` 降级为"传播用"。审核目标改为过滤无效 / 垃圾 / 违规。
 - **代码**：`packages/domain`（+ `audience.ts` haversine 匹配）· `packages/shared` · `server/`（+ `audience-service` / `inbox-service` / `notification-service`；投递扇出在 `blessing-write.ts` 的 `transitionAndPersist` 里到 `published` 时触发，幂等 `deliveredAt`；数据层内存 + PGlite 两套同 ports，11 张表）· `client/`（+ Inbox 页 + 通知徽标；Profile / Compose 重做）· `arch/` · `e2e/`。
 - **走查**：见 [docs/DEMO.md](docs/DEMO.md)（已重写，需两个账号：发送者 + 收件人）。
@@ -28,6 +28,7 @@
 - [x] **B-60 P1 模型重定为「陌生人群发」（ADR 0004）** — 全栈实现 + 全套测试重写 + 文档 + openspec 同步。详见 CHANGELOG / PROMPT_LOG。
 - [x] **B-61 标签支持自定义** / **B-62 正文下限 15→5** / **B-63 撤回后误重投 bug（移除 republish，改复制编辑）** / **B-64 回信关联原祝福** — 见 CHANGELOG。
 - [x] **B-67 回补 `add-p1-text-blessing` 的 spec 并归档** — B-62/63/64/61 四处改动此前只进了 BACKLOG/CHANGELOG，没人回头改 openspec delta；用 `/opsx:update` 回补 `blessing-authoring`（字数 5）/ `blessing-delivery`（去 republish、加回信关联）/ `blessing-records`（发件箱按钮文案）三个能力的 spec + 校正 tasks.md 里几处过时描述，`validate --strict` 通过后 `/opsx:archive`，10 个能力主 spec 现在活在 `openspec/specs/`。同时在 AGENTS.md §2 加了"spec 同步检查"这条规则，防止再次出现"代码改了、spec 没跟"。
+- [x] **B-43 openspec change `add-p1-text-blessing` 评审** — 随 B-67 一并解决：已 apply + archive，不再是待办。
 
 ## 待办
 
@@ -65,4 +66,3 @@
 - [ ] **B-40 "精选展示"默认开启的合规性** — 法务确认，见调研 ADR-M。
 - [ ] **B-41 数值待定** — hold 时长目标 / 上限、链接有效期默认值、字数上下限、范本最终清单。见 use-cases 开放问题。
 - [ ] **B-42 资金托管模式选型 + 公司主体 / 资质办理启动** — P3 前，见调研领域一 ADR-A…ADR-G。
-- [ ] **B-43 openspec change `add-p1-text-blessing` 评审** — 通过后才 `/opsx:apply`。

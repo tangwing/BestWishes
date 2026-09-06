@@ -5,7 +5,7 @@
 
 ## 一句话结论
 
-P1「陌生人祝福 · 按条件群发」的核心链路已在生产分层代码里实现：`pnpm verify` 绿（**139 进程内测试**，含 8 个 Fastify HTTP 端到端 + 5 个跑真实 SQL 的 PGlite 集成 + domain 的 audience/moderation/lifecycle 纯函数测试），`pnpm test:e2e` 绿（**9 个真浏览器 Playwright**，多浏览器上下文模拟发送者 / 收件人）。数据层内存 + PGlite 两套同 ports 实现。外部依赖（微信授权、真实内容安全 API、逆地理编码、真实推送）按接口留位，P1 用 stub / 规则实现。
+P1「陌生人祝福 · 按条件群发」的核心链路已在生产分层代码里实现，**openspec change 已 apply + archive**（[openspec/specs/](../../openspec/specs/) 是当前权威行为描述）：`pnpm verify` 绿（**139 进程内测试**，含 8 个 Fastify HTTP 端到端 + 5 个跑真实 SQL 的 PGlite 集成 + domain 的 audience/moderation/lifecycle 纯函数测试），`pnpm test:e2e` 绿（**10 个真浏览器 Playwright**，多浏览器上下文模拟发送者 / 收件人）。数据层内存 + PGlite 两套同 ports 实现。外部依赖（微信授权、真实内容安全 API、逆地理编码、真实推送）按接口留位，P1 用 stub / 规则实现。
 
 ## 逐用例
 
@@ -40,5 +40,6 @@ P1「陌生人祝福 · 按条件群发」的核心链路已在生产分层代�
 1. `maxAudienceSize`（测试期 10）、受众半径上下限、hold / TTL / 字数等数值 —— `packages/domain/src/config.ts`。
 2. 真实微信网页授权、真实内容安全 API、逆地理编码、真实推送通道 —— 需账号，接口已留位。
 3. "精选展示默认开启"的合规性 —— 待法务（ADR-M）。
-4. openspec change `add-p1-text-blessing`（已按 ADR 0004 重定、`validate --strict` 通过）—— 评审后 `/opsx:archive`。
-5. 是否删 `prototype/`（monorepo 已远超其功能）。
+4. ~~openspec change `add-p1-text-blessing` 评审~~ —— 已 apply + archive（2026-09-06），见 `openspec/changes/archive/2026-09-06-add-p1-text-blessing/`。
+5. 是否删 `prototype/`（monorepo 已远超其功能，见 BACKLOG B-29）。
+6. 审核台角色鉴权（UC-16 的 ⬜）—— 已开 openspec change `add-moderation-rbac`（proposal/design/specs/tasks 齐全，`validate --strict` 通过），等评审后 `/opsx:apply`，见 BACKLOG B-65。
