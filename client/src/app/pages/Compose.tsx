@@ -42,6 +42,9 @@ const DEFAULT_FILTER: AudienceFilter = {
   tags: [],
 };
 
+const MAX_FILTER_TAGS = 10;
+const MAX_TAG_LEN = 20;
+
 export function Compose() {
   const { user, loading } = useSession();
   const nav = useNavigate();
@@ -58,6 +61,7 @@ export function Compose() {
   const [preview, setPreview] = useState<AudiencePreview | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
   const [pasteBlocked, setPasteBlocked] = useState(false);
+  const [customTag, setCustomTag] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const [canBroadcast, setCanBroadcast] = useState(true);
@@ -90,6 +94,13 @@ export function Compose() {
   useEffect(() => {
     setPreview(null);
   }, [filter]);
+
+  function addCustomTag() {
+    const tag = customTag.trim().slice(0, MAX_TAG_LEN);
+    if (!tag || filter.tags.includes(tag) || filter.tags.length >= MAX_FILTER_TAGS) return;
+    setFilter({ ...filter, tags: [...filter.tags, tag] });
+    setCustomTag('');
+  }
 
   function runPreview() {
     setErr('');
@@ -297,6 +308,31 @@ export function Compose() {
                   {tag}
                 </span>
               ))}
+            </div>
+            <div className={s.row}>
+              <input
+                type="text"
+                placeholder="自定义标签，回车添加"
+                value={customTag}
+                maxLength={MAX_TAG_LEN}
+                disabled={filter.tags.length >= MAX_FILTER_TAGS}
+                onChange={(e) => {
+                  setCustomTag(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addCustomTag();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={addCustomTag}
+                disabled={!customTag.trim() || filter.tags.length >= MAX_FILTER_TAGS}
+              >
+                添加
+              </button>
             </div>
 
             <div style={{ marginTop: 14 }}>

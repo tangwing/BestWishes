@@ -12,12 +12,15 @@ const GENDERS: [Gender | 'unset', string][] = [
 ];
 
 const CURRENT_YEAR = new Date().getFullYear();
+const MAX_TAGS = 12;
+const MAX_TAG_LEN = 20;
 
 export function Profile() {
   const { user, loading } = useSession();
   const nav = useNavigate();
   const [p, setP] = useState<ProfileView | null>(null);
   const [suggested, setSuggested] = useState<string[]>([]);
+  const [customTag, setCustomTag] = useState('');
   const [saved, setSaved] = useState(false);
   const [geoBusy, setGeoBusy] = useState(false);
   const [geoErr, setGeoErr] = useState('');
@@ -71,6 +74,13 @@ export function Profile() {
   const toggleTag = (tag: string) => {
     const has = p.tags.includes(tag);
     save({ tags: has ? p.tags.filter((x) => x !== tag) : [...p.tags, tag] });
+  };
+
+  const addCustomTag = () => {
+    const tag = customTag.trim().slice(0, MAX_TAG_LEN);
+    if (!tag || p.tags.includes(tag) || p.tags.length >= MAX_TAGS) return;
+    save({ tags: [...p.tags, tag] });
+    setCustomTag('');
   };
 
   return (
@@ -204,6 +214,32 @@ export function Profile() {
             </span>
           ))}
         </div>
+        <div className={s.row}>
+          <input
+            type="text"
+            placeholder="自定义标签，回车添加"
+            value={customTag}
+            maxLength={MAX_TAG_LEN}
+            disabled={p.tags.length >= MAX_TAGS}
+            onChange={(e) => {
+              setCustomTag(e.target.value);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addCustomTag();
+              }
+            }}
+          />
+          <button
+            type="button"
+            onClick={addCustomTag}
+            disabled={!customTag.trim() || p.tags.length >= MAX_TAGS}
+          >
+            添加
+          </button>
+        </div>
+        {p.tags.length >= MAX_TAGS && <p className={s.hint}>最多 {MAX_TAGS} 个标签。</p>}
       </div>
 
       <div className={s.card}>
