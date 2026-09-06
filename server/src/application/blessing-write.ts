@@ -34,6 +34,7 @@ async function deliverIfNeeded(deps: AppDeps, blessing: BlessingRecord): Promise
       userId: recipientId,
       kind: 'blessing_received',
       blessingId: blessing.id,
+      requestId: null,
       fromUserId: blessing.authorId,
       createdAt: at,
       readAt: null,

@@ -4,6 +4,7 @@ import {
   PLACEHOLDER_TEXT,
   type AudienceFilter,
   type BlessingContentType,
+  type BlessingScope,
   type Occasion,
   type PlaceholderType,
 } from '@bestwishes/domain';
@@ -24,7 +25,7 @@ export interface SubmitInput {
   contentType: BlessingContentType;
   body: string;
   occasion: Occasion;
-  scope: 'broadcast' | 'reply';
+  scope: BlessingScope;
   replyToUserId?: string | undefined;
   replyToBlessingId?: string | undefined;
   audience?: AudienceFilterDto | undefined;
@@ -54,7 +55,7 @@ export interface OutboxItem {
   slug: string;
   state: string;
   occasion: Occasion;
-  scope: 'broadcast' | 'reply';
+  scope: BlessingScope;
   recipientCount: number;
   bodyPreview: string;
   body: string;
@@ -198,6 +199,7 @@ export function createBlessingService(deps: AppDeps) {
         audience: recipients.value.audience,
         replyToUserId: recipients.value.replyToUserId,
         replyToBlessingId: recipients.value.replyToBlessingId,
+        requestId: null,
         recipientIds: recipients.value.recipientIds,
         state: 'draft',
         slug: deps.slugs.next(),

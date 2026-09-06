@@ -5,6 +5,7 @@ import { type AudienceCandidate, type BlessingState, type GeoPoint } from '@best
 import { and, asc, count, desc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import type { IdGenerator } from '../../ports/ids';
 import type {
+  AudioScoreRecord,
   BlessingEventRecord,
   BlessingRecord,
   ConsentRecord,
@@ -15,8 +16,10 @@ import type {
   ReportRecord,
   TemplateRecord,
   UserRecord,
+  WishRequestRecord,
 } from '../../ports/records';
 import type {
+  AudioScoreRepository,
   BlessingEventRepository,
   BlessingRepository,
   ConsentRepository,
@@ -29,6 +32,7 @@ import type {
   StreakRepository,
   TemplateRepository,
   UserRepository,
+  WishRequestRepository,
 } from '../../ports/repositories';
 import type { Db } from '../db/client';
 import * as t from '../db/schema';
@@ -97,6 +101,7 @@ function toBlessing(row: BlessingRow, events: BlessingEventRecord[]): BlessingRe
     audience: row.audience,
     replyToUserId: row.replyToUserId,
     replyToBlessingId: row.replyToBlessingId,
+    requestId: row.requestId,
     recipientIds: row.recipientIds,
     state: row.state,
     slug: row.publicSlug,
@@ -124,6 +129,7 @@ function blessingValues(r: BlessingRecord): typeof t.blessings.$inferInsert {
     audience: r.audience,
     replyToUserId: r.replyToUserId,
     replyToBlessingId: r.replyToBlessingId,
+    requestId: r.requestId,
     recipientIds: r.recipientIds,
     state: r.state,
     publicSlug: r.slug,
@@ -634,6 +640,7 @@ class PgNotificationRepository implements NotificationRepository {
       userId: record.userId,
       kind: record.kind,
       blessingId: record.blessingId,
+      requestId: record.requestId,
       fromUserId: record.fromUserId,
       createdAt: new Date(record.createdAt),
       readAt: record.readAt ? new Date(record.readAt) : null,
@@ -651,6 +658,7 @@ class PgNotificationRepository implements NotificationRepository {
       userId: row.userId,
       kind: row.kind,
       blessingId: row.blessingId,
+      requestId: row.requestId,
       fromUserId: row.fromUserId,
       createdAt: iso(row.createdAt),
       readAt: isoOrNull(row.readAt),
@@ -670,6 +678,121 @@ class PgNotificationRepository implements NotificationRepository {
       .update(t.notifications)
       .set({ readAt: new Date() })
       .where(and(eq(t.notifications.userId, userId), isNull(t.notifications.readAt)));
+  }
+}
+
+function toWishRequest(row: typeof t.wishRequests.$inferSelect): WishRequestRecord {
+  return {
+    id: row.id,
+    authorId: row.authorId,
+    situationText: row.situationText,
+    scriptText: row.scriptText,
+    state: row.state,
+    createdAt: iso(row.createdAt),
+    recipientCandidateIds: row.recipientCandidateIds,
+    moderation: row.moderation,
+  };
+}
+
+function wishRequestValues(r: WishRequestRecord): typeof t.wishRequests.$inferInsert {
+  return {
+    id: r.id,
+    authorId: r.authorId,
+    situationText: r.situationText,
+    scriptText: r.scriptText,
+    state: r.state,
+    createdAt: new Date(r.createdAt),
+    recipientCandidateIds: r.recipientCandidateIds,
+    moderation: r.moderation,
+  };
+}
+
+class PgWishRequestRepository implements WishRequestRepository {
+  constructor(private readonly db: Db) {}
+
+  async add(record: WishRequestRecord): Promise<void> {
+    await this.db.insert(t.wishRequests).values(wishRequestValues(record));
+  }
+
+  async findById(id: string): Promise<WishRequestRecord | null> {
+    const rows = await this.db.select().from(t.wishRequests).where(eq(t.wishRequests.id, id));
+    return rows[0] ? toWishRequest(rows[0]) : null;
+  }
+
+  async save(record: WishRequestRecord): Promise<void> {
+    await this.db
+      .update(t.wishRequests)
+      .set(wishRequestValues(record))
+      .where(eq(t.wishRequests.id, record.id));
+  }
+
+  async listPublished(): Promise<WishRequestRecord[]> {
+    const rows = await this.db
+      .select()
+      .from(t.wishRequests)
+      .where(eq(t.wishRequests.state, 'published'))
+      .orderBy(desc(t.wishRequests.createdAt));
+    return rows.map(toWishRequest);
+  }
+
+  async listByAuthor(authorId: string): Promise<WishRequestRecord[]> {
+    const rows = await this.db
+      .select()
+      .from(t.wishRequests)
+      .where(eq(t.wishRequests.authorId, authorId))
+      .orderBy(desc(t.wishRequests.createdAt));
+    return rows.map(toWishRequest);
+  }
+}
+
+function toAudioScore(row: typeof t.audioScores.$inferSelect): AudioScoreRecord {
+  return {
+    blessingId: row.blessingId,
+    completeness: row.completeness,
+    focus: row.focus,
+    focusConfidence: row.focusConfidence,
+    sincerity: row.sincerity,
+    sincerityConfidence: row.sincerityConfidence,
+    personalization: row.personalization,
+    livenessPassed: row.livenessPassed,
+    computedAt: iso(row.computedAt),
+  };
+}
+
+function audioScoreValues(r: AudioScoreRecord): typeof t.audioScores.$inferInsert {
+  return {
+    blessingId: r.blessingId,
+    completeness: r.completeness,
+    focus: r.focus,
+    focusConfidence: r.focusConfidence,
+    sincerity: r.sincerity,
+    sincerityConfidence: r.sincerityConfidence,
+    personalization: r.personalization,
+    livenessPassed: r.livenessPassed,
+    computedAt: new Date(r.computedAt),
+  };
+}
+
+class PgAudioScoreRepository implements AudioScoreRepository {
+  constructor(private readonly db: Db) {}
+
+  async add(record: AudioScoreRecord): Promise<void> {
+    await this.db.insert(t.audioScores).values(audioScoreValues(record));
+  }
+
+  async findByBlessingId(blessingId: string): Promise<AudioScoreRecord | null> {
+    const rows = await this.db
+      .select()
+      .from(t.audioScores)
+      .where(eq(t.audioScores.blessingId, blessingId));
+    return rows[0] ? toAudioScore(rows[0]) : null;
+  }
+
+  async save(record: AudioScoreRecord): Promise<void> {
+    await this.db
+      .update(t.audioScores)
+      .set(audioScoreValues(record))
+      .where(eq(t.audioScores.blessingId, record.blessingId));
   }
 }
 
@@ -705,5 +828,7 @@ export function createPgRepositories(db: Db, ids: IdGenerator): Repositories {
     streaks: new PgStreakRepository(db),
     inbox: new PgInboxRepository(db),
     notifications: new PgNotificationRepository(db),
+    wishRequests: new PgWishRequestRepository(db),
+    audioScores: new PgAudioScoreRepository(db),
   };
 }

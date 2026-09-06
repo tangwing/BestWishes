@@ -6,7 +6,8 @@ import type { AppDeps } from './deps';
 export interface NotificationView {
   id: string;
   kind: NotificationKind;
-  blessingId: string;
+  blessingId: string | null;
+  requestId: string | null;
   from: { userId: string; nickname: string };
   createdAt: string;
   read: boolean;
@@ -26,6 +27,7 @@ export function createNotificationService(deps: AppDeps) {
           id: n.id,
           kind: n.kind,
           blessingId: n.blessingId,
+          requestId: n.requestId,
           from: {
             userId: n.fromUserId,
             nickname: profile?.senderName ?? user?.nickname ?? '一位朋友',

@@ -1,22 +1,22 @@
 ## 1. 领域层（`packages/domain`，纯函数先行）
 
-- [ ] 1.1 `BlessingScope` 加 `'wish_response'`；`Blessing` 加 `requestId: string | null`；类型检查通过（`pnpm --filter @bestwishes/domain typecheck`）
-- [ ] 1.2 新增 `WishRequest` 类型（`id`/`authorId`/`situationText`/`scriptText`/`state`/`createdAt`/`recipientCandidateIds`）+ 极简状态机（`published → withdrawn → deleted`，`published → deleted`），仿 `lifecycle.ts` 风格写纯函数 `applyWishRequestTransition`，单测覆盖合法/非法转移
-- [ ] 1.3 音频信号打分规则层（纯函数，不含任何网络调用）：给定"转写文本 + 词级时间戳 + 音频时长"的合成测试数据，实现停顿分布、语速稳定性、犹豫词密度的计算，组合成"专注度"标签（高/中/低），单测覆盖每个信号的边界情况（无停顿、超长停顿、语速忽快忽慢、密集犹豫词）
-- [ ] 1.4 稿子对齐覆盖率的纯函数（给定"稿子文本 + 转写文本"，输出"完整/部分/明显不完整"三档），先用简单的 token 覆盖率近似实现（不依赖真实强制对齐工具），单测覆盖完整/漏读大段/无稿子三种情况
-- [ ] 1.5 `pnpm test:unit` 全绿，新增测试计入 domain 测试总数
+- [x] 1.1 `BlessingScope` 加 `'wish_response'`；`Blessing` 加 `requestId: string | null`；类型检查通过（`pnpm --filter @bestwishes/domain typecheck`）
+- [x] 1.2 新增 `WishRequest` 类型（`id`/`authorId`/`situationText`/`scriptText`/`state`/`createdAt`/`recipientCandidateIds`）+ 极简状态机（`published → withdrawn → deleted`，`published → deleted`），仿 `lifecycle.ts` 风格写纯函数 `applyWishRequestTrigger`（`wish-request-lifecycle.ts`），单测覆盖合法/非法转移（7 测试）
+- [x] 1.3 音频信号打分规则层（`audio-signals.ts`，纯函数，不含任何网络调用）：停顿分布、语速稳定性、犹豫词密度，组合成"专注度"标签（高/中/低）+ 置信度；单测覆盖边界情况（12 测试）。修了一个真实的精度问题：犹豫词表里的"这个/那个"是中文常规指示代词（如"这个世界"），朴素子串匹配会大量误判——改成"只在紧跟停顿标记（逗号/省略号/句末）时才算犹豫词"，权重/阈值全部走 `FocusScoringConfig` 配置，不硬编码
+- [x] 1.4 稿子对齐覆盖率的纯函数（`script-coverage.ts`）：有稿子按分句字符覆盖率判定完整/部分/明显不完整；无稿子复用现有 `isLowEffort`/`looksGarbled` 判"是否构成有效表达"，不做覆盖率评估。单测覆盖完整/漏读大段/无稿子/纯乱码（9 测试）
+- [x] 1.5 `pnpm test:unit` 全绿（122 domain 测试，+28）
 
 ## 2. 共享层（`packages/shared`）
 
-- [ ] 2.1 新增 `submitWishRequestSchema`（situationText 必填、scriptText 可选，长度约束复用 `submitBlessingSchema` 的字数配置）
-- [ ] 2.2 `submitBlessingSchema` 的 `contentType` 校验放开：`audio` 允许但仅当 `scope='wish_response'`（zod `.refine`），`video` 始终拒绝；补 `requestId` 可选字段
-- [ ] 2.3 `pnpm --filter @bestwishes/shared typecheck` 通过
+- [x] 2.1 新增 `submitWishRequestSchema`（situationText 必填、scriptText 可选 ≤2000 字）
+- [x] 2.2 `submitBlessingSchema.scope` 加 `'wish_response'`，补 `requestId` 可选字段。**未加 zod 层面的 `.refine`**——沿用本仓库已有的一致做法（`scope=reply` 时 `replyToUserId` 必填也不是 zod refine，是 `blessing-service.ts` 里带错误码的业务校验）：`contentType=audio` 仅在 `wish_response` 场景放行，这条跨字段规则放在应用层（见 §6.4），zod 只管形状
+- [x] 2.3 `pnpm --filter @bestwishes/shared typecheck` 通过
 
 ## 3. 数据层
 
-- [ ] 3.1 `server/src/infrastructure/db/schema.ts` 新增 `wish_requests` 表；`blessings` 表加 `request_id` 列（可空，外键到 `wish_requests`）；新增音频评分结果表 `audio_scores`（区别于 `moderation` 字段：`blessingId`、`completeness`、`focus`、`sincerity`、`personalizationLabel`、`livenessPassed`、置信度字段、`computedAt`）
-- [ ] 3.2 `pnpm --filter @bestwishes/server db:generate` 生成迁移，人工检查生成的 SQL 只包含预期的新表/新列
-- [ ] 3.3 `in-memory-repositories.ts` 新增 `WishRequestRepository`、`AudioScoreRepository` 的内存实现；`pg-repositories.ts` 同步实现两套 ports 契约一致；两边各补一个仓储层单测（建、查、状态更新）
+- [x] 3.1 `wish_requests` 表；`blessings.request_id`（可空，FK `wish_requests`，`onDelete: set null`）；`audio_scores` 表（`blessingId` 主键即 FK，`completeness`/`focus`+置信度/`sincerity`+置信度/`personalization`/`livenessPassed`/`computedAt`）；`notifications.blessing_id` 改可空 + 新增 `notifications.request_id`（`wish_request_matched` 通知用，两者按 `kind` 恰好其一非空）
+- [x] 3.2 `pnpm --filter @bestwishes/server db:generate` 生成 `0002_absent_valeria_richards.sql`；人工检查过，只含预期的新表/新列/FK，无意外改动
+- [x] 3.3 `in-memory-repositories.ts` 新增 `InMemoryWishRequestRepository`、`InMemoryAudioScoreRepository`；`pg-repositories.ts` 同步实现两套 ports 契约一致；`pnpm test`（167 测试，含 5 个 PGlite 真 SQL 集成测试）全绿验证了迁移可用
 
 ## 4. 音频存储
 

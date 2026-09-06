@@ -18,12 +18,16 @@ import type {
   BlessingMedia,
   BlessingScope,
   BlessingState,
+  CompletenessLabel,
   Gender,
   LifecycleActor,
   ModerationResult,
+  PersonalizationLabel,
   ReportCategory,
   ReportOrigin,
   ReportState,
+  ScoreLabel,
+  WishRequestState,
 } from '@bestwishes/domain';
 import type { NotificationKind } from '../../ports/records';
 
@@ -90,6 +94,19 @@ export const blessingDrafts = pgTable('blessing_drafts', {
   updatedAt: ts('updated_at').notNull(),
 });
 
+export const wishRequests = pgTable('wish_requests', {
+  id: text('id').primaryKey(),
+  authorId: text('author_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  situationText: text('situation_text').notNull(),
+  scriptText: text('script_text'),
+  state: text('state').$type<WishRequestState>().notNull().default('published'),
+  createdAt: ts('created_at').notNull(),
+  recipientCandidateIds: jsonb('recipient_candidate_ids').$type<string[]>().notNull().default([]),
+  moderation: jsonb('moderation').$type<ModerationResult>(),
+});
+
 export const blessings = pgTable('blessings', {
   id: text('id').primaryKey(),
   authorId: text('author_id')
@@ -103,6 +120,7 @@ export const blessings = pgTable('blessings', {
   audience: jsonb('audience').$type<AudienceFilter>().notNull(),
   replyToUserId: text('reply_to_user_id'),
   replyToBlessingId: text('reply_to_blessing_id'),
+  requestId: text('request_id').references(() => wishRequests.id, { onDelete: 'set null' }),
   recipientIds: jsonb('recipient_ids').$type<string[]>().notNull().default([]),
   state: text('state').$type<BlessingState>().notNull(),
   publicSlug: text('public_slug').notNull().unique(),
@@ -114,6 +132,22 @@ export const blessings = pgTable('blessings', {
   moderation: jsonb('moderation').$type<ModerationResult>(),
   renewCount: integer('renew_count').notNull().default(0),
   countedInStreak: boolean('counted_in_streak').notNull().default(false),
+});
+
+/** 音频打分结果——独立于 blessings.moderation：moderation 判"能不能过审"，
+ * 这里是"用心反馈"，语义不同，见 add-p2-wish-request-audio design.md。 */
+export const audioScores = pgTable('audio_scores', {
+  blessingId: text('blessing_id')
+    .primaryKey()
+    .references(() => blessings.id, { onDelete: 'cascade' }),
+  completeness: text('completeness').$type<CompletenessLabel>().notNull(),
+  focus: text('focus').$type<ScoreLabel>().notNull(),
+  focusConfidence: doublePrecision('focus_confidence').notNull(),
+  sincerity: text('sincerity').$type<ScoreLabel>().notNull(),
+  sincerityConfidence: doublePrecision('sincerity_confidence').notNull(),
+  personalization: text('personalization').$type<PersonalizationLabel>().notNull(),
+  livenessPassed: boolean('liveness_passed').notNull(),
+  computedAt: ts('computed_at').notNull(),
 });
 
 export const blessingEvents = pgTable('blessing_events', {
@@ -181,9 +215,10 @@ export const notifications = pgTable('notifications', {
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   kind: text('kind').$type<NotificationKind>().notNull(),
-  blessingId: text('blessing_id')
-    .notNull()
-    .references(() => blessings.id, { onDelete: 'cascade' }),
+  /** kind='blessing_received' 时必填；'wish_request_matched' 时为 null。 */
+  blessingId: text('blessing_id').references(() => blessings.id, { onDelete: 'cascade' }),
+  /** kind='wish_request_matched' 时必填；'blessing_received' 时为 null。 */
+  requestId: text('request_id').references(() => wishRequests.id, { onDelete: 'cascade' }),
   fromUserId: text('from_user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),

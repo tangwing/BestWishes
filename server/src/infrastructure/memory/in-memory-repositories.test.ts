@@ -21,6 +21,7 @@ function blessing(over: Partial<BlessingRecord> = {}): BlessingRecord {
     audience: { radiusKm: 5, ageMin: null, ageMax: null, gender: 'any', tags: [] },
     replyToUserId: null,
     replyToBlessingId: null,
+    requestId: null,
     recipientIds: ['usr_2'],
     state: 'verifying',
     slug: 'slug1',

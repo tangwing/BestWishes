@@ -2,6 +2,7 @@
 
 import type { AudienceCandidate, BlessingState } from '@bestwishes/domain';
 import type {
+  AudioScoreRecord,
   BlessingEventRecord,
   BlessingRecord,
   ConsentRecord,
@@ -12,6 +13,7 @@ import type {
   ReportRecord,
   TemplateRecord,
   UserRecord,
+  WishRequestRecord,
 } from './records';
 
 export interface UserRepository {
@@ -92,6 +94,21 @@ export interface NotificationRepository {
   markAllRead(userId: string): Promise<void>;
 }
 
+export interface WishRequestRepository {
+  add(record: WishRequestRecord): Promise<void>;
+  findById(id: string): Promise<WishRequestRecord | null>;
+  save(record: WishRequestRecord): Promise<void>;
+  /** 广场：所有 published 状态，按发布时间倒序。 */
+  listPublished(): Promise<WishRequestRecord[]>;
+  listByAuthor(authorId: string): Promise<WishRequestRecord[]>;
+}
+
+export interface AudioScoreRepository {
+  add(record: AudioScoreRecord): Promise<void>;
+  findByBlessingId(blessingId: string): Promise<AudioScoreRecord | null>;
+  save(record: AudioScoreRecord): Promise<void>;
+}
+
 export interface Repositories {
   users: UserRepository;
   profiles: ProfileRepository;
@@ -104,4 +121,6 @@ export interface Repositories {
   streaks: StreakRepository;
   inbox: InboxRepository;
   notifications: NotificationRepository;
+  wishRequests: WishRequestRepository;
+  audioScores: AudioScoreRepository;
 }

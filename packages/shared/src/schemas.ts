@@ -47,7 +47,7 @@ export const profileUpdateSchema = z.object({
 export type ProfileUpdateDto = z.infer<typeof profileUpdateSchema>;
 
 export const blessingContentTypeSchema = z.enum(['text', 'audio', 'video']);
-export const blessingScopeSchema = z.enum(['broadcast', 'reply']);
+export const blessingScopeSchema = z.enum(['broadcast', 'reply', 'wish_response']);
 
 export const submitBlessingSchema = z.object({
   contentType: blessingContentTypeSchema.default('text'),
@@ -57,7 +57,9 @@ export const submitBlessingSchema = z.object({
   replyToUserId: z.string().min(1).optional(),
   /** 被回复的原始祝福 id，用于把回信关联回去。找不到 / 不是该收件人的祝福时后端会忽略。 */
   replyToBlessingId: z.string().min(1).optional(),
-  /** broadcast 必填；reply 忽略。 */
+  /** scope=wish_response 时，回应的那条祝福请求 id。找不到 / 请求已不存在时后端会拒绝。 */
+  requestId: z.string().min(1).optional(),
+  /** broadcast 必填；reply / wish_response 忽略。 */
   audience: audienceFilterSchema.optional(),
 });
 export type SubmitBlessingDto = z.infer<typeof submitBlessingSchema>;
@@ -68,3 +70,10 @@ export const draftSchema = z.object({
   audience: audienceFilterSchema.optional(),
 });
 export type DraftDto = z.infer<typeof draftSchema>;
+
+/** 祝福请求：处境描述 + 可选稿子。字数约束与祝福正文一致，运行时用同一套 bodyMinLen/MaxLen 配置校验。 */
+export const submitWishRequestSchema = z.object({
+  situationText: z.string(),
+  scriptText: z.string().trim().max(2000).optional(),
+});
+export type SubmitWishRequestDto = z.infer<typeof submitWishRequestSchema>;

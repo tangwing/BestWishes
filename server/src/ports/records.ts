@@ -3,6 +3,7 @@
 
 import type {
   AudienceFilter,
+  AudioScore,
   Blessing,
   BlessingEvent,
   Gender,
@@ -10,6 +11,7 @@ import type {
   ReportCategory,
   ReportOrigin,
   ReportState,
+  WishRequest,
 } from '@bestwishes/domain';
 
 export interface UserRecord {
@@ -77,6 +79,8 @@ export interface DraftRecord {
  */
 export type BlessingRecord = Blessing & { holdUntil: string | null };
 export type BlessingEventRecord = BlessingEvent & { id: string; blessingId: string };
+export type WishRequestRecord = WishRequest;
+export type AudioScoreRecord = AudioScore;
 
 export interface ReportRecord {
   id: string;
@@ -105,13 +109,17 @@ export interface InboxItemRecord {
   readAt: string | null;
 }
 
-export type NotificationKind = 'blessing_received';
+export type NotificationKind = 'blessing_received' | 'wish_request_matched';
 
 export interface NotificationRecord {
   id: string;
   userId: string;
   kind: NotificationKind;
-  blessingId: string;
+  /** kind='blessing_received' 时必填；'wish_request_matched' 时为 null。 */
+  blessingId: string | null;
+  /** kind='wish_request_matched' 时必填（关联的祝福请求）；'blessing_received' 时为 null。 */
+  requestId: string | null;
+  /** blessing_received：祝福发送者。wish_request_matched：请求作者。 */
   fromUserId: string;
   createdAt: string;
   readAt: string | null;

@@ -15,6 +15,13 @@
       "when": 1788681673619,
       "tag": "0001_chunky_maria_hill",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788705230512,
+      "tag": "0002_absent_valeria_richards",
+      "breakpoints": true
     }
   ]
 }

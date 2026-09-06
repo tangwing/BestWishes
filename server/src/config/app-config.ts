@@ -14,6 +14,9 @@ const overridesSchema = z.object({
   BW_SPOT_CHECK_RATIO: z.coerce.number().min(0).max(1).optional(),
   BW_MAX_AUDIENCE: z.coerce.number().int().positive().optional(),
   BW_AUDIENCE_MAX_RADIUS_KM: z.coerce.number().positive().optional(),
+  BW_AUDIO_MIN_DURATION_SEC: z.coerce.number().positive().optional(),
+  BW_AUDIO_MAX_DURATION_SEC: z.coerce.number().positive().optional(),
+  BW_AUDIO_SCORING_TIMEOUT_SECONDS: z.coerce.number().positive().optional(),
 });
 
 export function loadP1Config(source: NodeJS.ProcessEnv = process.env): P1Config {
@@ -33,5 +36,10 @@ export function loadP1Config(source: NodeJS.ProcessEnv = process.env): P1Config 
     maxAudienceSize: o.BW_MAX_AUDIENCE ?? DEFAULT_CONFIG.maxAudienceSize,
     audienceMaxRadiusKm: o.BW_AUDIENCE_MAX_RADIUS_KM ?? DEFAULT_CONFIG.audienceMaxRadiusKm,
     audienceMinRadiusKm: DEFAULT_CONFIG.audienceMinRadiusKm,
+    audioMinDurationSec: o.BW_AUDIO_MIN_DURATION_SEC ?? DEFAULT_CONFIG.audioMinDurationSec,
+    audioMaxDurationSec: o.BW_AUDIO_MAX_DURATION_SEC ?? DEFAULT_CONFIG.audioMaxDurationSec,
+    audioScoringTimeoutSeconds:
+      o.BW_AUDIO_SCORING_TIMEOUT_SECONDS ?? DEFAULT_CONFIG.audioScoringTimeoutSeconds,
+    focusScoring: DEFAULT_CONFIG.focusScoring,
   };
 }

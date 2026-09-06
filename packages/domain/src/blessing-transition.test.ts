@@ -14,6 +14,7 @@ function base(over: Partial<Blessing> = {}): Blessing {
     audience: { radiusKm: 5, ageMin: null, ageMax: null, gender: 'any', tags: [] },
     replyToUserId: null,
     replyToBlessingId: null,
+    requestId: null,
     recipientIds: ['u2'],
     state: 'verifying',
     slug: 's1',

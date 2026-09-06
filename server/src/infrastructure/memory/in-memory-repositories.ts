@@ -4,6 +4,7 @@
 import type { AudienceCandidate, BlessingState } from '@bestwishes/domain';
 import type { IdGenerator } from '../../ports/ids';
 import type {
+  AudioScoreRecord,
   BlessingEventRecord,
   BlessingRecord,
   ConsentRecord,
@@ -14,8 +15,10 @@ import type {
   ReportRecord,
   TemplateRecord,
   UserRecord,
+  WishRequestRecord,
 } from '../../ports/records';
 import type {
+  AudioScoreRepository,
   BlessingEventRepository,
   BlessingRepository,
   ConsentRepository,
@@ -28,6 +31,7 @@ import type {
   StreakRepository,
   TemplateRepository,
   UserRepository,
+  WishRequestRepository,
 } from '../../ports/repositories';
 
 const clone = <T>(v: T): T => structuredClone(v);
@@ -224,6 +228,56 @@ class InMemoryBlessingEventRepository implements BlessingEventRepository {
   }
 }
 
+class InMemoryWishRequestRepository implements WishRequestRepository {
+  private readonly byId = new Map<string, WishRequestRecord>();
+
+  add(record: WishRequestRecord): Promise<void> {
+    this.byId.set(record.id, clone(record));
+    return Promise.resolve();
+  }
+  findById(id: string): Promise<WishRequestRecord | null> {
+    const rec = this.byId.get(id);
+    return Promise.resolve(rec ? clone(rec) : null);
+  }
+  save(record: WishRequestRecord): Promise<void> {
+    this.byId.set(record.id, clone(record));
+    return Promise.resolve();
+  }
+  listPublished(): Promise<WishRequestRecord[]> {
+    return Promise.resolve(
+      [...this.byId.values()]
+        .filter((r) => r.state === 'published')
+        .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+        .map(clone),
+    );
+  }
+  listByAuthor(authorId: string): Promise<WishRequestRecord[]> {
+    return Promise.resolve(
+      [...this.byId.values()]
+        .filter((r) => r.authorId === authorId)
+        .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+        .map(clone),
+    );
+  }
+}
+
+class InMemoryAudioScoreRepository implements AudioScoreRepository {
+  private readonly byBlessingId = new Map<string, AudioScoreRecord>();
+
+  add(record: AudioScoreRecord): Promise<void> {
+    this.byBlessingId.set(record.blessingId, clone(record));
+    return Promise.resolve();
+  }
+  findByBlessingId(blessingId: string): Promise<AudioScoreRecord | null> {
+    const rec = this.byBlessingId.get(blessingId);
+    return Promise.resolve(rec ? clone(rec) : null);
+  }
+  save(record: AudioScoreRecord): Promise<void> {
+    this.byBlessingId.set(record.blessingId, clone(record));
+    return Promise.resolve();
+  }
+}
+
 class InMemoryReportRepository implements ReportRepository {
   private readonly byId = new Map<string, ReportRecord>();
 
@@ -350,5 +404,7 @@ export function createInMemoryRepositories(opts: InMemoryOptions): Repositories 
     streaks: new InMemoryStreakRepository(),
     inbox: new InMemoryInboxRepository(),
     notifications: new InMemoryNotificationRepository(),
+    wishRequests: new InMemoryWishRequestRepository(),
+    audioScores: new InMemoryAudioScoreRepository(),
   };
 }
