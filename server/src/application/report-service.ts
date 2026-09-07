@@ -34,6 +34,7 @@ export function createReportService(deps: AppDeps) {
       await deps.repos.reports.add({
         id: deps.ids.next('rpt'),
         blessingId: b.id,
+        requestId: null,
         origin: 'report',
         category,
         state: 'open',

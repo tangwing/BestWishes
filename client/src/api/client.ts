@@ -169,6 +169,7 @@ export interface QueueItem {
   note: string | null;
   createdAt: string;
   blessing: { id: string; state: string; body: string } | null;
+  wishRequest: { id: string; state: string; situationText: string } | null;
 }
 
 export interface SubmitBlessingInput {

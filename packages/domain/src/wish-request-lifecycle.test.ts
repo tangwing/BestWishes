@@ -5,6 +5,22 @@ import {
   allowedWishRequestTriggers,
 } from './wish-request-lifecycle';
 
+describe('祝福请求状态机 — 疑似内容要过人工复核', () => {
+  it('pending_review --review_pass--> published', () => {
+    const r = applyWishRequestTrigger('pending_review', 'review_pass');
+    expect(r).toEqual({ ok: true, next: 'published' });
+  });
+
+  it('pending_review --review_reject--> deleted', () => {
+    const r = applyWishRequestTrigger('pending_review', 'review_reject');
+    expect(r).toEqual({ ok: true, next: 'deleted' });
+  });
+
+  it('pending_review 不接受 withdraw（还没公开，没什么可撤回的）', () => {
+    expect(canApplyWishRequestTrigger('pending_review', 'withdraw')).toBe(false);
+  });
+});
+
 describe('祝福请求状态机 — 合法转移', () => {
   it('published --withdraw--> withdrawn', () => {
     const r = applyWishRequestTrigger('published', 'withdraw');

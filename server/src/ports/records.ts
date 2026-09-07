@@ -84,7 +84,10 @@ export type AudioScoreRecord = AudioScore;
 
 export interface ReportRecord {
   id: string;
-  blessingId: string;
+  /** 举报 / 疑似的祝福；工单来自 wish-request 时为 null。 */
+  blessingId: string | null;
+  /** 工单来自祝福请求（发布时命中疑似）时必填；否则 null。 */
+  requestId: string | null;
   origin: ReportOrigin;
   category: ReportCategory;
   state: ReportState;

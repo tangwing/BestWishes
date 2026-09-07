@@ -274,4 +274,54 @@ describe('祝福请求 + 音频回应', () => {
     const secondWithdraw = await ctx.app.wishRequests.withdraw(author, r.value.id);
     expect(secondWithdraw.ok).toBe(false);
   });
+
+  it('处境描述命中违禁词 → 拒绝发布', async () => {
+    const r = await ctx.app.wishRequests.publish(author, {
+      situationText: '刷单返利，加入我们就能赚钱，最近压力很大希望有人鼓励我。',
+      tags: [],
+    });
+    expect(r.ok).toBe(false);
+  });
+
+  it('处境描述命中拉客护栏词 → 广场看不到、不触发匹配，进人工队列；人工通过后才公开 + 匹配推送', async () => {
+    const r = await ctx.app.wishRequests.publish(author, {
+      situationText: '最近很焦虑，加我微信详细聊聊，希望有人能鼓励我一下。',
+      tags: ['考研'],
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+
+    // 命中疑似的这段时间：广场看不到，responder 也没收到匹配通知
+    expect((await ctx.app.wishRequests.plaza()).map((p) => p.id)).not.toContain(r.value.id);
+    const beforeNotif = await ctx.app.notifications.list(responder);
+    expect(beforeNotif.items.some((n) => n.requestId === r.value.id)).toBe(false);
+
+    const queue = await ctx.app.moderationQueue.queue();
+    const ticket = queue.find((q) => q.wishRequest?.id === r.value.id);
+    expect(ticket).toBeDefined();
+    expect(ticket?.wishRequest?.state).toBe('pending_review');
+
+    await ctx.app.moderationQueue.resolve(ticket!.id, 'pass', '误判，正常求助', author);
+
+    // 通过后才公开、才触发匹配推送
+    expect((await ctx.app.wishRequests.plaza()).map((p) => p.id)).toContain(r.value.id);
+    const afterNotif = await ctx.app.notifications.list(responder);
+    expect(afterNotif.items.some((n) => n.requestId === r.value.id)).toBe(true);
+  });
+
+  it('人工驳回一条待审的请求 → 直接进终态，不公开', async () => {
+    const r = await ctx.app.wishRequests.publish(author, {
+      situationText: '最近很焦虑，加我微信详细聊聊，希望有人能鼓励我一下。',
+      tags: [],
+    });
+    if (!r.ok) throw new Error('publish failed');
+
+    const queue = await ctx.app.moderationQueue.queue();
+    const ticket = queue.find((q) => q.wishRequest?.id === r.value.id);
+    await ctx.app.moderationQueue.resolve(ticket!.id, 'takedown', '确实不合适', author);
+
+    expect((await ctx.app.wishRequests.plaza()).map((p) => p.id)).not.toContain(r.value.id);
+    const stillPendingWithdraw = await ctx.app.wishRequests.withdraw(author, r.value.id);
+    expect(stillPendingWithdraw.ok).toBe(false); // 已经是终态，连撤回都不行
+  });
 });

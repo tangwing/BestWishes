@@ -16,7 +16,23 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${PORT}`,
     trace: 'retain-on-failure',
   },
-  projects: [{ name: 'chrome', use: { ...devices['Desktop Chrome'], channel: 'chrome' } }],
+  projects: [
+    {
+      name: 'chrome',
+      use: {
+        ...devices['Desktop Chrome'],
+        channel: 'chrome',
+        // 音频回应场景要真的录到东西：假麦克风设备 + 自动放行权限弹窗，
+        // 不需要真实硬件也不需要人工点"允许"。clipboard-write 是 author-flow
+        // 测试"粘贴被拦截"场景要用的，加 permissions 数组后不再是默认隐式允许，
+        // 得显式列出。
+        permissions: ['microphone', 'clipboard-write'],
+        launchOptions: {
+          args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
+        },
+      },
+    },
+  ],
   webServer: {
     command:
       'pnpm --filter @bestwishes/client build && pnpm --filter @bestwishes/server exec tsx src/main.ts',

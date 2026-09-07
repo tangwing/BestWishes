@@ -173,11 +173,13 @@ export interface Blessing {
 
 // ---- P2：祝福请求 + 匹配（见 add-p2-wish-request-audio） ----
 
-/** 祝福请求的生命周期：比 Blessing 简单得多——没有"发布即校验、延迟送达"的语义，
- * 只有"公开 / 撤回 / 删除"三态。撤回是终态，不提供重新发布（同 B-63 的教训）。 */
-export type WishRequestState = 'published' | 'withdrawn' | 'deleted';
+/** 祝福请求的生命周期：比 Blessing 简单——没有"发布即校验、延迟送达"的 hold 语义，
+ * 但命中疑似（suspect）仍然要进人工复核队列才能公开——广场未登录也能看，
+ * 曝光面比群发的收件箱更大，不能因为"没有 hold 概念"就跳过审核。
+ * `pending_review` 是这个等待态；撤回是终态，不提供重新发布（同 B-63 的教训）。 */
+export type WishRequestState = 'pending_review' | 'published' | 'withdrawn' | 'deleted';
 
-export type WishRequestTrigger = 'withdraw' | 'delete';
+export type WishRequestTrigger = 'withdraw' | 'delete' | 'review_pass' | 'review_reject';
 
 export interface WishRequest {
   id: string;

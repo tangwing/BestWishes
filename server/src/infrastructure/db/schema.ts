@@ -166,9 +166,10 @@ export const blessingEvents = pgTable('blessing_events', {
 
 export const reports = pgTable('reports', {
   id: text('id').primaryKey(),
-  blessingId: text('blessing_id')
-    .notNull()
-    .references(() => blessings.id, { onDelete: 'cascade' }),
+  /** 工单来自 wish-request 时为 null。 */
+  blessingId: text('blessing_id').references(() => blessings.id, { onDelete: 'cascade' }),
+  /** 工单来自 wish-request（发布时命中疑似）时必填。 */
+  requestId: text('request_id').references(() => wishRequests.id, { onDelete: 'cascade' }),
   origin: text('origin').$type<ReportOrigin>().notNull(),
   category: text('category').$type<ReportCategory>().notNull(),
   state: text('state').$type<ReportState>().notNull(),

@@ -129,23 +129,77 @@ export function createWishRequestService(deps: AppDeps) {
       }
 
       const now = deps.clock.now().toISOString();
+      // 广场未登录也能看，曝光面比群发的收件箱更大——命中疑似不能跳过人工复核，
+      // 即使 WishRequest 没有 blessing 那套 hold/verifying 语义（见 types.ts 的注释）。
+      const needsReview = outcome.createTicket;
       const record: WishRequestRecord = {
         id: deps.ids.next('wrq'),
         authorId: userId,
         situationText: input.situationText.trim(),
         scriptText: input.scriptText?.trim() || null,
         tags: input.tags,
-        state: 'published',
+        state: needsReview ? 'pending_review' : 'published',
         createdAt: now,
         recipientCandidateIds: [],
         moderation,
       };
 
-      const candidateIds = await matchAndNotify(record);
-      record.recipientCandidateIds = candidateIds;
+      if (!needsReview) {
+        record.recipientCandidateIds = await matchAndNotify(record);
+      }
       await deps.repos.wishRequests.add(record);
 
+      if (needsReview) {
+        await deps.repos.reports.add({
+          id: deps.ids.next('rpt'),
+          blessingId: null,
+          requestId: record.id,
+          origin: 'auto_suspect',
+          category: moderation.categories[0] ?? 'other',
+          state: 'open',
+          priority: 30,
+          note: outcome.note,
+          assignee: null,
+          resolutionReason: null,
+          reporterFingerprint: null,
+          count: 1,
+          createdAt: now,
+          resolvedAt: null,
+          timeline: [{ at: now, text: '工单创建（auto_suspect，来自祝福请求）' }],
+        });
+      }
+
       return ok(await toView(record));
+    },
+
+    /** 人工复核通过一条待审的请求：正式公开，并这时才触发匹配推送
+     * （之前一直没公开，不该在还没过审时就把它推给别人）。 */
+    async approveAfterReview(id: string): Promise<Result<null>> {
+      const r = await deps.repos.wishRequests.findById(id);
+      if (!r) return err(appError('not_found', 'wish request not found', '找不到这条请求'));
+      const result = applyWishRequestTrigger(r.state, 'review_pass');
+      if (!result.ok) {
+        return err(appError('blessing_state_conflict', result.reason, '这个操作现在做不了'));
+      }
+      const candidateIds = await matchAndNotify(r);
+      await deps.repos.wishRequests.save({
+        ...r,
+        state: result.next,
+        recipientCandidateIds: candidateIds,
+      });
+      return ok(null);
+    },
+
+    /** 人工复核驳回一条待审的请求：直接进终态，不公开。 */
+    async rejectAfterReview(id: string): Promise<Result<null>> {
+      const r = await deps.repos.wishRequests.findById(id);
+      if (!r) return err(appError('not_found', 'wish request not found', '找不到这条请求'));
+      const result = applyWishRequestTrigger(r.state, 'review_reject');
+      if (!result.ok) {
+        return err(appError('blessing_state_conflict', result.reason, '这个操作现在做不了'));
+      }
+      await deps.repos.wishRequests.save({ ...r, state: result.next });
+      return ok(null);
     },
 
     async plaza(): Promise<WishRequestView[]> {

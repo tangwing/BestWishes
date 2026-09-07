@@ -148,6 +148,7 @@ function toReport(row: ReportRow): ReportRecord {
   return {
     id: row.id,
     blessingId: row.blessingId,
+    requestId: row.requestId,
     origin: row.origin,
     category: row.category,
     state: row.state,
@@ -167,6 +168,7 @@ function reportValues(r: ReportRecord): typeof t.reports.$inferInsert {
   return {
     id: r.id,
     blessingId: r.blessingId,
+    requestId: r.requestId,
     origin: r.origin,
     category: r.category,
     state: r.state,

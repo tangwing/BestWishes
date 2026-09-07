@@ -52,8 +52,9 @@ export function Moderation() {
               {r.blessing && (
                 <span className={`${s.tag} ${s[r.blessing.state] ?? ''}`}>{r.blessing.state}</span>
               )}
+              {r.wishRequest && <span className={s.tag}>祝福请求 · {r.wishRequest.state}</span>}
               <div style={{ fontFamily: 'var(--serif)', fontSize: 14 }}>
-                {r.blessing?.body ?? '（祝福已不存在）'}
+                {r.blessing?.body ?? r.wishRequest?.situationText ?? '（内容已不存在）'}
               </div>
               <div className={s.meta}>
                 大类：{r.category} · 计数 {r.count}

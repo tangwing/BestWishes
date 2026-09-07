@@ -17,12 +17,25 @@ export function WishRequestResponses() {
 
   useEffect(() => {
     if (!id || !user) return;
-    api
-      .wishRequestResponses(id)
-      .then(setList)
-      .catch(() => {
-        setErr('没有权限查看，或这条请求不存在。');
-      });
+    let active = true;
+    // 回应要经过打分 + hold 才会 published，一次性 fetch 会在还没发布时永远显示"还没有人回应"
+    // （P1 的 Inbox 页踩过同一个坑：见 PROMPT_LOG），这里同样改成轮询。
+    const tick = () => {
+      void api
+        .wishRequestResponses(id)
+        .then((r) => {
+          if (active) setList(r);
+        })
+        .catch(() => {
+          if (active) setErr('没有权限查看，或这条请求不存在。');
+        });
+    };
+    tick();
+    const h = setInterval(tick, 3000);
+    return () => {
+      active = false;
+      clearInterval(h);
+    };
   }, [id, user]);
 
   return (

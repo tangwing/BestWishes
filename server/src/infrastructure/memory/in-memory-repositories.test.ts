@@ -86,6 +86,7 @@ describe('复核工单仓储：优先级排序', () => {
   it('listOpen 按优先级降序', async () => {
     const base = {
       blessingId: 'bls_1',
+      requestId: null,
       category: 'other' as const,
       state: 'open' as const,
       note: null,

@@ -55,8 +55,13 @@
 
 ## 8. 端到端与收尾
 
-- [ ] 8.1 e2e：用预置音频文件模拟上传（不依赖真实麦克风），覆盖"发布请求（附稿子）→ 另一账号浏览广场并录音回应 → 请求人收件箱看到回应"的关键路径
-- [ ] 8.2 `pnpm verify` 全绿；`pnpm test:e2e` 全绿
-- [ ] 8.3 `docs/DEMO.md` 补充祝福请求 + 音频回应的走查步骤
+- [x] 8.1 e2e（`e2e/tests/wish-request.spec.ts`，2 个）：**没有用预置音频文件模拟**——`playwright.config.ts` 的 chrome 项目加了 `--use-fake-device-for-media-stream --use-fake-ui-for-media-stream` 启动参数 + `permissions: ['microphone']`，真的走 `MediaRecorder` 录 6 秒假音频，比原计划更接近真实浏览器路径。覆盖"发布请求（附稿子）→ 另一账号在广场看到 → 进回应页看到波形和验证码 → 真的录音 → 提交 → 多维反馈页 → 请求人在回应列表看到 + 能播放"，以及"撤回后广场看不到、我的请求页显示已撤回"。副作用：给 chrome 项目加 `permissions` 数组后，`author-flow.spec.ts` 原有的剪贴板测试因为不再"隐式允许"而 403——加了 `clipboard-write` 到同一个数组里补上。
+
+  **这一步的过程本身就是最有价值的验证**：写这两个 e2e 测试时，先后挖出三个东西：
+  1. （已在 §7.7 记录）HTTP 路由 `requestId` 重复校验的 422。
+  2. （已在 §7.7 记录）回应页缺consent gate 的 403。
+  3. **一个真正的安全审核缺口**：`wish-request-service.publish()` 从一开始就只处理了 `violation`（拒绝）和 `pass`（直接发布），完全没处理 `suspect`——命中拉客护栏词的处境描述会直接进公开广场（未登录都能看，比群发收件箱曝光面更大），不会进人工复核队列。这不是 e2e 测试断言直接抓到的（测试脚本本身没有专门造一条 suspect 内容去验证），而是在给 e2e 测试的第二个用例排查"广场文本重复导致断言失败"时，回头检查 `publish()` 全部代码路径才发现的。修法：给 `WishRequestState` 加 `pending_review`（`packages/domain`）、`ReportRecord` 仿照 `NotificationRecord` 的先例改成对 `blessingId`/`requestId` 二选一多态、`moderation-queue-service` 分支处理两种工单来源（`QueueItem` 加 `wishRequest` 字段，`resolve()` 按 `requestId` 是否存在分流）、`Moderation.tsx` 同步渲染两种预览。加了 4 个新集成测试（命中违禁词拒绝发布、命中护栏词进人工队列且不公开不推送、人工通过后才公开+触发匹配、人工驳回直接终态）到 `wish-request-flow.test.ts`，`wish-request-lifecycle.test.ts` 补了 3 个新状态转移测试。新迁移 `0004_magical_devos.sql`。
+- [x] 8.2 `pnpm verify` 全绿（201 测试，+6：3 个新 lifecycle + 4 个新 suspect 集成测试 - 1 因为其它调整）；`pnpm test:e2e` 全绿（12 个，+2）
+- [ ] 8.3 `docs/DEMO.md` 补充祝福请求 + 音频回应的走查步骤——下一步
 - [ ] 8.4 `openspec validate add-p2-wish-request-audio --strict` 通过
 - [ ] 8.5 BACKLOG.md / CHANGELOG.md 记录本次变更；PROMPT_LOG.md 记录驱动本次变更的用户 prompt

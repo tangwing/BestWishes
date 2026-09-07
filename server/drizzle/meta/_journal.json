@@ -29,6 +29,13 @@
       "when": 1788746289249,
       "tag": "0003_open_captain_america",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788788623153,
+      "tag": "0004_magical_devos",
+      "breakpoints": true
     }
   ]
 }

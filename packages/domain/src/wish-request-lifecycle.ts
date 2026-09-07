@@ -7,6 +7,10 @@ import type { WishRequestState, WishRequestTrigger } from './types';
 type TransitionTable = Record<WishRequestState, Partial<Record<WishRequestTrigger, WishRequestState>>>;
 
 const TRANSITIONS: TransitionTable = {
+  pending_review: {
+    review_pass: 'published',
+    review_reject: 'deleted',
+  },
   published: {
     withdraw: 'withdrawn',
     delete: 'deleted',

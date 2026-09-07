@@ -189,6 +189,7 @@ export function createAudioScoringService(deps: AppDeps) {
         await deps.repos.reports.add({
           id: deps.ids.next('rpt'),
           blessingId: draft.id,
+          requestId: null,
           origin: 'auto_suspect',
           category: moderation.categories[0] ?? 'other',
           state: 'open',
