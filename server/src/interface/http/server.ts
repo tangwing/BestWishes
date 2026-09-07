@@ -3,6 +3,7 @@
 import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance } from 'fastify';
 import cookie from '@fastify/cookie';
+import multipart from '@fastify/multipart';
 import { isAppException } from '@bestwishes/shared';
 import { httpStatusFor } from './errors';
 import { registerRoutes } from './routes';
@@ -24,6 +25,10 @@ export async function buildServer(deps: ServerDeps): Promise<FastifyInstance> {
   });
 
   await app.register(cookie);
+  await app.register(multipart, {
+    attachFieldsToBody: 'keyValues',
+    limits: { fileSize: 20 * 1024 * 1024 }, // 20MB，够放 180 秒 opus 音频，留足余量
+  });
 
   // 统一错误处理：application 层抛的 AppException 按错误码映射 status，其余按 500。
   app.setErrorHandler((error, request, reply) => {

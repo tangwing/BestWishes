@@ -68,7 +68,7 @@ module.exports = {
   options: {
     doNotFollow: { path: 'node_modules' },
     exclude: {
-      path: '(\\.test\\.(ts|tsx)$|test-(harness|server)\\.ts$|^arch/|/prototype/|/(dist|build)/)',
+      path: '(\\.test\\.(ts|tsx)$|test-(harness|server|multipart)\\.ts$|^arch/|/prototype/|/(dist|build)/)',
     },
     tsConfig: { fileName: 'tsconfig.base.json' },
     tsPreCompilationDeps: true,

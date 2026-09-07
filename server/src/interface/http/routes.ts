@@ -8,6 +8,7 @@ import {
   occasionSchema,
   profileUpdateSchema,
   submitBlessingSchema,
+  submitWishRequestSchema,
   AppException,
   type Result,
 } from '@bestwishes/shared';
@@ -180,6 +181,85 @@ export function registerRoutes(app: FastifyInstance, application: Application): 
     );
     unwrap(await application.reports.report(slug, category, note, fingerprint(request)));
     return { ok: true };
+  });
+
+  // ---- 祝福请求 + 音频回应 ----
+  app.post('/api/wish-requests', async (request) => {
+    const input = parse(submitWishRequestSchema, request.body);
+    return unwrap(await application.wishRequests.publish(requireUserId(request), input));
+  });
+
+  app.get('/api/wish-requests', async () => application.wishRequests.plaza());
+
+  app.get('/api/wish-requests/mine', async (request) =>
+    application.wishRequests.myRequests(requireUserId(request)),
+  );
+
+  app.get('/api/wish-requests/:id', async (request) => {
+    const { id } = parse(idParam, request.params);
+    const view = await application.wishRequests.getById(id);
+    if (!view) throw new AppException('not_found', 'wish request not found', '找不到这条请求');
+    return view;
+  });
+
+  app.post('/api/wish-requests/:id/withdraw', async (request) => {
+    const { id } = parse(idParam, request.params);
+    return unwrap(await application.wishRequests.withdraw(requireUserId(request), id));
+  });
+
+  app.delete('/api/wish-requests/:id', async (request) => {
+    const { id } = parse(idParam, request.params);
+    return unwrap(await application.wishRequests.remove(requireUserId(request), id));
+  });
+
+  app.get('/api/wish-requests/:id/responses', async (request) => {
+    const { id } = parse(idParam, request.params);
+    return unwrap(await application.wishRequests.responses(requireUserId(request), id));
+  });
+
+  app.get('/api/audio-challenge', (request) => {
+    requireUserId(request);
+    return application.audioScoring.issueLivenessChallenge();
+  });
+
+  const wishResponseFieldsSchema = z.object({
+    requestId: z.string().min(1),
+    durationSec: z.coerce.number().positive(),
+    occasion: occasionSchema,
+    challengeToken: z.string().min(1),
+    clientTranscript: z.string().optional(),
+  });
+
+  app.post('/api/wish-requests/:id/respond', async (request) => {
+    const { id } = parse(idParam, request.params);
+    const body = request.body as Record<string, unknown>;
+    const fields = parse(wishResponseFieldsSchema, body);
+    if (!Buffer.isBuffer(body['audio'])) {
+      throw new AppException('validation_failed', 'missing audio file', '没有收到音频文件');
+    }
+    return unwrap(
+      await application.audioScoring.submit(requireUserId(request), {
+        requestId: id,
+        audio: body['audio'],
+        durationSec: fields.durationSec,
+        occasion: fields.occasion,
+        challengeToken: fields.challengeToken,
+        clientTranscript: fields.clientTranscript,
+      }),
+    );
+  });
+
+  app.get('/api/blessings/:id/audio-feedback', async (request) => {
+    const { id } = parse(idParam, request.params);
+    return unwrap(await application.audioScoring.myFeedback(requireUserId(request), id));
+  });
+
+  app.get('/api/blessings/:id/audio', async (request, reply) => {
+    const { id } = parse(idParam, request.params);
+    const userId = requireUserId(request);
+    const buf = unwrap(await application.audioScoring.readAudio(userId, id));
+    void reply.header('content-type', 'audio/webm');
+    return reply.send(buf);
   });
 
   // ---- moderation console (demo：任何会话都能进；真实按角色鉴权) ----

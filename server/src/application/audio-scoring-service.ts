@@ -94,11 +94,13 @@ export function createAudioScoringService(deps: AppDeps) {
       }
 
       const now = deps.clock.now().toISOString();
-      const audioId = deps.ids.next('aud');
-      const audioUrl = await deps.audioStorage.save(audioId, input.audio);
+      const blessingId = deps.ids.next('bls');
+      // 用祝福 id 本身当音频文件的 key——回放路由按 blessing id 查权限，
+      // 不需要另建一张"音频 id -> blessing id"的映射表。
+      const audioUrl = await deps.audioStorage.save(blessingId, input.audio);
 
       let draft: BlessingRecord = {
-        id: deps.ids.next('bls'),
+        id: blessingId,
         authorId: userId,
         contentType: 'audio',
         body: '',
@@ -207,6 +209,19 @@ export function createAudioScoringService(deps: AppDeps) {
       }
 
       return ok({ id: draft.id, state: draft.state });
+    },
+
+    /** 回放权限：只有这条祝福的收发双方能拉音频文件。 */
+    async readAudio(userId: string, blessingId: string): Promise<Result<Buffer>> {
+      const b = await deps.repos.blessings.findById(blessingId);
+      if (!b || b.contentType !== 'audio') {
+        return err(appError('not_found', 'audio not found', '找不到这段音频'));
+      }
+      if (b.authorId !== userId && !b.recipientIds.includes(userId)) {
+        return err(appError('forbidden', 'not a party to this blessing', '没有权限查看'));
+      }
+      const buf = await deps.audioStorage.read(blessingId);
+      return ok(buf);
     },
 
     async myFeedback(userId: string, blessingId: string): Promise<Result<MyAudioFeedback | null>> {

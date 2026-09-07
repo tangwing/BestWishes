@@ -16,7 +16,7 @@ export class LocalAudioStorage implements AudioStoragePort {
     await mkdir(this.dir, { recursive: true });
     const path = this.pathFor(id);
     await writeFile(path, data);
-    return `/api/audio/${id}`;
+    return `/api/blessings/${id}/audio`;
   }
 
   async read(id: string): Promise<Buffer> {

@@ -37,9 +37,9 @@
 
 - [x] 6.1 `wish-request-service.ts`：发布（含内容安全检查，命中 violation 拒绝发布）、撤回（终态）、删除、广场查询（`listPublished`）、回应列表查询（仅作者，`listByRequestId` 新增到 `BlessingRepository`，只展示已 `published` 的回应，不设数量上限）
 - [x] 6.2 匹配逻辑就在 `wish-request-service.ts` 内部（`matchAndNotify`），没有单独拆 `wish-request-matching-service` 文件——复用 `audience-service.ts` 的 `resolve()`，构造一个 `AudienceFilter`（`radiusKm=audienceMaxRadiusKm`、`tags=request.tags`、性别/年龄不限）直接喂给现成的 haversine+标签匹配纯函数；请求人没设位置时 `resolve` 返回错误，这里当"零候选人"处理，不阻止发布
-- [ ] 6.3 HTTP 路由（`interface/http/routes.ts`）：`POST /api/wish-requests`、`GET /api/wish-requests`（广场，未登录可访问）、`GET /api/wish-requests/:id`、`POST /api/wish-requests/:id/withdraw`、`DELETE /api/wish-requests/:id`、`GET /api/wish-requests/:id/responses`（仅作者）、`GET /api/wish-requests/mine`、`GET /api/audio-challenge`（发一次性验证词）、音频上传路由（`multipart/form-data`，接 `@fastify/multipart`）、`GET /api/audio/:id`（回放，仅收发双方可访问，需要先查 blessing 确认权限）、`GET /api/blessings/:id/audio-feedback`（回应者查看自己的多维反馈）——**下一步做这个**
+- [x] 6.3 HTTP 路由（`interface/http/routes.ts`）：`POST /api/wish-requests`、`GET /api/wish-requests`（广场，未登录可访问）、`GET /api/wish-requests/mine`、`GET /api/wish-requests/:id`、`POST /api/wish-requests/:id/withdraw`、`DELETE /api/wish-requests/:id`、`GET /api/wish-requests/:id/responses`（仅作者）、`GET /api/audio-challenge`（发一次性验证词）、`POST /api/wish-requests/:id/respond`（`multipart/form-data`，接 `@fastify/multipart`，`attachFieldsToBody:'keyValues'` 让字段直接是字符串、文件直接是 Buffer，不用手动拼 parts）、`GET /api/blessings/:id/audio`（回放，音频文件用 blessing id 本身当 key，不用另建"音频 id → blessing id"的映射；鉴权逻辑放进 `audioScoring.readAudio()`，路由层只是薄薄一层）、`GET /api/blessings/:id/audio-feedback`
 - [x] ~~6.4~~ 已在 5.5 里说明：不改 `blessing-service.submit`，音频走独立的 `audio-scoring-service.submit`
-- [ ] 6.5 HTTP 层集成测试（`app.inject`，而不是直接调 `ctx.app.xxx`）：上传走真实的 multipart 编码，覆盖跟 6.3 路由对应的权限边界（未登录不能发布/回应/看别人的回应列表、只有收发双方能拉音频文件）——`wish-request-flow.test.ts` 已经在 application 层覆盖了业务逻辑分支，这里补的是"路由层有没有接对、鉴权有没有漏"
+- [x] 6.5 HTTP 层集成测试（`wish-request-http.test.ts`，3 个）：未登录能浏览广场但发布/回应要 401；完整链路走真实 multipart 编码（手写了一个 `test-multipart.ts` 构造 body，没为测试单独加 `form-data` 依赖）；不相关第三方拉音频文件 403。这一层测的是"路由有没有接对、鉴权有没有漏"，业务分支已经在 `wish-request-flow.test.ts` 覆盖过了，不重复测
 
 ## 7. 前端
 
