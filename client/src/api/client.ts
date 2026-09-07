@@ -131,7 +131,8 @@ export interface InboxItem {
 export interface NotificationItem {
   id: string;
   kind: string;
-  blessingId: string;
+  blessingId: string | null;
+  requestId: string | null;
   from: { userId: string; nickname: string };
   createdAt: string;
   read: boolean;
@@ -178,6 +179,44 @@ export interface SubmitBlessingInput {
   replyToUserId?: string;
   replyToBlessingId?: string;
   audience?: AudienceFilter;
+}
+
+export interface WishRequestView {
+  id: string;
+  authorId: string;
+  authorNickname: string;
+  situationText: string;
+  scriptText: string | null;
+  tags: string[];
+  state: string;
+  createdAt: string;
+}
+
+export interface ResponseSummary {
+  id: string;
+  fromNickname: string;
+  fromCity: string | null;
+  audioUrl: string | null;
+  createdAt: string;
+}
+
+export interface AudioChallenge {
+  phrase: string;
+  token: string;
+  expiresAt: string;
+}
+
+export interface SubmittedAudioResponse {
+  id: string;
+  state: string;
+}
+
+export interface MyAudioFeedback {
+  completeness: string;
+  focus: string;
+  sincerity: string;
+  personalization: string;
+  livenessPassed: boolean;
 }
 
 export const api = {
@@ -231,4 +270,53 @@ export const api = {
   queue: () => call<QueueItem[]>('GET', '/api/moderation/queue'),
   resolve: (id: string, action: string, reason: string) =>
     call<{ ok: true }>('POST', `/api/moderation/${id}/resolve`, { action, reason }),
+
+  // ---- 祝福请求 + 音频回应 ----
+  publishWishRequest: (input: { situationText: string; scriptText?: string | undefined; tags: string[] }) =>
+    call<WishRequestView>('POST', '/api/wish-requests', input),
+  wishRequestPlaza: () => call<WishRequestView[]>('GET', '/api/wish-requests'),
+  myWishRequests: () => call<WishRequestView[]>('GET', '/api/wish-requests/mine'),
+  getWishRequest: (id: string) => call<WishRequestView>('GET', `/api/wish-requests/${id}`),
+  withdrawWishRequest: (id: string) =>
+    call<{ ok: true }>('POST', `/api/wish-requests/${id}/withdraw`),
+  deleteWishRequest: (id: string) => call<{ ok: true }>('DELETE', `/api/wish-requests/${id}`),
+  wishRequestResponses: (id: string) =>
+    call<ResponseSummary[]>('GET', `/api/wish-requests/${id}/responses`),
+
+  issueAudioChallenge: () => call<AudioChallenge>('GET', '/api/audio-challenge'),
+
+  /** 音频回应用真正的 multipart 上传，不走 JSON 的 call()。 */
+  async respondToWishRequest(
+    requestId: string,
+    input: {
+      audio: Blob;
+      durationSec: number;
+      occasion: Occasion;
+      challengeToken: string;
+      clientTranscript?: string | undefined;
+    },
+  ): Promise<SubmittedAudioResponse> {
+    const form = new FormData();
+    form.append('audio', input.audio, 'response.webm');
+    form.append('durationSec', String(input.durationSec));
+    form.append('occasion', input.occasion);
+    form.append('challengeToken', input.challengeToken);
+    if (input.clientTranscript) form.append('clientTranscript', input.clientTranscript);
+
+    const res = await fetch(`/api/wish-requests/${requestId}/respond`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      body: form,
+    });
+    const text = await res.text();
+    const data: unknown = text ? JSON.parse(text) : null;
+    if (!res.ok) {
+      const e = (data ?? {}) as Partial<ApiError>;
+      throw new ApiCallError(e.error ?? 'internal', e.message ?? '提交失败');
+    }
+    return data as SubmittedAudioResponse;
+  },
+
+  audioFeedback: (blessingId: string) =>
+    call<MyAudioFeedback | null>('GET', `/api/blessings/${blessingId}/audio-feedback`),
 };

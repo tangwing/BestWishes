@@ -15,6 +15,13 @@ import { Inbox } from './app/pages/Inbox';
 import { Streak } from './app/pages/Streak';
 import { Moderation } from './app/pages/Moderation';
 import { PublicPage } from './app/pages/PublicPage';
+import { WishRequests } from './app/pages/WishRequests';
+import { PublishWishRequest } from './app/pages/PublishWishRequest';
+import { WishRequestDetail } from './app/pages/WishRequestDetail';
+import { RespondToWishRequest } from './app/pages/RespondToWishRequest';
+import { WishRequestResponses } from './app/pages/WishRequestResponses';
+import { MyWishRequests } from './app/pages/MyWishRequests';
+import { AudioFeedback } from './app/pages/AudioFeedback';
 
 const router = createBrowserRouter([
   {
@@ -31,6 +38,13 @@ const router = createBrowserRouter([
       { path: 'inbox', element: <Inbox /> },
       { path: 'streak', element: <Streak /> },
       { path: 'moderation', element: <Moderation /> },
+      { path: 'wish-requests', element: <WishRequests /> },
+      { path: 'wish-requests/new', element: <PublishWishRequest /> },
+      { path: 'wish-requests/mine', element: <MyWishRequests /> },
+      { path: 'wish-requests/:id', element: <WishRequestDetail /> },
+      { path: 'wish-requests/:id/respond', element: <RespondToWishRequest /> },
+      { path: 'wish-requests/:id/responses', element: <WishRequestResponses /> },
+      { path: 'blessings/:id/feedback', element: <AudioFeedback /> },
     ],
   },
   { path: '/p/:slug', element: <PublicPage /> },

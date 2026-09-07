@@ -40,6 +40,7 @@ export function App() {
           <NavLink to="/" end>
             首页
           </NavLink>
+          <NavLink to="/wish-requests">祝福请求</NavLink>
           {user && (
             <>
               <NavLink to="/compose">写祝福</NavLink>
@@ -47,6 +48,7 @@ export function App() {
                 收件箱{unread > 0 && <span className={s.badge}>{unread}</span>}
               </NavLink>
               <NavLink to="/records">发出的</NavLink>
+              <NavLink to="/wish-requests/mine">我的请求</NavLink>
               <NavLink to="/streak">回响</NavLink>
               <NavLink to="/profile">个人空间</NavLink>
               <NavLink to="/moderation">审核台</NavLink>

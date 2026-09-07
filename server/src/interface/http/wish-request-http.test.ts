@@ -50,7 +50,10 @@ async function respond(
   const challenge = challengeRes.json<{ phrase: string; token: string }>();
   const { body, contentType } = buildMultipartBody(
     {
-      requestId,
+      // requestId 特意不放进表单字段——它来自 URL 参数，跟真实前端 client.ts 的行为
+      // 保持一致（B-69 的教训：曾经服务端 schema 要求它重复出现在表单里，
+      // 而真实浏览器客户端从没发过这个字段，422 一直没被测出来，因为这里手写的
+      // 测试当时"贴心"地把它也塞了进去，掩盖了这个 bug）。
       durationSec: overrides.durationSec ?? '20',
       occasion: overrides.occasion ?? 'daily',
       challengeToken: challenge.token,

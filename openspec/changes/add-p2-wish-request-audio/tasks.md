@@ -43,13 +43,15 @@
 
 ## 7. 前端
 
-- [ ] 7.1 请求广场页：分页列表，未登录可浏览，点击响应引导登录
-- [ ] 7.2 发布请求页：处境描述 + 可选稿子输入框，复用现有撰写页的静心引导风格
-- [ ] 7.3 录音组件：`MediaRecorder` 录制 + `AnalyserNode` 实时波形渲染 + 计时 + 时长上下限校验 + 提交
-- [ ] 7.4 回应者查看自己的多维反馈（标签形式，不展示单一分数）
-- [ ] 7.5 请求人查看某条请求的回应列表页（不展示评分细节）
-- [ ] 7.6 导航加"祝福请求"入口
-- [ ] 7.7 `pnpm --filter @bestwishes/client typecheck` 通过，手动过一遍浏览器录音流程（无头环境可能拿不到真实麦克风，需人工或用预置音频文件走一遍）
+- [x] 7.1 请求广场页（`WishRequests.tsx`）：列表（暂不分页，跟 P1 outbox/inbox 一样先返回全量，demo 规模够用），未登录可浏览，点击响应引导登录
+- [x] 7.2 发布请求页（`PublishWishRequest.tsx`）：处境描述 + 可选稿子 + 标签（复用 Compose 页同款自定义标签输入），静心引导风格跟 Compose 一致
+- [x] 7.3 录音组件（`components/AudioRecorder.tsx`）：`MediaRecorder` 录制 + `AnalyserNode` 实时波形渲染（canvas）+ 计时 + 到达上限自动停止 + 重录。**转写不接真实语音识别**（design.md 早就定的取舍）——录音人自己在文本框里补充说了什么，这段文字就是打分管线的 `clientTranscript`
+- [x] 7.4 回应者查看自己的多维反馈（`AudioFeedback.tsx`，轮询直到有结果，标签形式，不展示单一分数）
+- [x] 7.5 请求人查看某条请求的回应列表页（`WishRequestResponses.tsx`，不展示评分细节，只有正文/音频）；另加 `WishRequestDetail.tsx`（单条请求详情，区分作者/非作者视角）和 `MyWishRequests.tsx`（我发布的请求列表 + 撤回）
+- [x] 7.6 导航加"祝福请求"（任何人可见）+ "我的请求"（登录后可见）两个入口
+- [x] 7.7 `pnpm --filter @bestwishes/client typecheck` 通过；**没有用无头模拟音频走查，是用真实系统 Chrome + `--use-fake-device-for-media-stream --use-fake-ui-for-media-stream` 启动参数跑通了完整浏览器流程**（发布请求 → 广场 → 录音页看到波形 → 真的录 6 秒 → 提交 → 反馈页显示多维标签），比预想的更接近真实使用路径。过程中揪出两个真 bug（不是理论风险，是这次手动走查实际触发的）：
+  1. HTTP 路由的 `wishResponseFieldsSchema` 把 `requestId` 也定义成表单必填字段，但它其实来自 URL 参数——真实浏览器客户端理所当然不会在表单里重复带这个字段，一直 422。之前的 `wish-request-http.test.ts` 没测出来，是因为手写的测试数据"贴心"地把 `requestId` 也塞进了表单，掩盖了这个校验冗余。已修：去掉这个字段，测试也同步改成不发它，跟真实客户端行为一致。
+  2. `RespondToWishRequest.tsx` 完全没做 `Compose.tsx` 早就有的"进页面查有没有同意协议 / 提交时接住 `consent_required` 跳转"这套逻辑——新用户直接点"录一段祝福回应"会走到提交那一步才发现自己没同意过协议，报错却没引导。两处都补上了，跟 Compose 页保持一致的把关方式。
 
 ## 8. 端到端与收尾
 

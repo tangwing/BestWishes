@@ -23,3 +23,7 @@ build/
 # 本地 PGlite 落盘目录
 .pgdata/
 *.pgdata/
+
+# 本地音频文件落盘目录
+.audio-data/
+*.audio-data/

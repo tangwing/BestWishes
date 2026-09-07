@@ -223,7 +223,6 @@ export function registerRoutes(app: FastifyInstance, application: Application): 
   });
 
   const wishResponseFieldsSchema = z.object({
-    requestId: z.string().min(1),
     durationSec: z.coerce.number().positive(),
     occasion: occasionSchema,
     challengeToken: z.string().min(1),
