@@ -22,6 +22,13 @@
       "when": 1788705230512,
       "tag": "0002_absent_valeria_richards",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788746289249,
+      "tag": "0003_open_captain_america",
+      "breakpoints": true
     }
   ]
 }

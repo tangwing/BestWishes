@@ -186,6 +186,8 @@ export interface WishRequest {
   situationText: string;
   /** 希望回应者朗读的具体稿子；可不填，不填则回应者自由发挥。 */
   scriptText: string | null;
+  /** 可选标签，用于 wish-request-matching 按标签推荐候选响应人；留空表示不按标签限定，只按距离。 */
+  tags: string[];
   state: WishRequestState;
   createdAt: string;
   /** 发布时按标签 / 距离算出的候选响应人快照；此后画像变化不影响它。 */

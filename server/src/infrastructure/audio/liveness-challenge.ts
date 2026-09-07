@@ -4,6 +4,7 @@
 // 这是 MVP 方案，不是声纹/深伪检测：见 design.md「为什么不现在做声纹/深伪检测」。
 
 import { createHmac, randomInt } from 'node:crypto';
+import type { LivenessChallengePort } from '../../ports/liveness';
 
 export interface LivenessChallenge {
   phrase: string;
@@ -48,8 +49,14 @@ export function verifyChallengeToken(
   return { ok: true, phrase };
 }
 
-/** 转写文本里是否出现了验证词——不要求精确位置（转写词级时间戳的对齐精度有限），
- * 只要求出现，配合"整体录音时长有上下限"已经能挡住大部分随手复用的情况。 */
-export function transcriptContainsPhrase(transcript: string, phrase: string): boolean {
-  return transcript.includes(phrase);
+export class HmacLivenessChallenge implements LivenessChallengePort {
+  constructor(private readonly secret: string) {}
+
+  issue(now: Date, ttlSeconds: number): LivenessChallenge {
+    return issueChallenge(this.secret, now, ttlSeconds);
+  }
+
+  verify(token: string, now: Date): ReturnType<typeof verifyChallengeToken> {
+    return verifyChallengeToken(this.secret, token, now);
+  }
 }

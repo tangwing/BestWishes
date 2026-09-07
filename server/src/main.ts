@@ -6,6 +6,10 @@ import { loadP1Config } from './config/app-config';
 import { createApplication } from './application';
 import { SystemClock } from './infrastructure/system-clock';
 import { RandomIdGenerator, RandomSlugGenerator } from './infrastructure/ids';
+import { HmacLivenessChallenge } from './infrastructure/audio/liveness-challenge';
+import { LocalAudioStorage } from './infrastructure/audio/local-audio-storage';
+import { RuleBasedAsrProvider } from './infrastructure/audio/rule-based-asr';
+import { RuleBasedSincerityEvaluator } from './infrastructure/audio/rule-based-sincerity';
 import { createInMemoryRepositories } from './infrastructure/memory/in-memory-repositories';
 import { createDb, migrateToLatest } from './infrastructure/db/client';
 import { createPgRepositories, seedPgTemplates } from './infrastructure/pg/pg-repositories';
@@ -44,6 +48,10 @@ async function main(): Promise<void> {
     slugs: new RandomSlugGenerator(),
     moderation: new RuleBasedProvider({ config }),
     config,
+    audioStorage: new LocalAudioStorage(env.BW_AUDIO_DIR),
+    asr: new RuleBasedAsrProvider(),
+    sincerity: new RuleBasedSincerityEvaluator(),
+    liveness: new HmacLivenessChallenge(env.BW_LIVENESS_SECRET),
   });
 
   // 扫描任务：延迟送达到点发布、链接到期、hold 超时升级

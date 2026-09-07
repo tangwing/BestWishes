@@ -11,6 +11,7 @@ export * from './streak';
 export * from './wish-request-lifecycle';
 export * from './audio-signals';
 export * from './script-coverage';
+export * from './liveness';
 export * from './moderation/apply';
 export * from './moderation/ruleBased';
 export * as words from './moderation/words';

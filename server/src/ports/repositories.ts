@@ -56,6 +56,8 @@ export interface BlessingRepository {
   listByAuthor(authorId: string): Promise<BlessingRecord[]>;
   /** 到期扫描 / hold 超时扫描用 */
   listByState(state: BlessingState): Promise<BlessingRecord[]>;
+  /** 一条祝福请求收到的全部回应（scope=wish_response）。 */
+  listByRequestId(requestId: string): Promise<BlessingRecord[]>;
 }
 
 export interface BlessingEventRepository {

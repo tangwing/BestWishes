@@ -6,6 +6,10 @@ import { DEFAULT_CONFIG, RuleBasedProvider } from '@bestwishes/domain';
 import { createApplication, type Application } from '../../application';
 import { FakeClock } from '../../application/test-harness';
 import { SequentialIdGenerator, SequentialSlugGenerator } from '../ids';
+import { HmacLivenessChallenge } from '../audio/liveness-challenge';
+import { LocalAudioStorage } from '../audio/local-audio-storage';
+import { RuleBasedAsrProvider } from '../audio/rule-based-asr';
+import { RuleBasedSincerityEvaluator } from '../audio/rule-based-sincerity';
 import { seedTemplates } from '../templates-seed';
 import type { Repositories } from '../../ports/repositories';
 import { createDb, migrateToLatest, type DbHandle } from '../db/client';
@@ -37,6 +41,10 @@ beforeEach(async () => {
     slugs: new SequentialSlugGenerator(),
     moderation: new RuleBasedProvider({ config }),
     config,
+    audioStorage: new LocalAudioStorage('/tmp/bestwishes-test-audio-pg'),
+    asr: new RuleBasedAsrProvider(),
+    sincerity: new RuleBasedSincerityEvaluator(),
+    liveness: new HmacLivenessChallenge('test-liveness-secret'),
   });
 });
 

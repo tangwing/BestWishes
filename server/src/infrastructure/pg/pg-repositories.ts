@@ -474,6 +474,15 @@ class PgBlessingRepository implements BlessingRepository {
     const rows = await this.db.select().from(t.blessings).where(eq(t.blessings.state, state));
     return Promise.all(rows.map(async (row) => toBlessing(row, await this.loadEvents(row.id))));
   }
+
+  async listByRequestId(requestId: string): Promise<BlessingRecord[]> {
+    const rows = await this.db
+      .select()
+      .from(t.blessings)
+      .where(eq(t.blessings.requestId, requestId))
+      .orderBy(desc(t.blessings.createdAt));
+    return Promise.all(rows.map(async (row) => toBlessing(row, await this.loadEvents(row.id))));
+  }
 }
 
 class PgBlessingEventRepository implements BlessingEventRepository {
@@ -687,6 +696,7 @@ function toWishRequest(row: typeof t.wishRequests.$inferSelect): WishRequestReco
     authorId: row.authorId,
     situationText: row.situationText,
     scriptText: row.scriptText,
+    tags: row.tags,
     state: row.state,
     createdAt: iso(row.createdAt),
     recipientCandidateIds: row.recipientCandidateIds,
@@ -700,6 +710,7 @@ function wishRequestValues(r: WishRequestRecord): typeof t.wishRequests.$inferIn
     authorId: r.authorId,
     situationText: r.situationText,
     scriptText: r.scriptText,
+    tags: r.tags,
     state: r.state,
     createdAt: new Date(r.createdAt),
     recipientCandidateIds: r.recipientCandidateIds,

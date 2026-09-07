@@ -8,6 +8,10 @@ import {
 } from '@bestwishes/domain';
 import type { Clock } from '../ports/clock';
 import { SequentialIdGenerator, SequentialSlugGenerator } from '../infrastructure/ids';
+import { HmacLivenessChallenge } from '../infrastructure/audio/liveness-challenge';
+import { LocalAudioStorage } from '../infrastructure/audio/local-audio-storage';
+import { RuleBasedAsrProvider } from '../infrastructure/audio/rule-based-asr';
+import { RuleBasedSincerityEvaluator } from '../infrastructure/audio/rule-based-sincerity';
 import { createInMemoryRepositories } from '../infrastructure/memory/in-memory-repositories';
 import type { TemplateRecord } from '../ports/records';
 import { createApplication } from './index';
@@ -53,6 +57,10 @@ export function makeApp(
         ? new UnavailableProvider()
         : new RuleBasedProvider({ config }),
     config,
+    audioStorage: new LocalAudioStorage('/tmp/bestwishes-test-audio'),
+    asr: new RuleBasedAsrProvider(),
+    sincerity: new RuleBasedSincerityEvaluator(),
+    liveness: new HmacLivenessChallenge('test-liveness-secret'),
   });
   return { app, clock, repos, config };
 }

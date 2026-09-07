@@ -1,0 +1,1 @@
+ALTER TABLE "wish_requests" ADD COLUMN "tags" jsonb DEFAULT '[]'::jsonb NOT NULL;

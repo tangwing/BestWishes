@@ -11,6 +11,8 @@ import { createStreakService } from './streak-service';
 import { createScans } from './scans';
 import { createReportService } from './report-service';
 import { createModerationQueueService } from './moderation-queue-service';
+import { createWishRequestService } from './wish-request-service';
+import { createAudioScoringService } from './audio-scoring-service';
 
 export function createApplication(deps: AppDeps) {
   return {
@@ -25,6 +27,8 @@ export function createApplication(deps: AppDeps) {
     streak: createStreakService(deps),
     reports: createReportService(deps),
     moderationQueue: createModerationQueueService(deps),
+    wishRequests: createWishRequestService(deps),
+    audioScoring: createAudioScoringService(deps),
     scans: createScans(deps),
     templates: {
       list: (): ReturnType<typeof deps.repos.templates.listActive> =>

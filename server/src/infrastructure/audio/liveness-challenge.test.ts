@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { issueChallenge, verifyChallengeToken, transcriptContainsPhrase } from './liveness-challenge';
+import { issueChallenge, verifyChallengeToken } from './liveness-challenge';
 
 const SECRET = 'test-secret';
 
@@ -34,15 +34,5 @@ describe('issueChallenge / verifyChallengeToken', () => {
   it('短语是三位数字', () => {
     const challenge = issueChallenge(SECRET, new Date(), 300);
     expect(challenge.phrase).toMatch(/^\d{3}$/);
-  });
-});
-
-describe('transcriptContainsPhrase', () => {
-  it('转写文本包含验证词时通过', () => {
-    expect(transcriptContainsPhrase('请听好，372，愿你平安喜乐', '372')).toBe(true);
-  });
-
-  it('转写文本不包含验证词时不通过', () => {
-    expect(transcriptContainsPhrase('愿你平安喜乐每一天', '372')).toBe(false);
   });
 });

@@ -71,9 +71,11 @@ export const draftSchema = z.object({
 });
 export type DraftDto = z.infer<typeof draftSchema>;
 
-/** 祝福请求：处境描述 + 可选稿子。字数约束与祝福正文一致，运行时用同一套 bodyMinLen/MaxLen 配置校验。 */
+/** 祝福请求：处境描述 + 可选稿子 + 可选标签（供 wish-request-matching 按标签推荐候选响应人）。
+ * 字数约束与祝福正文一致，运行时用同一套 bodyMinLen/MaxLen 配置校验。 */
 export const submitWishRequestSchema = z.object({
   situationText: z.string(),
   scriptText: z.string().trim().max(2000).optional(),
+  tags: z.array(z.string().trim().min(1).max(20)).max(10).default([]),
 });
 export type SubmitWishRequestDto = z.infer<typeof submitWishRequestSchema>;

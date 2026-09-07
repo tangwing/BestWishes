@@ -17,7 +17,7 @@ export interface AsrHint {
    * 恶意客户端理论上可以提交跟音频无关的文本。真实云 ASR 接入后，
    * 服务端会重新对音频本身做转写，不再采信这个字段，届时这条信任边界自然消失。
    * 见 design.md 的风险登记。 */
-  clientTranscript?: string;
+  clientTranscript?: string | undefined;
 }
 
 export interface AsrProvider {

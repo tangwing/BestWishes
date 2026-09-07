@@ -5,7 +5,14 @@ import type { Env } from '../../config/env';
 import { makeApp } from '../../application/test-harness';
 import { buildServer } from './server';
 
-const testEnv: Env = { NODE_ENV: 'test', PORT: 0, HOST: '127.0.0.1', BW_DB: 'memory' };
+const testEnv: Env = {
+  NODE_ENV: 'test',
+  PORT: 0,
+  HOST: '127.0.0.1',
+  BW_DB: 'memory',
+  BW_AUDIO_DIR: '/tmp/bestwishes-test-audio-server',
+  BW_LIVENESS_SECRET: 'test-liveness-secret',
+};
 
 export async function makeServer(opts?: Parameters<typeof makeApp>[0]) {
   const ctx = makeApp(opts);

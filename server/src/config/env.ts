@@ -10,6 +10,10 @@ const envSchema = z.object({
   BW_DB: z.enum(['memory', 'pglite']).default('memory'),
   // pglite 落盘目录。不设则纯内存。
   BW_PGDATA: z.string().optional(),
+  // 音频文件落盘目录。
+  BW_AUDIO_DIR: z.string().default('./.audio-data'),
+  // 挑战式真人校验的 HMAC 签名密钥。生产环境务必用真正的随机密钥覆盖。
+  BW_LIVENESS_SECRET: z.string().default('dev-only-liveness-secret-change-in-prod'),
 });
 
 export type Env = z.infer<typeof envSchema>;

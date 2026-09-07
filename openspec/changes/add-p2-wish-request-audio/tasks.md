@@ -29,24 +29,17 @@
 - [x] 5.2 `SincerityEvaluator` 接口（`ports/sincerity-evaluator.ts`）：`evaluate(transcript, requestContext)` 输出真诚度/个性化标签 + 置信度
 - [x] 5.3 `RuleBasedAsrProvider` + `RuleBasedSincerityEvaluator`（`infrastructure/audio/`）：前者按 `hint.clientTranscript` 把词时间戳按时长均匀铺开（近似估计，非真实对齐）；后者用有意义字符的集合重合度判个性化、按重合度+长度判真诚度。都有单测（7 测试）
 - [x] 5.4 挑战式真人校验（`infrastructure/audio/liveness-challenge.ts`）：`issueChallenge`/`verifyChallengeToken` 用 HMAC 签名做无状态校验（不用额外建表存"发出去的挑战"），三位随机数字短语，`transcriptContainsPhrase` 检查转写是否包含。单测覆盖签发/校验/过期/错误密钥/格式错误（7 测试，含一个真 bug：拼接字段最初用 `:` 分隔，和 ISO 时间戳自带的冒号冲突导致解析错位，改用 `|`）
-- [ ] 5.5 `audio-scoring-service` 编排以上环节 + 与 `blessing-service`/`transitionAndPersist`/现有审核工单机制对接——**下一步优先做这个**，见下方"设计备忘"
-- [ ] 5.6 超时保守处理：复用 `scans.ts` 的定时扫描模式，配置 `audioScoringTimeoutSeconds`，超时未出结果转人工复核队列，回应者侧显示"评估中"占位
-- [ ] 5.7 集成测试：覆盖 spec 里的关键场景——命中 violation 驳回、suspect 转人工队列、有稿子完整/部分朗读、无稿子自由表达、验证词缺失转人工、评估结果不一致转人工、超时转人工、多维标签不含单一分数
-
-**5.5 设计备忘（继续实现时先读这个，避免重新想一遍）**：
-- 音频响应不走 `blessing-service.submit()` 现成的"先落 body 再同步查 moderation"路径（音频没有 body，要先转写才有文本）。做法：`audio-scoring-service` 自己组一条 `draftRecord`（`contentType='audio'`, `scope='wish_response'`, `body=''`, `media.transcript=null`）→ `transitionAndPersist(..., 'submit', ...)` 进 `verifying`（复用状态机，不重新发明）→ 转写 → 把 transcript 写进 `media.transcript` → `moderation.check({text: transcript, occasion})`（复用现成 `ModerationProvider`，同文本流程）。
-- **命中 violation**：`transitionAndPersist(..., 'auto_violation', ...)`，不跑后续打分、不建 `audio_scores` 记录（spec 明确要求）。
-- **命中 suspect 或 pass**：都继续跑完整性/专注度/真诚度/真人校验，写一条 `audio_scores` 记录（这几项是"内容质量反馈"，跟"安全不安全"是两回事，不用等人工过审）。然后 suspect 走现有的建工单逻辑（照抄 `blessing-service.submit` 里 `outcome.createTicket` 那段，走 `reports` 仓储，不新建复核机制）；pass 走 `transitionAndPersist(..., 'auto_pass', ...)` + 设 `holdUntil`（沿用文本的 hold 节奏，走同一个 `scans.publishReady` 扫描发布）。
-- 真人校验（liveness）不通过时：spec 要求"转人工复核，不直接驳回"——处理成跟 suspect 同一条路径（建工单），不是单独一套。
-- 这几步和 `blessing-service.submit()` 现有的 outcome 分支高度相似但不完全复用同一个函数（`submit()` 是同步定式，这里转写是"已经发生"的既定输入，不需要重新校验字数下限等文本专属规则）——参照抄写为主，不用抽象出共享函数（现在只有两个调用点，抽象为时尚早，YAGNI）。
+- [x] 5.5 `audio-scoring-service.ts` 编排完成。实际做法跟当初设想的"接入 blessing-service.submit"不一样——写的时候发现音频回应根本不该走 submit() 那条"先落 body 再同步查 moderation"的路径（音频没有 body，要先转写才有文本可审），所以 `audio-scoring-service` 自己组一条 `draftRecord`（`contentType='audio'`, `scope='wish_response'`）→ `transitionAndPersist(..., 'submit', ...)` 进 `verifying`（复用状态机）→ 转写（`AsrProvider`）→ `body`/`media.transcript` 一起写成转写文本（moderation-queue 展示 `b.body` 需要看到真实内容，不能留空）→ `moderation.check`（复用现成 `ModerationProvider`）。命中 `violation` 直接驳回、不打分；`suspect` 或 `pass` 都跑完整性/专注度/真诚度/真人校验并落一条 `audio_scores`（内容质量反馈和"安不安全"是两回事）；真人校验不通过时按 suspect 同一条路径转人工（建工单，不新开一套复核机制）；只有"moderation 过 + liveness 过"才设 `holdUntil`，交给现成的 `scans.publishReady()` 扫上去发布——完全复用文本流程已有的 hold 节奏，没有新造轮子。
+- [~] 5.6 超时保守处理——**有意先不做**：当前 `RuleBasedAsrProvider`/`RuleBasedSincerityEvaluator` 都是同步内存计算，管线不可能真的"超时"，现在搭一套超时扫描机制无法被任何测试验证到，纯属为假设中的未来（真实云 ASR）预先设计（违反"不为假设中的未来需求做设计"）。等真的接云 API、有真实网络延迟时，在 `audio-scoring-service.submit` 外面包一层超时 + 复用 `scans.ts` 的定时扫描模式即可，接口已经预留了空间（`audioScoringTimeoutSeconds` 配置项已经在，只是还没人读它）。记入 BACKLOG。
+- [x] 5.7 集成测试（`wish-request-flow.test.ts`，11 个）：发布 + 广场 + 按标签匹配通知、不匹配/太远的人仍能在广场看到、不能回应自己的请求、完整链路到打分到送达到回应者看反馈、时长超范围拒绝、命中违禁词驳回不打分、命中拉客护栏词转人工、真人校验未过转人工、验证 token 过期拒绝、撤回后不能再回应、撤回是终态不能重新发布
 
 ## 6. 服务端应用层 + 路由
 
-- [ ] 6.1 `wish-request-service`：发布（含内容安全检查）、撤回（终态，不提供重新发布）、删除（二次确认语义，不影响已有回应）、广场分页查询、回应列表查询（仅作者可访问，不设数量上限）
-- [ ] 6.2 `wish-request-matching-service`：复用 `packages/domain/src/audience.ts` 的匹配纯函数，发布时计算候选人快照 + 逐个建 `wish_request_matched` 通知；零候选人时不阻止发布
-- [ ] 6.3 路由：`POST /api/wish-requests`、`GET /api/wish-requests`（广场，未登录可访问）、`GET /api/wish-requests/:id`、`POST /api/wish-requests/:id/withdraw`、`DELETE /api/wish-requests/:id`、`GET /api/wish-requests/:id/responses`（仅作者）、音频上传路由、`GET /api/audio/:id`（回放，仅收发双方可访问）
-- [ ] 6.4 `blessing-service.submit` 接入：`scope='wish_response'` 时校验 `requestId` 指向的请求存在（同 B-64 的 `replyToBlessingId` 校验模式，防伪造）、允许 `contentType=audio`、提交后异步触发 `audio-scoring-service`
-- [ ] 6.5 集成测试：`app.inject` 覆盖"发布请求 → 候选人收到通知 → 未登录也能浏览广场 → 登录用户录音回应 → 打分 → 请求人收件箱看到回应（不含评分细节）→ 回应者能看到自己的多维反馈"全链路
+- [x] 6.1 `wish-request-service.ts`：发布（含内容安全检查，命中 violation 拒绝发布）、撤回（终态）、删除、广场查询（`listPublished`）、回应列表查询（仅作者，`listByRequestId` 新增到 `BlessingRepository`，只展示已 `published` 的回应，不设数量上限）
+- [x] 6.2 匹配逻辑就在 `wish-request-service.ts` 内部（`matchAndNotify`），没有单独拆 `wish-request-matching-service` 文件——复用 `audience-service.ts` 的 `resolve()`，构造一个 `AudienceFilter`（`radiusKm=audienceMaxRadiusKm`、`tags=request.tags`、性别/年龄不限）直接喂给现成的 haversine+标签匹配纯函数；请求人没设位置时 `resolve` 返回错误，这里当"零候选人"处理，不阻止发布
+- [ ] 6.3 HTTP 路由（`interface/http/routes.ts`）：`POST /api/wish-requests`、`GET /api/wish-requests`（广场，未登录可访问）、`GET /api/wish-requests/:id`、`POST /api/wish-requests/:id/withdraw`、`DELETE /api/wish-requests/:id`、`GET /api/wish-requests/:id/responses`（仅作者）、`GET /api/wish-requests/mine`、`GET /api/audio-challenge`（发一次性验证词）、音频上传路由（`multipart/form-data`，接 `@fastify/multipart`）、`GET /api/audio/:id`（回放，仅收发双方可访问，需要先查 blessing 确认权限）、`GET /api/blessings/:id/audio-feedback`（回应者查看自己的多维反馈）——**下一步做这个**
+- [x] ~~6.4~~ 已在 5.5 里说明：不改 `blessing-service.submit`，音频走独立的 `audio-scoring-service.submit`
+- [ ] 6.5 HTTP 层集成测试（`app.inject`，而不是直接调 `ctx.app.xxx`）：上传走真实的 multipart 编码，覆盖跟 6.3 路由对应的权限边界（未登录不能发布/回应/看别人的回应列表、只有收发双方能拉音频文件）——`wish-request-flow.test.ts` 已经在 application 层覆盖了业务逻辑分支，这里补的是"路由层有没有接对、鉴权有没有漏"
 
 ## 7. 前端
 

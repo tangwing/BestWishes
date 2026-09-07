@@ -101,6 +101,7 @@ export const wishRequests = pgTable('wish_requests', {
     .references(() => users.id, { onDelete: 'cascade' }),
   situationText: text('situation_text').notNull(),
   scriptText: text('script_text'),
+  tags: jsonb('tags').$type<string[]>().notNull().default([]),
   state: text('state').$type<WishRequestState>().notNull().default('published'),
   createdAt: ts('created_at').notNull(),
   recipientCandidateIds: jsonb('recipient_candidate_ids').$type<string[]>().notNull().default([]),
