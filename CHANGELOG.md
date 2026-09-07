@@ -4,6 +4,24 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added — P2 第一批：祝福请求 + 匹配 + 音频打分（B-68, [openspec/changes/add-p2-wish-request-audio](openspec/changes/add-p2-wish-request-audio/)）
+
+> 待用户审阅，未归档。
+
+- **祝福请求**：登录用户写下处境/心事（必填正文）+ 可选一段稿子（供回应者朗读）+ 可选标签，发布后进入公开的**请求广场**（未登录可浏览，响应需登录）。生命周期 `pending_review → published → withdrawn/deleted`——命中安全护栏词的 `suspect` 内容先进人工复核，通过后才公开并触发匹配推送；`published` 只能撤回或删除，同 P1 撤回即终态的心智模型，不提供"重新发布"。
+- **兴趣匹配推送**：请求发布（或复核通过）时，复用 `audience-service` 现成的 haversine + 标签匹配逻辑，按标签重合计算候选响应人并推送通知——请求人不选受众，是系统帮忙递给可能感兴趣的人；广场浏览和匹配推送并存，互不排斥。
+- **音频祝福录制 + 实时波形**：`blessing.contentType='audio'` 从类型占位变成真正可提交路径。前端用 `MediaRecorder` + `AnalyserNode` 实现录音组件，录制过程展示实时波形（canvas），到达时长上限自动停止，可重录。P2 只做音频，视频形态继续留白推到 P3。
+- **音频打分管线**（本次改动的技术重点）：转写 → （复用现成 `ModerationProvider`）安全审核 → 完整度判定（有稿子按分句字符覆盖率，无稿子复用 `isLowEffort`/`looksGarbled` 判有效表达）→ 专注度信号工程（停顿分布、语速方差、犹豫词密度，全部可解释、非黑盒）→ 真诚度/个性化评估 → 挑战式真人校验（下发随机验证词，HMAC 无状态签名，MVP 不做声纹/深伪检测——研究报告认为那是"军备竞赛"，不能当唯一闸门）。评分输出恒为**多维标签 + 置信度**，不是单一分数（vision.md 硬约束，避免变成互相比较打分的攀比场）。所有环节走可插拔接口（`AsrProvider`/`SincerityEvaluator`/`LivenessChallengePort`/`AudioStoragePort`），P2 默认接不需要真实云账号的规则实现（`RuleBasedAsrProvider` 采信客户端提供的转写文本，这个信任边界写进了代码注释；`RuleBasedSincerityEvaluator` 用字符重合度做启发式评估），同 P1 `ModerationProvider`/PGlite 的既有套路，可测、可 demo、换真实云 API 时只换驱动不换契约。
+- 回应者提交后立即看到自己录音的多维反馈；请求人在"我的请求"里查看全部回应（不设数量上限）并可播放，但看不到评分细节。
+
+### Fixed（P2 期间发现，随 B-68 一起交付）
+
+- **一处真实安全缺口**：`wish-request-service.publish()` 最初只处理了 `violation`（拒绝）和 `pass`（直接发布），完全没处理 `suspect`——命中拉客/敛财护栏词的处境描述会直接进入公开广场（未登录都能看，比 P1 群发的收件箱曝光面更大），不会进人工复核。不是被某条 e2e 断言直接抓到的，是在排查一处不相关的测试隔离问题时回头通读 `publish()` 全部分支才发现。修法：`WishRequestState` 加 `pending_review`；`ReportRecord` 仿照 `NotificationRecord` 已有的先例，把"目标"从恒为一条祝福改成祝福或祝福请求二选一的多态；`moderation-queue-service` 按工单来源分流处理，复用同一个人工复核队列而不是新建一套；`content-moderation` 的 openspec spec 补了对应的 MODIFIED delta。
+- HMAC 挑战 token 的字段分隔符最初用 `:`，和 ISO 时间戳自带的冒号冲突导致解析错位——改用 `|`。
+- 犹豫词检测把"这个/那个"当成朴素子串匹配，误判"这个世界"这类正常表达——改成只在紧跟停顿标记（逗号/省略号/句末）时才计入犹豫词。
+- HTTP 路由的音频提交 schema 曾把 `requestId` 定义成表单必填字段，但它其实来自 URL 参数——真实浏览器客户端从不会在表单里重复带这个字段，一直 422；手写的集成测试当年"贴心"地把它也塞进了表单数据，掩盖了这个 bug。已去掉这个冗余字段。
+- 音频回应页最初没有 `Compose.tsx` 早就有的"进页面查协议同意状态 / 提交时接住 `consent_required` 跳转"逻辑，新用户会在提交时才发现自己没同意协议、且报错没有引导——补齐同款检查。
+
 ### Docs
 
 - 回补 `add-p1-text-blessing` 的 openspec delta 并归档（B-67）：该 change 实现完成后一直没归档，中间几轮点状修复（B-61/62/63/64）都只进了 BACKLOG/CHANGELOG，从没回头改它的 spec——归档前发现 spec 描述的还是"字数下限 15""撤回可重新发布""标签只能预设"这些过时行为。用 `/opsx:update` 逐条核对代码校正 `blessing-authoring` / `blessing-delivery` / `blessing-records` 三个能力的 delta（含两个新 scenario：撤回后不能重新发布、回信关联原祝福），顺带清理 `tasks.md` 里几处过时的复核项，`validate --strict` 通过后 `/opsx:archive`——10 个能力的主 spec 现在活在 `openspec/specs/`，是当前行为的权威来源。同步刷新 `docs/product/p1-acceptance-status.md` 的测试数与受影响用例证据。

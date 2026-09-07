@@ -8,11 +8,11 @@
 
 ## 恢复点（先读这段）
 
-- **阶段**：**P1 已完成并归档**（详见下方"P1 存档"）。**P2 启动**：用户选定 P2 第一批范围 = 祝福请求 + 匹配、音频祝福（录制 + 打分），视频推到 P3。openspec change `add-p2-wish-request-audio` 已写好 proposal/design/specs/tasks（`validate --strict` 通过），用户要求"出完 spec 后自动持续推进"，**当前正在按 tasks.md 自主实现中**，用户次日早晨审阅。
-- **B-68 add-p2-wish-request-audio 实现进度**：见 [openspec/changes/add-p2-wish-request-audio/tasks.md](openspec/changes/add-p2-wish-request-audio/tasks.md) 的勾选状态就是最新进度，这里不重复列。design.md 里"打分管线"一节是核心——ASR/强制对齐/信号工程/LLM 真诚度评估/挑战式真人校验，全部通过可插拔接口注入，P2 默认接 `RuleBasedAudioScoringProvider`（不需要真实云账号即可跑通、可测、可 demo，同 P1 `RuleBasedProvider`/PGlite 的套路）。真人校验 MVP 用挑战式（下发随机验证词），不做声纹/深伪检测（研究报告：那是"军备竞赛"，不能当唯一闸门）。评分输出恒为多维标签 + 置信度，绝不是单一分数（vision.md 硬约束）。
+- **阶段**：**P1 已完成并归档**（详见下方"P1 存档"）。**P2 第一批（`add-p2-wish-request-audio`：祝福请求 + 匹配 + 音频录制打分）已全部实现完成**，`pnpm verify`（201 测试）/ `pnpm test:e2e`（12 个）/ `openspec validate --strict` 全绿，`docs/DEMO.md` 已补 P2 走查。**当前等用户审阅**——用户明确说过"审阅通过"由用户自己拍板，不能自行判定后就去动 P3 或扩大范围，所以这里先停下。
+- **B-68 add-p2-wish-request-audio**：实现细节 + 过程中发现修复的问题（filler-word 误判、HMAC 分隔符冲突、`requestId` 表单冗余字段导致的 422、回应页缺 consent gate、以及一处真实安全缺口——`suspect` 内容曾能绕过人工复核直接进公开广场）全部记在 [tasks.md](openspec/changes/add-p2-wish-request-audio/tasks.md) 的勾选说明里，逐条读比这里复述准确。**未归档**——归档是用户审阅通过之后的动作，不预先做。
 - **技术栈**（ADR 0003）：Web-first PWA + Node/TS（Fastify）+ PostgreSQL（Drizzle / PGlite）+ pnpm monorepo；音频新增 `@fastify/multipart` 依赖 + 本机文件落盘（生产换对象存储时同 PGlite→postgres-js 的"换驱动不换契约"模式）。
 - **工作方式**：用户按点评提改动 → 记进本文件 → 持续完成。每轮结束自动 commit + push。
-- **下一步**：完成 `add-p2-wish-request-audio` 的实现 + 测试 + demo 走查，等用户次日审阅反馈。`add-moderation-rbac` 仍按用户要求"先放着"（B-65）。
+- **下一步（等用户审阅反馈，不要自行推进）**：审阅通过 → `/opsx:archive add-p2-wish-request-audio`，然后再谈 P3（视频形态、悬赏资金等）范围。审阅若提出改动，按改动内容判断走 BACKLOG 点状修复还是回到这个 change 里改。`add-moderation-rbac` 仍按用户要求"先放着"（B-65）。B-66（标签/状态拆分）待后续单独设计讨论。
 
 <details>
 <summary>P1 存档（点开查看）</summary>
@@ -29,9 +29,9 @@
 
 ---
 
-## 进行中
+## 待用户审阅
 
-- [~] **B-68 P2 第一批：祝福请求 + 匹配 + 音频打分**（`add-p2-wish-request-audio`）— 后端（tasks.md §1-6：领域层 / 数据层 / 音频存储 / 打分管线编排 / 服务层 / HTTP 路由）**已全部完成**，195 测试全绿，`pnpm build`/`typecheck`/`test:arch` 全干净。剩 §7 前端（请求广场 / 发布页 / 录音组件+波形 / 反馈展示）和 §8 e2e + demo 文档，进度以该文件勾选状态为准。用户要求"出完 spec 自动持续推进，次日审阅"。核心技术决策见该 change 的 design.md：`WishRequest` 独立聚合、`Blessing.scope` 加 `wish_response`、打分管线全部可插拔且 P2 默认用不依赖真实云账号的规则实现（`RuleBasedAsrProvider`/`RuleBasedSincerityEvaluator`，采信客户端转写这个信任边界已写进代码注释）、真人校验用挑战式 HMAC token（不做声纹/深伪检测）、评分输出恒为多维标签而非单一分数。过程中发现并修了两个真 bug（犹豫词"这个/那个"误判、token 分隔符和 ISO 时间戳冲突），以及一处 spec 遗漏（`WishRequest` 缺 `tags` 字段导致按标签匹配没法实现，已补齐全链路）。
+- [x] **B-68 P2 第一批：祝福请求 + 匹配 + 音频打分**（`add-p2-wish-request-audio`）— **全部 8 节完成**：领域层（`WishRequest` 状态机、音频信号打分纯函数、稿子覆盖率判定）、数据层（`wish_requests`/`audio_scores` 表 + 内存/PGlite 两套实现）、音频存储（本机落盘）、打分管线编排（转写→安全审核→完整度/专注度/真诚度→挑战式真人校验）、服务层 + HTTP 路由、前端（请求广场/发布页/录音组件+实时波形/多维反馈展示/我的请求）、e2e（真实系统 Chrome + fake-device 参数真的录音，不是预置文件模拟）、文档（`docs/DEMO.md` 补 P2 走查，两处规划期遗漏的 spec 缺口已回补）。核心技术决策见该 change 的 design.md：`WishRequest` 独立聚合、`Blessing.scope` 加 `wish_response`、打分管线全部可插拔且 P2 默认用不依赖真实云账号的规则实现（`RuleBasedAsrProvider`/`RuleBasedSincerityEvaluator`，采信客户端转写这个信任边界已写进代码注释）、真人校验用挑战式 HMAC token（不做声纹/深伪检测）、评分输出恒为多维标签而非单一分数。过程中发现并修了几个真 bug：犹豫词"这个/那个"误判、HMAC token 分隔符和 ISO 时间戳冲突、`requestId` 表单冗余字段导致真实客户端 422（测试当年被自己"贴心"的多余字段掩盖）、回应页缺 consent gate；以及一处**真实安全缺口**——`wish-request-service.publish()` 曾经只处理 violation/pass，命中拉客护栏词的 `suspect` 内容会直接绕过人工复核进入公开广场（未登录都能看，曝光面比 P1 群发收件箱更大），已修复为 `pending_review` 状态 + 复用统一人工复核队列（`ReportRecord` 仿照 `NotificationRecord` 先例做成多态）。`pnpm verify` 201 测试、`pnpm test:e2e` 12 个、`openspec validate --strict` 全绿。**等用户审阅，审阅通过后再 `/opsx:archive`**。
 
 ## 刚完成（下轮挪进 CHANGELOG）
 

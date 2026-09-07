@@ -224,4 +224,36 @@
 1. **回补 + 归档**（B-67）：用 `/opsx:update` 走查 `add-p1-text-blessing` 的 10 个 delta spec，对照实际代码（`packages/domain/src/config.ts`、`lifecycle.ts`、`types.ts`、`inbox-service.ts`、`Records.tsx`）逐条核对，修正 `blessing-authoring`（字数 5）、`blessing-delivery`（去掉 republish、`作者管理祝福`要求改写为"撤回是终态"+新增"复制正文另行提交"场景、新增"回信关联原祝福"整条 requirement）、`blessing-records`（发件箱按钮文案）三个能力；顺带把 `tasks.md` 里几处过时的复核项（2.7/3.4/3.5/7.4）核实后打勾，PG 数据层已完成但被误标"待做"的一行也拆开改正。`openspec validate --strict` 通过后，走 `openspec-sync-specs` 把全部 10 个能力从 delta 合并进 `openspec/specs/`（此前是空目录，纯创建），再 `/opsx:archive` 移进 `openspec/changes/archive/2026-09-06-add-p1-text-blessing/`。同步刷新 `docs/product/p1-acceptance-status.md` 的测试数和几条受影响用例的证据。
 2. **机制**（AGENTS.md §2 新增"spec 同步检查"）：动手前先问——这次改动触及的行为，在已归档主 spec 或某个未归档 change 的 delta 里有没有对应 Requirement？有，就得在同一轮工作里把 spec 一并改掉，不能只记 BACKLOG/CHANGELOG；没有，照旧走 BACKLOG→CHANGELOG，不必为小改动开新 change。同时写明今天问题的根因——`add-p1-text-blessing` 实现完之后一直没归档，长期停留在"已实现但未归档"的中间态，才让好几轮点状修复都绕过了它——所以规则里特别强调"功能上线后尽快归档"。
 
+## 2026-09-06 ～ 2026-09-07
+
+### P1 状态检查 + 进入 P2
+
+> 看一下P1是不是都已经完成了？是否需要做Openspec的Archive？然后我们就进入到P2了。
+
+**结果**：确认 P1（`add-p1-text-blessing`）已实现完成、spec 已回补、已归档（上一节 B-67），没有遗留动作。据此进入 P2 范围讨论。
+
+### P2 范围拍板：请求匹配优先，音频优先于视频
+
+> 我们可以做如下的调整。第一，我们在P2里面首先实现请求匹配……第二，一个用户可以寻求祝福……通过录音的方式反馈回来，作为他的祝福。其次，我们可以先把视频推到P3，我们这次专注于实现音频的录制和打分。最好是有一个自己APP上面有一个这种音频波纹……你可以针对这两个功能，然后出详细的Spec，供我评审后就可以开工。
+>
+>（中途插入）我们可能重点关注音频打分的功能和算法，这部分是最难的，搞定后其他都简单。
+
+**结果**：用 `/opsx:propose` 开新 change `add-p2-wish-request-audio`。三个澄清问题当场拍板：发现路径="广场浏览 + 兴趣匹配推送"两者都要；回应数量不限，请求人自己看；稿子="可选附稿（推荐）"。design.md 按用户强调的"音频打分是最难的部分"重点展开打分管线（可插拔 ASR/真诚度评估接口、P2 默认 RuleBased 实现不需要真实云账号、多维标签而非单一分数、挑战式真人校验不做声纹/深伪检测）。`openspec validate --strict` 通过。
+
+> 基于以上考虑点出最专业全面的Spec吧……我是希望这个APP是足够实用且有品味的，真的为大家带来幸福。基于此你把spec出完 然后自动开始持续推进就好，我明早看到后会进行审阅。
+>
+> 持续loop
+
+**结果**：用户明确授权 spec 完成后**自主持续实现**、不必每步确认，次日早晨审阅。用 `/loop` 机制自主推进，按 tasks.md 顺序（领域层→共享层→数据层→音频存储→打分管线→服务端→前端→端到端）逐节实现，每完成一个有意义的阶段跑测试 + commit：
+
+1. **领域层**：`WishRequest` 状态机（纯函数，仿 `lifecycle.ts` 风格）；音频信号打分（`audio-signals.ts`：停顿分布、语速方差、犹豫词密度）——过程中修了一个真实精度问题，"这个/那个"朴素子串匹配误判"这个世界"这类正常表达，改成只在紧跟停顿标记时才计入犹豫词；稿子覆盖率判定（有稿子按分句字符覆盖率，无稿子复用现成的 `isLowEffort`/`looksGarbled`）。122 domain 测试。
+2. **共享层 + 数据层**：`submitWishRequestSchema`；`wish_requests`/`audio_scores` 表 + `blessings.request_id`/`notifications.request_id` 多态字段；内存 + PGlite 两套仓储实现同步。167 测试（含 5 个 PGlite 真 SQL 集成）。
+3. **音频存储 + 打分管线编排**：`AudioStoragePort`（本机落盘）；`AsrProvider`/`SincerityEvaluator` 可插拔接口 + `RuleBasedAsrProvider`/`RuleBasedSincerityEvaluator`；挑战式真人校验（`liveness-challenge.ts`，HMAC 无状态签名）——修了一个真实 bug，字段分隔符最初用 `:` 和 ISO 时间戳自带冒号冲突，改用 `|`；`audio-scoring-service.ts` 编排整条管线（写的时候发现音频回应不该走 `blessing-service.submit` 那条"先落 body"的路径，改为自己组装 draft 记录）。过程中还发现并修了一个真实的架构边界违规：编排层直接 import 了基础设施层的 liveness 实现，被 `pnpm test:arch` 拦下，按现有 ports 模式补了 `ports/liveness.ts` 接口，纯函数 `transcriptContainsPhrase` 挪进 domain。
+4. **服务端应用层 + 路由**：`wish-request-service`（发布/撤回/删除/广场/回应列表，匹配逻辑复用现成 `audience-service.resolve()`，未拆独立 matching service 文件）；HTTP 路由（multipart 音频上传接 `@fastify/multipart`）。201 测试。
+5. **前端**：请求广场、发布请求页、录音组件（`MediaRecorder`+`AnalyserNode` 实时波形）、多维反馈展示、我的请求列表、导航入口。用真实系统 Chrome + `--use-fake-device-for-media-stream` 参数走查完整浏览器流程（不是无头模拟），比预想的更接近真实使用路径，过程中揪出两个真 bug：HTTP schema 把 `requestId` 定义成表单必填字段但真实客户端从不发它（此前的手写测试"贴心"地帮它塞了这个字段，掩盖了 422）；音频回应页缺 `Compose.tsx` 早就有的 consent gate 检查。
+6. **端到端**：真实浏览器录音（非预置文件模拟）跑通完整链路 + 撤回场景，过程中又挖出一个测试隔离问题（两个用例用了相同的处境文案，共享内存服务器互相污染）和**一处真正的安全缺口**——`wish-request-service.publish()` 从一开始就只处理了 `violation`/`pass`，完全没处理 `suspect`：命中拉客护栏词的处境描述会直接进入公开广场（未登录都能看，曝光面比 P1 群发收件箱更大），不经人工复核。不是被专门的断言抓到的，是在排查测试隔离问题时回头通读 `publish()` 全部分支才发现。修复：`WishRequestState` 加 `pending_review`；`ReportRecord` 仿照 `NotificationRecord` 的先例改成"目标是祝福或祝福请求二选一"的多态；`moderation-queue-service`/`Moderation.tsx` 同步支持两种工单来源。12 个 e2e 测试全绿。
+7. **文档收尾**：`docs/DEMO.md` 重写覆盖 P1+P2；`openspec validate add-p2-wish-request-audio --strict` 前回补两处规划期遗漏的 spec 缺口（`wish-request` 缺 `tags` 字段的撰写场景、`content-moderation` 的复核队列"目标"泛化为祝福或祝福请求）。
+
+**产物**：`pnpm verify` 绿（**201 测试**）；`pnpm test:e2e` 绿（**12 个**）；`openspec validate add-p2-wish-request-audio --strict` 通过。按用户指示，全部完成后更新 BACKLOG/CHANGELOG/PROMPT_LOG（本节），然后**停下等用户审阅**——不自行判定"审阅通过"就去动 P3 或扩大范围。
+
 **产物**：`openspec validate --strict` 全仓通过（1 个进行中 change `add-moderation-rbac` + 10 个主 spec）；BACKLOG/CHANGELOG/AGENTS.md 同步更新。

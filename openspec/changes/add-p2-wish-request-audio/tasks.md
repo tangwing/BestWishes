@@ -64,4 +64,4 @@
 - [x] 8.2 `pnpm verify` 全绿（201 测试，+6：3 个新 lifecycle + 4 个新 suspect 集成测试 - 1 因为其它调整）；`pnpm test:e2e` 全绿（12 个，+2）
 - [x] 8.3 `docs/DEMO.md` 重写标题/模型一句话覆盖 P1+P2，新增「P2 祝福请求 + 音频回应」完整走查表格，环境变量 / "这版没有的"两节同步更新
 - [x] 8.4 `openspec validate add-p2-wish-request-audio --strict` 通过。顺带回补了两处规划期漏掉、实现中才发现的 spec 缺口（不是事后补充式的"让 spec 看起来完整"，是真实的规范空白）：`wish-request` 的「撰写祝福请求」一直没提到 `tags` 输入（但 `wish-request-matching` 的 spec 从一开始就假设了它存在）；`content-moderation` 的「统一人工复核队列」原文写死"目标祝福"，没考虑过队列的目标可能是一条祝福请求——这正是 §8.1 那个真 bug 在 spec 层面的对应缺口。都已经在 `wish-request/spec.md` 补场景、新增 `content-moderation/spec.md` 的 MODIFIED delta，`proposal.md` 的 Modified Capabilities 也加了这一条。
-- [x] 8.5 BACKLOG.md / CHANGELOG.md / PROMPT_LOG.md——见下一次提交
+- [x] 8.5 BACKLOG.md / CHANGELOG.md / PROMPT_LOG.md 已更新（本次提交）——`add-p2-wish-request-audio` 全部 8 节完成，等用户审阅；审阅通过后再走 `/opsx:archive`（本变更本身未在这轮里归档，归档是审阅之后的动作，不预先做）
