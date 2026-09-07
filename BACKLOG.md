@@ -31,7 +31,7 @@
 
 ## 进行中
 
-- [~] **B-68 P2 第一批：祝福请求 + 匹配 + 音频打分**（`add-p2-wish-request-audio`）— proposal/design/specs/tasks 已完成并 `validate --strict` 通过；正按 `openspec/changes/add-p2-wish-request-audio/tasks.md` 自主实现，进度以该文件勾选状态为准。用户要求"出完 spec 自动持续推进，次日审阅"。核心技术决策见该 change 的 design.md：`WishRequest` 独立聚合、`Blessing.scope` 加 `wish_response`、音频打分管线全部可插拔且 P2 默认用不依赖真实云账号的 `RuleBasedAudioScoringProvider`、真人校验用挑战式（不做声纹/深伪检测）、评分输出恒为多维标签而非单一分数。
+- [~] **B-68 P2 第一批：祝福请求 + 匹配 + 音频打分**（`add-p2-wish-request-audio`）— 后端（tasks.md §1-6：领域层 / 数据层 / 音频存储 / 打分管线编排 / 服务层 / HTTP 路由）**已全部完成**，195 测试全绿，`pnpm build`/`typecheck`/`test:arch` 全干净。剩 §7 前端（请求广场 / 发布页 / 录音组件+波形 / 反馈展示）和 §8 e2e + demo 文档，进度以该文件勾选状态为准。用户要求"出完 spec 自动持续推进，次日审阅"。核心技术决策见该 change 的 design.md：`WishRequest` 独立聚合、`Blessing.scope` 加 `wish_response`、打分管线全部可插拔且 P2 默认用不依赖真实云账号的规则实现（`RuleBasedAsrProvider`/`RuleBasedSincerityEvaluator`，采信客户端转写这个信任边界已写进代码注释）、真人校验用挑战式 HMAC token（不做声纹/深伪检测）、评分输出恒为多维标签而非单一分数。过程中发现并修了两个真 bug（犹豫词"这个/那个"误判、token 分隔符和 ISO 时间戳冲突），以及一处 spec 遗漏（`WishRequest` 缺 `tags` 字段导致按标签匹配没法实现，已补齐全链路）。
 
 ## 刚完成（下轮挪进 CHANGELOG）
 
