@@ -6,7 +6,7 @@
 
 ### Requirement: 撰写祝福请求
 
-登录用户 SHALL 可撰写一条祝福请求，内容包含处境 / 心事描述（必填正文）与一段可选的具体稿子（`scriptText`，供回应者朗读）。正文长度约束与祝福正文一致（复用 `blessing-authoring` 的字数规则）。请求 MUST 先过内容安全检查（复用 `content-moderation` 的 `ModerationProvider`）才能进入广场，判定逻辑与祝福正文一致。
+登录用户 SHALL 可撰写一条祝福请求，内容包含处境 / 心事描述（必填正文）、一段可选的具体稿子（`scriptText`，供回应者朗读）、以及一组可选标签（供 `wish-request-matching` 按标签推荐候选响应人；留空表示不按标签限定）。正文长度约束与祝福正文一致（复用 `blessing-authoring` 的字数规则）。请求 MUST 先过内容安全检查（复用 `content-moderation` 的 `ModerationProvider`），判定逻辑与祝福正文一致：命中 `violation` MUST 拒绝发布；命中 `suspect` MUST NOT 直接公开或触发匹配推送，而是进入人工复核队列，通过后才正式公开（见"请求的生命周期"）；只有 `pass` 才立即公开。
 
 #### Scenario: 附稿子发布
 
@@ -22,6 +22,11 @@
 
 - **WHEN** 一条请求的处境描述或稿子命中内容安全检查的 `violation`
 - **THEN** 请求被拒绝发布，作者看到拒绝原因
+
+#### Scenario: 请求内容命中疑似
+
+- **WHEN** 一条请求的处境描述命中内容安全检查的 `suspect`（如拉客 / 敛财话术）
+- **THEN** 请求进入 `pending_review`，不出现在广场，不触发候选人匹配推送；同一条工单出现在人工复核队列（复用 `content-moderation` 的统一队列，不新建一套）
 
 ### Requirement: 请求广场
 
@@ -39,7 +44,7 @@
 
 ### Requirement: 请求的生命周期
 
-请求 MUST 处于 `published`、`withdrawn`、`deleted` 三态之一。撤回 MUST 立即从广场移除且 MUST 是终态——不提供"重新发布"操作，作者若想再发一次相近的请求，只能复制内容另发一条新的（与 `blessing-delivery` 的撤回规则保持一致的心智模型）。删除 MUST 二次确认、不可逆，且不影响已经收到的回应（回应作为独立的 `Blessing` 记录，不因请求被删除而消失）。
+请求 MUST 处于 `pending_review`、`published`、`withdrawn`、`deleted` 四态之一。命中疑似的请求 MUST 先进入 `pending_review`，人工复核通过后才转为 `published`（此时才计算候选响应人快照并触发匹配推送——不能在还没公开时就推给别人）；人工驳回则直接进 `deleted`，不经过 `published`。`pending_review` MUST NOT 提供撤回操作（还没公开，没有可撤回的曝光）。撤回（仅对 `published` 有效）MUST 立即从广场移除且 MUST 是终态——不提供"重新发布"操作，作者若想再发一次相近的请求，只能复制内容另发一条新的（与 `blessing-delivery` 的撤回规则保持一致的心智模型）。删除 MUST 二次确认、不可逆，且不影响已经收到的回应（回应作为独立的 `Blessing` 记录，不因请求被删除而消失）。
 
 #### Scenario: 撤回后从广场消失
 
@@ -50,6 +55,16 @@
 
 - **WHEN** 作者删除一条已经收到几条回应的请求
 - **THEN** 这些回应仍然保留在作者的收件箱里，不受影响
+
+#### Scenario: 人工复核通过后才公开与匹配
+
+- **WHEN** 一条 `pending_review` 的请求被人工复核通过
+- **THEN** 请求转为 `published`、出现在广场，此时才计算候选响应人并推送匹配通知
+
+#### Scenario: 人工驳回直接终态
+
+- **WHEN** 一条 `pending_review` 的请求被人工复核驳回
+- **THEN** 请求转为 `deleted`，从未出现在广场，作者无法再对它做任何操作
 
 ### Requirement: 查看收到的回应
 
