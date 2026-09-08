@@ -15,6 +15,7 @@ import {
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { Application } from '../../application';
 import { clearSession, getUserId, requireUserId, setSession } from './session';
+import { sniffAudioContentType } from './audio-content-type';
 
 function parse<S extends ZodTypeAny>(schema: S, data: unknown): z.output<S> {
   const r = schema.safeParse(data);
@@ -257,7 +258,7 @@ export function registerRoutes(app: FastifyInstance, application: Application): 
     const { id } = parse(idParam, request.params);
     const userId = requireUserId(request);
     const buf = unwrap(await application.audioScoring.readAudio(userId, id));
-    void reply.header('content-type', 'audio/webm');
+    void reply.header('content-type', sniffAudioContentType(buf));
     return reply.send(buf);
   });
 

@@ -257,3 +257,9 @@
 **产物**：`pnpm verify` 绿（**201 测试**）；`pnpm test:e2e` 绿（**12 个**）；`openspec validate add-p2-wish-request-audio --strict` 通过。按用户指示，全部完成后更新 BACKLOG/CHANGELOG/PROMPT_LOG（本节），然后**停下等用户审阅**——不自行判定"审阅通过"就去动 P3 或扩大范围。
 
 **产物**：`openspec validate --strict` 全仓通过（1 个进行中 change `add-moderation-rbac` + 10 个主 spec）；BACKLOG/CHANGELOG/AGENTS.md 同步更新。
+
+### P2 Demo 走查反馈：Safari 录音失败（B-69）
+
+> 我试用了一下P2的Demo，然后发现一些问题，比如说我用Safari浏览器录音结束之后显示错误，然后自己敲下那个录音的文字之后呢，发送按钮仍然不能点击。
+
+**结果**：根因是 `AudioRecorder` 只在系统 Chrome（e2e 假设备）上验证过，几处只对 Chrome 成立的假设在 Safari 上崩，且崩得不可恢复——录音对象拿不到（`recorded` 保持 null），外层"发送"按钮的 `disabled` 条件永远为真，所以手敲转写也点不动。逐条修（详见 `add-p2-wish-request-audio/tasks.md` §8.6）：`webkitAudioContext` 兜底 + 波形初始化失败降级不阻断录音；按 `MediaRecorder.isTypeSupported` 选容器格式（Safari 出 mp4）+ 回放路由按文件头嗅探 `Content-Type`；`start(250)` timeslice + 空录音明确报错；无 `MediaRecorder` 给明确提示。新增嗅探器单测 4 个，`blessing-audio` delta spec 补 4 个场景。`pnpm verify` 205 / `pnpm test:e2e` 12 全绿。Safari 真机复测待用户（本机 macOS 12 装不了 Playwright webkit）。change 仍未归档，继续等用户审阅。

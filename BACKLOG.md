@@ -10,6 +10,7 @@
 
 - **阶段**：**P1 已完成并归档**（详见下方"P1 存档"）。**P2 第一批（`add-p2-wish-request-audio`：祝福请求 + 匹配 + 音频录制打分）已全部实现完成**，`pnpm verify`（201 测试）/ `pnpm test:e2e`（12 个）/ `openspec validate --strict` 全绿，`docs/DEMO.md` 已补 P2 走查。**当前等用户审阅**——用户明确说过"审阅通过"由用户自己拍板，不能自行判定后就去动 P3 或扩大范围，所以这里先停下。
 - **B-68 add-p2-wish-request-audio**：实现细节 + 过程中发现修复的问题（filler-word 误判、HMAC 分隔符冲突、`requestId` 表单冗余字段导致的 422、回应页缺 consent gate、以及一处真实安全缺口——`suspect` 内容曾能绕过人工复核直接进公开广场）全部记在 [tasks.md](openspec/changes/add-p2-wish-request-audio/tasks.md) 的勾选说明里，逐条读比这里复述准确。**未归档**——归档是用户审阅通过之后的动作，不预先做。
+- **B-69（2026-09-08 用户 Safari 走查）**：`AudioRecorder` 只在 Chrome 上验证过，Safari 上录音结束报错、且录音拿不到导致"发送"按钮永久禁用。已修：`webkitAudioContext` 兜底 + 波形初始化失败降级不阻断录音；按 `MediaRecorder.isTypeSupported` 选容器格式（Safari 出 mp4）、回放路由按文件头嗅探 `Content-Type`；`start(250)` timeslice + 空录音明确报错。详见 tasks.md §8.6。`blessing-audio` delta spec 已同步。**Safari 真机复测待用户做**。
 - **技术栈**（ADR 0003）：Web-first PWA + Node/TS（Fastify）+ PostgreSQL（Drizzle / PGlite）+ pnpm monorepo；音频新增 `@fastify/multipart` 依赖 + 本机文件落盘（生产换对象存储时同 PGlite→postgres-js 的"换驱动不换契约"模式）。
 - **工作方式**：用户按点评提改动 → 记进本文件 → 持续完成。每轮结束自动 commit + push。
 - **下一步（等用户审阅反馈，不要自行推进）**：审阅通过 → `/opsx:archive add-p2-wish-request-audio`，然后再谈 P3（视频形态、悬赏资金等）范围。审阅若提出改动，按改动内容判断走 BACKLOG 点状修复还是回到这个 change 里改。`add-moderation-rbac` 仍按用户要求"先放着"（B-65）。B-66（标签/状态拆分）待后续单独设计讨论。

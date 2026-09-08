@@ -2,6 +2,11 @@
 // 转写：P2 不接真实语音识别（design.md 的取舍——真实云 ASR 是后续接入项），
 // 由录音人自己把说的内容补充成文字；这段文字就是打分管线的 clientTranscript
 // 输入（见 server 的 AsrHint 信任边界说明）。
+//
+// 跨浏览器：Safari 与 Chrome 支持的容器格式不同（Safari 只出 audio/mp4，
+// Chrome 出 audio/webm），且 Safari 老版本只有 webkitAudioContext。波形依赖
+// 的 AudioContext / AnalyserNode 只是装饰，任何一步失败都不能阻断录音本身
+// ——否则用户录完看到报错、且外层"发送"按钮因为拿不到录音一直点不动。
 
 import { useEffect, useRef, useState } from 'react';
 import s from '../app.module.css';
@@ -11,6 +16,21 @@ export type RecorderPhase = 'idle' | 'recording' | 'recorded';
 export interface RecordedAudio {
   blob: Blob;
   durationSec: number;
+}
+
+/** 选一个当前浏览器真正支持的录音容器格式；拿不准就返回 undefined 让浏览器自己决定。 */
+function pickMimeType(): string | undefined {
+  if (typeof MediaRecorder === 'undefined') return undefined;
+  for (const type of ['audio/webm', 'audio/mp4', 'audio/ogg']) {
+    if (MediaRecorder.isTypeSupported(type)) return type;
+  }
+  return undefined;
+}
+
+function getAudioContextCtor(): typeof AudioContext | undefined {
+  if (typeof AudioContext !== 'undefined') return AudioContext;
+  const w = window as unknown as { webkitAudioContext?: typeof AudioContext };
+  return w.webkitAudioContext;
 }
 
 export function AudioRecorder(props: {
@@ -72,65 +92,106 @@ export function AudioRecorder(props: {
     timerRef.current = null;
     void audioCtxRef.current?.close();
     audioCtxRef.current = null;
+    analyserRef.current = null;
   }
 
-  async function start() {
-    setErr('');
-    if (!('mediaDevices' in navigator)) {
-      setErr('这个浏览器不支持录音');
-      return;
-    }
+  /** 波形是装饰：AudioContext 建不起来（老 Safari / 达到上下文数量上限）就跳过，不影响录音。 */
+  function tryStartWaveform(stream: MediaStream) {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-
-      const AudioCtx = window.AudioContext;
+      const AudioCtx = getAudioContextCtor();
+      if (!AudioCtx) return;
       const audioCtx = new AudioCtx();
       audioCtxRef.current = audioCtx;
+      void audioCtx.resume();
       const source = audioCtx.createMediaStreamSource(stream);
       const analyser = audioCtx.createAnalyser();
       analyser.fftSize = 1024;
       source.connect(analyser);
       analyserRef.current = analyser;
-
-      const recorder = new MediaRecorder(stream);
-      chunksRef.current = [];
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-      recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        const durationSec = Math.round((Date.now() - startedAtRef.current) / 1000);
-        setPlaybackUrl(URL.createObjectURL(blob));
-        setPhase('recorded');
-        stopTracks();
-        onRecorded({ blob, durationSec });
-      };
-      mediaRecorderRef.current = recorder;
-      startedAtRef.current = Date.now();
-      recorder.start();
-      setPhase('recording');
-      setElapsedSec(0);
       drawWaveform();
-      timerRef.current = setInterval(() => {
-        setElapsedSec((prev) => {
-          const next = prev + 1;
-          if (next >= maxDurationSec) stop();
-          return next;
-        });
-      }, 1000);
     } catch {
-      setErr('没能打开麦克风。检查一下权限设置？');
+      analyserRef.current = null;
     }
   }
 
+  async function start() {
+    setErr('');
+    if (!('mediaDevices' in navigator) || typeof MediaRecorder === 'undefined') {
+      setErr('这个浏览器不支持录音，换较新的 Safari 或 Chrome 试试');
+      return;
+    }
+
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      setErr('没能打开麦克风。检查一下权限设置？');
+      return;
+    }
+    streamRef.current = stream;
+
+    let recorder: MediaRecorder;
+    try {
+      const mimeType = pickMimeType();
+      recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+    } catch {
+      stopTracks();
+      setErr('这个浏览器的录音格式不受支持，换 Chrome 试试');
+      return;
+    }
+
+    tryStartWaveform(stream);
+
+    chunksRef.current = [];
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunksRef.current.push(e.data);
+    };
+    recorder.onerror = () => {
+      stopTracks();
+      setPhase('idle');
+      setElapsedSec(0);
+      setErr('录音出错了，重试一下');
+      onRecorded(null);
+    };
+    recorder.onstop = () => {
+      const type = recorder.mimeType || 'audio/webm';
+      const blob = new Blob(chunksRef.current, { type });
+      const durationSec = Math.round((Date.now() - startedAtRef.current) / 1000);
+      stopTracks();
+      if (blob.size === 0) {
+        setPhase('idle');
+        setElapsedSec(0);
+        setErr('没录到声音，检查麦克风后重试');
+        onRecorded(null);
+        return;
+      }
+      setPlaybackUrl(URL.createObjectURL(blob));
+      setPhase('recorded');
+      onRecorded({ blob, durationSec });
+    };
+    mediaRecorderRef.current = recorder;
+    startedAtRef.current = Date.now();
+    // 传 timeslice：Safari 不给 timeslice 时有过 stop() 不落最后一段数据的历史问题。
+    recorder.start(250);
+    setPhase('recording');
+    setElapsedSec(0);
+    timerRef.current = setInterval(() => {
+      setElapsedSec((prev) => {
+        const next = prev + 1;
+        if (next >= maxDurationSec) stop();
+        return next;
+      });
+    }, 1000);
+  }
+
   function stop() {
-    mediaRecorderRef.current?.stop();
+    if (mediaRecorderRef.current?.state === 'recording') mediaRecorderRef.current.stop();
   }
 
   function reset() {
     if (playbackUrl) URL.revokeObjectURL(playbackUrl);
     setPlaybackUrl(null);
+    setErr('');
     setPhase('idle');
     setElapsedSec(0);
     onRecorded(null);

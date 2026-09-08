@@ -16,6 +16,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed（P2 期间发现，随 B-68 一起交付）
 
+- **Safari 录音全程失败**（B-69，用户 2026-09-08 Safari 走查发现）：`AudioRecorder` 当初只在系统 Chrome（e2e 假设备）上验证过，几处硬编码在 Safari 上崩且不可恢复——录完显示错误，之后即使手敲转写文字，外层"发送"按钮仍因为拿不到录音（`recorded` 为 null）永久禁用。逐条修：① 波形用的 `AudioContext` 老 Safari 只有 `webkitAudioContext`，且波形是辅助反馈、初始化失败不该阻断录音——`getAudioContextCtor()` 兜底前缀名，整个波形初始化包进独立 `try`，失败降级为无波形继续录；② `new MediaRecorder(stream)` 不传 mimeType 时 Safari 录成 `audio/mp4`，代码却把 Blob 和回放路由的 `Content-Type` 都硬编码成 `audio/webm`——`pickMimeType()` 按 `MediaRecorder.isTypeSupported` 选格式，Blob 用 `recorder.mimeType`，回放路由新增 `sniffAudioContentType()` 按文件头（EBML / `ftyp` / `OggS`）判类型；③ `recorder.start()` 不传 timeslice，Safari 有 `stop()` 丢最后一段数据的历史问题——改 `start(250)`，`onstop` 里判空录音给明确报错而不是把坏数据交上去；④ 无 `MediaRecorder` 的浏览器给"换较新浏览器"提示。新增 `audio-content-type.test.ts`（4 个，嗅探纯函数）；`blessing-audio` delta spec 补四个场景。Safari 真机复测待用户做（本机 macOS 12 装不了 Playwright webkit）。
 - **一处真实安全缺口**：`wish-request-service.publish()` 最初只处理了 `violation`（拒绝）和 `pass`（直接发布），完全没处理 `suspect`——命中拉客/敛财护栏词的处境描述会直接进入公开广场（未登录都能看，比 P1 群发的收件箱曝光面更大），不会进人工复核。不是被某条 e2e 断言直接抓到的，是在排查一处不相关的测试隔离问题时回头通读 `publish()` 全部分支才发现。修法：`WishRequestState` 加 `pending_review`；`ReportRecord` 仿照 `NotificationRecord` 已有的先例，把"目标"从恒为一条祝福改成祝福或祝福请求二选一的多态；`moderation-queue-service` 按工单来源分流处理，复用同一个人工复核队列而不是新建一套；`content-moderation` 的 openspec spec 补了对应的 MODIFIED delta。
 - HMAC 挑战 token 的字段分隔符最初用 `:`，和 ISO 时间戳自带的冒号冲突导致解析错位——改用 `|`。
 - 犹豫词检测把"这个/那个"当成朴素子串匹配，误判"这个世界"这类正常表达——改成只在紧跟停顿标记（逗号/省略号/句末）时才计入犹豫词。
