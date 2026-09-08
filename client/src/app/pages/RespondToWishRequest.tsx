@@ -112,6 +112,15 @@ export function RespondToWishRequest() {
         <button disabled={busy || !durationOk || !transcript.trim() || !challenge} onClick={submit}>
           发出这段祝福
         </button>
+        {!busy && (!durationOk || !transcript.trim() || !challenge) && (
+          <p className={s.hint} style={{ marginTop: 8 }}>
+            还差：
+            {!recorded && '录一段音频；'}
+            {recorded && !durationOk && `录音时长要在 ${MIN_DURATION_SEC}–${MAX_DURATION_SEC} 秒之间（当前 ${recorded.durationSec} 秒）；`}
+            {!transcript.trim() && '补充文字；'}
+            {!challenge && '验证码加载中；'}
+          </p>
+        )}
       </div>
     </div>
   );

@@ -20,11 +20,32 @@ export interface RecordedAudio {
 
 /** 选一个当前浏览器真正支持的录音容器格式；拿不准就返回 undefined 让浏览器自己决定。 */
 function pickMimeType(): string | undefined {
-  if (typeof MediaRecorder === 'undefined') return undefined;
+  // Safari 的 isTypeSupported 既可能整个方法不存在（老版本），也可能对 audio/webm
+  // 谎报 true 但构造时抛错——所以这里只用它做"正向探测"，真正的兜底在 makeRecorder。
+  if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') {
+    return undefined;
+  }
   for (const type of ['audio/webm', 'audio/mp4', 'audio/ogg']) {
-    if (MediaRecorder.isTypeSupported(type)) return type;
+    try {
+      if (MediaRecorder.isTypeSupported(type)) return type;
+    } catch {
+      return undefined;
+    }
   }
   return undefined;
+}
+
+/** 先按探测到的格式构造，抛错就退回让浏览器自己挑（Safari 对 audio/webm 会谎报支持）。 */
+function makeRecorder(stream: MediaStream): MediaRecorder {
+  const preferred = pickMimeType();
+  if (preferred) {
+    try {
+      return new MediaRecorder(stream, { mimeType: preferred });
+    } catch {
+      /* 落到下面的无参构造 */
+    }
+  }
+  return new MediaRecorder(stream);
 }
 
 function getAudioContextCtor(): typeof AudioContext | undefined {
@@ -42,6 +63,7 @@ export function AudioRecorder(props: {
   const [phase, setPhase] = useState<RecorderPhase>('idle');
   const [elapsedSec, setElapsedSec] = useState(0);
   const [err, setErr] = useState('');
+  const [diag, setDiag] = useState('');
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -116,27 +138,30 @@ export function AudioRecorder(props: {
 
   async function start() {
     setErr('');
+    setDiag('');
     if (!('mediaDevices' in navigator) || typeof MediaRecorder === 'undefined') {
       setErr('这个浏览器不支持录音，换较新的 Safari 或 Chrome 试试');
+      setDiag(`不支持：mediaDevices=${String('mediaDevices' in navigator)} MediaRecorder=${typeof MediaRecorder}`);
       return;
     }
 
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch {
+    } catch (e) {
       setErr('没能打开麦克风。检查一下权限设置？');
+      setDiag(`getUserMedia 失败：${e instanceof Error ? `${e.name} ${e.message}` : String(e)}`);
       return;
     }
     streamRef.current = stream;
 
     let recorder: MediaRecorder;
     try {
-      const mimeType = pickMimeType();
-      recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
-    } catch {
+      recorder = makeRecorder(stream);
+    } catch (e) {
       stopTracks();
       setErr('这个浏览器的录音格式不受支持，换 Chrome 试试');
+      setDiag(`MediaRecorder 构造失败：${e instanceof Error ? `${e.name} ${e.message}` : String(e)}`);
       return;
     }
 
@@ -146,11 +171,13 @@ export function AudioRecorder(props: {
     recorder.ondataavailable = (e) => {
       if (e.data.size > 0) chunksRef.current.push(e.data);
     };
-    recorder.onerror = () => {
+    recorder.onerror = (e: Event) => {
       stopTracks();
       setPhase('idle');
       setElapsedSec(0);
       setErr('录音出错了，重试一下');
+      const inner = (e as unknown as { error?: { name?: string; message?: string } }).error;
+      setDiag(`recorder.onerror：${inner ? `${inner.name ?? ''} ${inner.message ?? ''}` : e.type}`);
       onRecorded(null);
     };
     recorder.onstop = () => {
@@ -158,6 +185,9 @@ export function AudioRecorder(props: {
       const blob = new Blob(chunksRef.current, { type });
       const durationSec = Math.round((Date.now() - startedAtRef.current) / 1000);
       stopTracks();
+      setDiag(
+        `已停止：${String(chunksRef.current.length)} 段 · ${String(Math.round(blob.size / 1024))} KB · ${type || '(空 type)'} · ${String(durationSec)} 秒`,
+      );
       if (blob.size === 0) {
         setPhase('idle');
         setElapsedSec(0);
@@ -171,8 +201,18 @@ export function AudioRecorder(props: {
     };
     mediaRecorderRef.current = recorder;
     startedAtRef.current = Date.now();
-    // 传 timeslice：Safari 不给 timeslice 时有过 stop() 不落最后一段数据的历史问题。
-    recorder.start(250);
+    try {
+      // 不传 timeslice：Safari 对 timeslice 支持不稳，最终只在 stop() 时收一整段最兼容。
+      recorder.start();
+    } catch (e) {
+      stopTracks();
+      setPhase('idle');
+      setErr('没能开始录音，重试一下');
+      setDiag(`recorder.start 失败：${e instanceof Error ? `${e.name} ${e.message}` : String(e)}`);
+      onRecorded(null);
+      return;
+    }
+    setDiag(`录制中：state=${recorder.state} · mimeType=${recorder.mimeType || '(默认)'}`);
     setPhase('recording');
     setElapsedSec(0);
     timerRef.current = setInterval(() => {
@@ -192,6 +232,7 @@ export function AudioRecorder(props: {
     if (playbackUrl) URL.revokeObjectURL(playbackUrl);
     setPlaybackUrl(null);
     setErr('');
+    setDiag('');
     setPhase('idle');
     setElapsedSec(0);
     onRecorded(null);
@@ -231,6 +272,11 @@ export function AudioRecorder(props: {
         )}
       </div>
       {err && <p className={s.error}>{err}</p>}
+      {diag && (
+        <p className={s.hint} style={{ marginTop: 6, fontFamily: 'monospace', fontSize: 11, opacity: 0.7 }}>
+          诊断：{diag}
+        </p>
+      )}
       <p className={s.hint} style={{ marginTop: 8 }}>
         录音时长建议 {minDurationSec}–{maxDurationSec} 秒。
       </p>
