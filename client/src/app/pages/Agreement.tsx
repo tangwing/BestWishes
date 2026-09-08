@@ -1,12 +1,20 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useSession } from '../session';
 import s from '../app.module.css';
 
+/** 只接受站内相对路径，挡掉 `//evil.com` 这类开放重定向。 */
+function safeReturnTo(raw: string | null): string {
+  if (raw && raw.startsWith('/') && !raw.startsWith('//')) return raw;
+  return '/compose';
+}
+
 export function Agreement() {
   const { user, loading } = useSession();
   const nav = useNavigate();
+  const [params] = useSearchParams();
+  const returnTo = safeReturnTo(params.get('returnTo'));
   const [featured, setFeatured] = useState(true);
   const [version, setVersion] = useState('');
   const [err, setErr] = useState('');
@@ -75,7 +83,7 @@ export function Agreement() {
                   scopeSynthesis: false,
                 })
                 .then(() => {
-                  nav('/compose');
+                  nav(returnTo);
                 });
             }}
           >

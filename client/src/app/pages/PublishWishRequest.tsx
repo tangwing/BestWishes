@@ -28,7 +28,7 @@ export function PublishWishRequest() {
       setSuggestedTags(r.tags);
     });
     void api.agreement().then((a) => {
-      if (!a.alreadyConsented) nav('/agreement');
+      if (!a.alreadyConsented) nav('/agreement?returnTo=%2Fwish-requests%2Fnew');
     });
   }, [user, nav]);
 
@@ -55,7 +55,7 @@ export function PublishWishRequest() {
       })
       .catch((e: unknown) => {
         if (e instanceof ApiCallError && e.code === 'consent_required') {
-          nav('/agreement');
+          nav('/agreement?returnTo=%2Fwish-requests%2Fnew');
           return;
         }
         setErr(e instanceof ApiCallError ? e.message : '出错了');

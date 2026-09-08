@@ -23,14 +23,18 @@ export function RespondToWishRequest() {
     if (!loading && !user) nav('/login');
   }, [loading, user, nav]);
 
+  const agreementUrl = id
+    ? `/agreement?returnTo=${encodeURIComponent(`/wish-requests/${id}/respond`)}`
+    : '/agreement';
+
   useEffect(() => {
     if (!id || !user) return;
     api.getWishRequest(id).then(setRequest).catch(() => undefined);
     api.issueAudioChallenge().then(setChallenge).catch(() => undefined);
     void api.agreement().then((a) => {
-      if (!a.alreadyConsented) nav('/agreement');
+      if (!a.alreadyConsented) nav(agreementUrl);
     });
-  }, [id, user, nav]);
+  }, [id, user, nav, agreementUrl]);
 
   function submit() {
     if (!id || !recorded || !challenge) return;
@@ -49,7 +53,7 @@ export function RespondToWishRequest() {
       })
       .catch((e: unknown) => {
         if (e instanceof ApiCallError && e.code === 'consent_required') {
-          nav('/agreement');
+          nav(agreementUrl);
           return;
         }
         setErr(e instanceof ApiCallError ? e.message : '提交失败');

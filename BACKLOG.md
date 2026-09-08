@@ -13,7 +13,9 @@
 - **B-69（2026-09-08 用户 Safari 走查）**：`AudioRecorder` 只在 Chrome 上验证过，Safari 上录音结束报错、且录音拿不到导致"发送"按钮永久禁用。已修：`webkitAudioContext` 兜底 + 波形初始化失败降级不阻断录音；按 `MediaRecorder.isTypeSupported` 选容器格式（Safari 出 mp4）、回放路由按文件头嗅探 `Content-Type`；`start(250)` timeslice + 空录音明确报错。详见 tasks.md §8.6。`blessing-audio` delta spec 已同步。**Safari 真机复测待用户做**。
 - **技术栈**（ADR 0003）：Web-first PWA + Node/TS（Fastify）+ PostgreSQL（Drizzle / PGlite）+ pnpm monorepo；音频新增 `@fastify/multipart` 依赖 + 本机文件落盘（生产换对象存储时同 PGlite→postgres-js 的"换驱动不换契约"模式）。
 - **工作方式**：用户按点评提改动 → 记进本文件 → 持续完成。每轮结束自动 commit + push。
-- **下一步（等用户审阅反馈，不要自行推进）**：审阅通过 → `/opsx:archive add-p2-wish-request-audio`，然后再谈 P3（视频形态、悬赏资金等）范围。审阅若提出改动，按改动内容判断走 BACKLOG 点状修复还是回到这个 change 里改。`add-moderation-rbac` 仍按用户要求"先放着"（B-65）。B-66（标签/状态拆分）待后续单独设计讨论。
+- **2026-09-08 用户 Demo 走查反馈（B-69~B-73）**：Safari 录音失败（B-69，两轮修复 + 加了可见诊断行，等 Safari 真机复测）；协议页硬编码跳转 bug（B-72，已修 + e2e 回归）；demo 数据持久化（B-73，`pnpm demo` 现在落盘 PGlite，重启不丢个人资料）；验证码校验确实实现了但校验的是客户端转写文本（B-70，P2 信任边界，无需改）；**B-71 导航改名/结构调整需要用户先回答 4 个歧义点**（见待办区），没动。
+- **UAT 自动化**：用户问有没有框架能自动跑他手动做的走查——**有，就是 `e2e/`（Playwright + 真实系统 Chrome）**，`pnpm test:e2e` 跑，13 个用例覆盖 P1 群发 + P2 请求/录音/打分/审核全链路（录音用 `--use-fake-device-for-media-stream` 真的走 MediaRecorder）。本轮把用户手动发现的 B-72 也补成了回归用例。唯一盖不到的是 Safari（macOS 12 装不了 Playwright webkit）。
+- **下一步**：① 用户回答 B-71 的 4 个歧义点后做导航改名。② `add-p2-wish-request-audio` 审阅通过 → `/opsx:archive`，再谈 P3。审阅若提改动，按内容判断走 BACKLOG 点状修复还是回 change 里改。`add-moderation-rbac` 仍"先放着"（B-65）。B-66 待单独设计讨论。
 
 <details>
 <summary>P1 存档（点开查看）</summary>
@@ -33,6 +35,14 @@
 ## 待用户审阅
 
 - [x] **B-68 P2 第一批：祝福请求 + 匹配 + 音频打分**（`add-p2-wish-request-audio`）— **全部 8 节完成**：领域层（`WishRequest` 状态机、音频信号打分纯函数、稿子覆盖率判定）、数据层（`wish_requests`/`audio_scores` 表 + 内存/PGlite 两套实现）、音频存储（本机落盘）、打分管线编排（转写→安全审核→完整度/专注度/真诚度→挑战式真人校验）、服务层 + HTTP 路由、前端（请求广场/发布页/录音组件+实时波形/多维反馈展示/我的请求）、e2e（真实系统 Chrome + fake-device 参数真的录音，不是预置文件模拟）、文档（`docs/DEMO.md` 补 P2 走查，两处规划期遗漏的 spec 缺口已回补）。核心技术决策见该 change 的 design.md：`WishRequest` 独立聚合、`Blessing.scope` 加 `wish_response`、打分管线全部可插拔且 P2 默认用不依赖真实云账号的规则实现（`RuleBasedAsrProvider`/`RuleBasedSincerityEvaluator`，采信客户端转写这个信任边界已写进代码注释）、真人校验用挑战式 HMAC token（不做声纹/深伪检测）、评分输出恒为多维标签而非单一分数。过程中发现并修了几个真 bug：犹豫词"这个/那个"误判、HMAC token 分隔符和 ISO 时间戳冲突、`requestId` 表单冗余字段导致真实客户端 422（测试当年被自己"贴心"的多余字段掩盖）、回应页缺 consent gate；以及一处**真实安全缺口**——`wish-request-service.publish()` 曾经只处理 violation/pass，命中拉客护栏词的 `suspect` 内容会直接绕过人工复核进入公开广场（未登录都能看，曝光面比 P1 群发收件箱更大），已修复为 `pending_review` 状态 + 复用统一人工复核队列（`ReportRecord` 仿照 `NotificationRecord` 先例做成多态）。`pnpm verify` 201 测试、`pnpm test:e2e` 12 个、`openspec validate --strict` 全绿。**等用户审阅，审阅通过后再 `/opsx:archive`**。
+
+## P2 Demo 走查反馈（2026-09-08，用户逐点提）
+
+- [x] **B-69 Safari 录音失败** — 见上方恢复点 + `add-p2-wish-request-audio/tasks.md` §8.6。已两轮修复 + 加可见诊断，等 Safari 真机复测。
+- [ ] **B-70（问题，非 bug）验证码校验是真的实现了吗** — 是。`audio-scoring-service.submit` 里 `transcriptContainsPhrase(transcript, tokenCheck.phrase)` 检查转写文本是否包含挑战短语，不含 → `livenessPassed=false` → 转人工复核队列（不直接驳回）。但 P2 不接真实 ASR，`transcript` = 用户自己在"补充文字"框里敲的 `clientTranscript`（`RuleBasedAsrProvider` 原样返回），这个信任边界写在代码注释和 design.md 里。所以现在校验的是"用户声称自己说了验证码"，不是"音频里真的有验证码"——真实云 ASR 接入后（B 待办）才变成对音频本身的校验。**无需改代码**，除非要在 UI 上把这个边界对用户说清楚。
+- [ ] **B-71 导航 / 页面改名 + 结构调整** — 用户提的映射：祝福请求 → **祈福广场**（显示大家的祈福，内部也能新增/查看自己的祝福请求，即把「我的请求」并入）；收件箱 → **我的福袋**；发出的 → **我的善意**；「回响」并入「个人空间」（去掉独立入口，把累计数展示放进 Profile）。属较大 UX 改动，**动手前要用户确认几处歧义**：① 「祈福广场」显示的"大家的祈福"是指祝福请求本身，还是也要把已发布的音频回应/祝福一起铺进去？② 「我的请求」是并成广场里的一个 tab / 筛选，还是保留独立页只是从导航挪走？③ 「写祝福」（`/compose`，P1 群发）这个入口保留原样吗？④ 「回响」页整个删掉，还是保留可从个人空间点进？触及 openspec `blessing-records` 等能力的文案层，spec 同步待定。
+- [x] **B-72 偶发：祝福请求点「回应」跳到写祝福页** — 根因不是偶发随机，是**未同意协议时**才触发：`RespondToWishRequest` / `PublishWishRequest` 未同意 → 跳 `/agreement`，而 `Agreement.tsx` 同意后**硬编码** `nav('/compose')`，不管来处。已同意过的会话不会触发，所以看着"偶发"。已修：`/agreement` 支持 `?returnTo=`（`safeReturnTo` 挡开放重定向），两个页面跳转时带上来处，同意后回到来处（默认仍 `/compose`）。加了 e2e 回归（wish-request.spec.ts #12：未同意用户点回应 → 协议页 → 同意后回到 `/respond`）。
+- [x] **B-73 个人资料每次测试都要重输** — `demo` 脚本用默认 `BW_DB=memory`，重启即清空。已改 `demo` 为 `BW_DB=pglite BW_PGDATA=.pgdata` 落盘持久化（`.pgdata/` 已在 `.gitignore`），会话 cookie 存 userId + 30 天有效期，重启仍登录。新增 `pnpm demo:fresh` 干净重来。`docs/DEMO.md` 已更新。
 
 ## 刚完成（下轮挪进 CHANGELOG）
 

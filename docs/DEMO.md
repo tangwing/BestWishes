@@ -3,7 +3,7 @@
 > 2026-09-07。P1「陌生人祝福」+ P2 第一批「祝福请求 + 音频回应」的可运行 Demo。
 > P1 模型见 [ADR 0004](adr/0004-p1-stranger-broadcast-model.md)，技术栈见 [ADR 0003](adr/0003-p1-tech-stack-web-first.md)；
 > P2 这一批见 [openspec/changes/add-p2-wish-request-audio/](../openspec/changes/add-p2-wish-request-audio/)（design.md 有完整的打分管线设计）。
-> 数据在内存里，重启清空。微信登录 / 内容审核 / 真实语音识别 / PostgreSQL 都是占位或可切换实现，见 [BACKLOG.md](../BACKLOG.md)。
+> 微信登录 / 内容审核 / 真实语音识别 都是占位或可切换实现，见 [BACKLOG.md](../BACKLOG.md)。
 
 ## 起
 
@@ -12,11 +12,18 @@ pnpm install
 pnpm demo        # 单进程，http://127.0.0.1:3000（hold 8 秒，方便看"校验中"）
 ```
 
-用 PGlite（真实 Postgres SQL、落盘）跑：
+`pnpm demo` 现在用 PGlite 落盘到 `server/.pgdata`、音频落盘到 `server/.audio-data`，
+**重启不丢数据**（个人资料、请求、录音都还在，登录态 30 天有效）。要干净重来：
+
+```bash
+pnpm demo:fresh  # 删掉 .pgdata / .audio-data 再起
+```
+
+纯内存（进程退出即清空，测试用）：
 
 ```bash
 pnpm --filter @bestwishes/client build
-BW_DB=pglite BW_PGDATA=./.pgdata BW_HOLD_SECONDS=8 pnpm --filter @bestwishes/server start
+BW_HOLD_SECONDS=8 pnpm --filter @bestwishes/server start
 ```
 
 ## 模型一句话

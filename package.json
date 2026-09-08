@@ -18,7 +18,8 @@
     "test": "vitest run",
     "build": "pnpm -r build",
     "dev": "pnpm --parallel -r --if-present dev",
-    "demo": "pnpm --filter @bestwishes/client build && BW_HOLD_SECONDS=8 pnpm --filter @bestwishes/server start",
+    "demo": "pnpm --filter @bestwishes/client build && BW_HOLD_SECONDS=8 BW_DB=pglite BW_PGDATA=.pgdata pnpm --filter @bestwishes/server start",
+    "demo:fresh": "rm -rf server/.pgdata server/.audio-data && pnpm demo",
     "verify": "pnpm typecheck && pnpm test:arch && pnpm test && pnpm build"
   },
   "devDependencies": {

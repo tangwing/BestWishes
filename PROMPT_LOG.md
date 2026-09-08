@@ -263,3 +263,18 @@
 > 我试用了一下P2的Demo，然后发现一些问题，比如说我用Safari浏览器录音结束之后显示错误，然后自己敲下那个录音的文字之后呢，发送按钮仍然不能点击。
 
 **结果**：根因是 `AudioRecorder` 只在系统 Chrome（e2e 假设备）上验证过，几处只对 Chrome 成立的假设在 Safari 上崩，且崩得不可恢复——录音对象拿不到（`recorded` 保持 null），外层"发送"按钮的 `disabled` 条件永远为真，所以手敲转写也点不动。逐条修（详见 `add-p2-wish-request-audio/tasks.md` §8.6）：`webkitAudioContext` 兜底 + 波形初始化失败降级不阻断录音；按 `MediaRecorder.isTypeSupported` 选容器格式（Safari 出 mp4）+ 回放路由按文件头嗅探 `Content-Type`；`start(250)` timeslice + 空录音明确报错；无 `MediaRecorder` 给明确提示。新增嗅探器单测 4 个，`blessing-audio` delta spec 补 4 个场景。`pnpm verify` 205 / `pnpm test:e2e` 12 全绿。Safari 真机复测待用户（本机 macOS 12 装不了 Playwright webkit）。change 仍未归档，继续等用户审阅。
+
+### 第二轮 Demo 走查：4 点反馈 + UAT 自动化问题
+
+> 1. 你的验证码，录音里判断有没有验证码，是通，是真的实现了吗？ 2. 把祝福请求变成显示成祈福广场……收件箱则称为我的福袋。发出的则称为我的善意，回响合并如个人空间。 3. 偶发的一个bug，是在祝福请求里面，点击回应的时候，有时候会跳转到写祝福的页面，而不是回复祝福请求的页面，偶发。 4. 能不能让我的这个每次的这个填写的个人资料……能够存入数据库或文件？避免每次测试时都要重新输入。
+>
+> 1. 有没有什么办法能自动进行我目前手动做的uat测试？……通过loop来自行迭代 2. 如果有的话可以setup一下试试，如果没有或者已经尝试结束，就电脑待机等待我明早检查
+
+**结果**（B-70~B-73，逐条）：
+1. **验证码校验**——是真的实现了（`transcriptContainsPhrase(transcript, phrase)`，不含 → 转人工复核）。但 P2 不接真实 ASR，`transcript` = 用户自己在"补充文字"框敲的 `clientTranscript`（`RuleBasedAsrProvider` 原样返回，信任边界写在代码注释 + design.md）。所以现在校验的是"用户声称说了验证码"，不是"音频里真有验证码"。无需改代码，记 B-70。
+2. **改名/结构调整**（祈福广场 / 我的福袋 / 我的善意 / 回响并入个人空间）——较大 UX 改动且有 4 处歧义（广场显示什么、我的请求怎么并、`/compose` 入口去留、回响页删不删），**没动，记 B-71 等用户回答**。
+3. **"偶发"跳转 bug**——根因不是随机：未同意协议的用户点「回应」→ 跳 `/agreement`，`Agreement.tsx` 同意后**硬编码** `nav('/compose')` 不看来处。已修：`/agreement` 认 `?returnTo=`（`safeReturnTo` 挡开放重定向），`RespondToWishRequest` / `PublishWishRequest` 带上来处。加 e2e 回归（wish-request.spec.ts #12）。B-72。
+4. **资料持久化**——`pnpm demo` 之前默认内存库。改成 `BW_DB=pglite BW_PGDATA=.pgdata` 落盘，重启不丢；cookie 存 userId + 30 天。新增 `pnpm demo:fresh`。B-73。
+5. **UAT 自动化**——已有，就是 `e2e/`（Playwright + 真实系统 Chrome，`pnpm test:e2e`，13 用例覆盖 P1+P2 全链路，录音走 fake-device 真 MediaRecorder）。本轮把 B-72 补成回归用例。Safari 盖不到（macOS 12 无 Playwright webkit）。已把此事说清，不额外搭新框架。
+
+`pnpm verify` 205 / `pnpm test:e2e` 13 全绿。demo 以持久化模式重启，留给用户明早走查。

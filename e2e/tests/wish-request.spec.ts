@@ -60,6 +60,38 @@ test('祝福请求：发布 → 广场浏览 → 录音回应（真麦克风假�
   await responderCtx.close();
 });
 
+test('未同意协议的用户点「回应」→ 跳协议页 → 同意后回到回应页（不是写祝福页）', async ({
+  page,
+  browser,
+}) => {
+  const SITUATION = 'wr3-最近考研压力很大，每天都很焦虑，希望有人能鼓励我一下。';
+  const r = region(42.0, -72.0);
+
+  await login(page, 'wr3-求祝福');
+  await setLocation(page, r.sender);
+  await agree(page);
+  await page.goto('/wish-requests/new');
+  await page.getByPlaceholder('最近遇到了什么，心情怎么样，希望被怎么祝福……').fill(SITUATION);
+  await page.getByRole('button', { name: '发布', exact: true }).click();
+  await page.waitForURL('**/wish-requests/wrq_**');
+  const requestId = page.url().split('/wish-requests/').pop() ?? '';
+
+  // 全新用户，没同意过协议
+  const ctx = await browser.newContext();
+  const p = await ctx.newPage();
+  await login(p, 'wr3-回应者');
+  await setLocation(p, r.recipient);
+
+  await p.goto(`/wish-requests/${requestId}/respond`);
+  await p.waitForURL('**/agreement**');
+  await p.getByRole('button', { name: '同意并继续' }).click();
+  // 关键断言：回到回应页，而不是被硬编码丢到 /compose
+  await p.waitForURL(`**/wish-requests/${requestId}/respond`);
+  await expect(p.getByText(SITUATION)).toBeVisible();
+
+  await ctx.close();
+});
+
 test('撤回请求后，广场看不到，也不能再回应', async ({ page }) => {
   const SITUATION = 'wr2-最近考研压力很大，每天都很焦虑，希望有人能鼓励我一下。';
   const r = region(41.0, -71.0);

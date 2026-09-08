@@ -16,6 +16,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed（P2 期间发现，随 B-68 一起交付）
 
+- **"偶发"点「回应」跳到写祝福页**（B-72，用户 2026-09-08 走查发现）：根因不是随机——`RespondToWishRequest` / `PublishWishRequest` 在用户没同意过协议时会跳 `/agreement`，而 `Agreement.tsx` 同意后**硬编码** `nav('/compose')`，完全不管用户是从哪来的。已同意过的会话不触发，所以看着像"偶发"。修：`/agreement` 认 `?returnTo=` 查询参数（`safeReturnTo` 只放行站内相对路径，挡 `//evil.com` 这类开放重定向），两个页面跳转时带上来处，同意后回到来处，默认仍是 `/compose`。加 e2e 回归：未同意用户点「回应」→ 协议页 → 同意 → 回到 `/wish-requests/:id/respond`（而不是 `/compose`）。
 - **Safari 录音全程失败**（B-69，用户 2026-09-08 Safari 走查发现）：`AudioRecorder` 当初只在系统 Chrome（e2e 假设备）上验证过，几处硬编码在 Safari 上崩且不可恢复——录完显示错误，之后即使手敲转写文字，外层"发送"按钮仍因为拿不到录音（`recorded` 为 null）永久禁用。逐条修：① 波形用的 `AudioContext` 老 Safari 只有 `webkitAudioContext`，且波形是辅助反馈、初始化失败不该阻断录音——`getAudioContextCtor()` 兜底前缀名，整个波形初始化包进独立 `try`，失败降级为无波形继续录；② `new MediaRecorder(stream)` 不传 mimeType 时 Safari 录成 `audio/mp4`，代码却把 Blob 和回放路由的 `Content-Type` 都硬编码成 `audio/webm`——`pickMimeType()` 按 `MediaRecorder.isTypeSupported` 选格式，Blob 用 `recorder.mimeType`，回放路由新增 `sniffAudioContentType()` 按文件头（EBML / `ftyp` / `OggS`）判类型；③ `recorder.start()` 不传 timeslice，Safari 有 `stop()` 丢最后一段数据的历史问题——改 `start(250)`，`onstop` 里判空录音给明确报错而不是把坏数据交上去；④ 无 `MediaRecorder` 的浏览器给"换较新浏览器"提示。新增 `audio-content-type.test.ts`（4 个，嗅探纯函数）；`blessing-audio` delta spec 补四个场景。Safari 真机复测待用户做（本机 macOS 12 装不了 Playwright webkit）。
 - **一处真实安全缺口**：`wish-request-service.publish()` 最初只处理了 `violation`（拒绝）和 `pass`（直接发布），完全没处理 `suspect`——命中拉客/敛财护栏词的处境描述会直接进入公开广场（未登录都能看，比 P1 群发的收件箱曝光面更大），不会进人工复核。不是被某条 e2e 断言直接抓到的，是在排查一处不相关的测试隔离问题时回头通读 `publish()` 全部分支才发现。修法：`WishRequestState` 加 `pending_review`；`ReportRecord` 仿照 `NotificationRecord` 已有的先例，把"目标"从恒为一条祝福改成祝福或祝福请求二选一的多态；`moderation-queue-service` 按工单来源分流处理，复用同一个人工复核队列而不是新建一套；`content-moderation` 的 openspec spec 补了对应的 MODIFIED delta。
 - HMAC 挑战 token 的字段分隔符最初用 `:`，和 ISO 时间戳自带的冒号冲突导致解析错位——改用 `|`。
@@ -40,6 +41,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- `pnpm demo` 改用 PGlite 落盘（B-73，用户 2026-09-08 提）：之前 demo 默认走内存库，每次重启个人资料 / 请求 / 录音全清空，手动走查要反复重新登录填资料。现在 `pnpm demo` 带 `BW_DB=pglite BW_PGDATA=.pgdata`，数据落到 `server/.pgdata`（音频本就落 `server/.audio-data`），重启不丢；会话 cookie 存 userId + 30 天有效期，重启后仍是登录态。新增 `pnpm demo:fresh` 删库重来。纯内存跑法（测试用）仍在，见 DEMO.md。
 - 祝福正文字数下限从 15 降到 5（B-62）：`packages/domain` `DEFAULT_CONFIG.bodyMinLen`；同步改 Compose 页提示文案与 DEMO.md 示例。上限仍是 500，`BW_BODY_MIN_LEN` 环境变量覆盖方式不变。
 
 ### Changed — P1 重定为「陌生人祝福 · 按条件群发」（B-60, [ADR 0004](docs/adr/0004-p1-stranger-broadcast-model.md)）
