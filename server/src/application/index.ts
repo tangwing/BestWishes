@@ -7,7 +7,6 @@ import { createBlessingService } from './blessing-service';
 import { createAudienceService } from './audience-service';
 import { createInboxService } from './inbox-service';
 import { createNotificationService } from './notification-service';
-import { createStreakService } from './streak-service';
 import { createScans } from './scans';
 import { createReportService } from './report-service';
 import { createModerationQueueService } from './moderation-queue-service';
@@ -24,7 +23,6 @@ export function createApplication(deps: AppDeps) {
     audience: createAudienceService(deps),
     inbox: createInboxService(deps),
     notifications: createNotificationService(deps),
-    streak: createStreakService(deps),
     reports: createReportService(deps),
     moderationQueue: createModerationQueueService(deps),
     wishRequests: createWishRequestService(deps),

@@ -63,7 +63,7 @@ async function respond(
   );
   return ctx.server.inject({
     method: 'POST',
-    url: `/api/wish-requests/${requestId}/respond`,
+    url: `/api/plaza/${requestId}/respond`,
     headers: { ...auth, 'content-type': contentType },
     payload: body,
   });
@@ -78,20 +78,20 @@ describe('HTTP 端到端：祝福请求 + 音频回应', () => {
 
     const noAuthPost = await ctx.server.inject({
       method: 'POST',
-      url: '/api/wish-requests',
+      url: '/api/plaza',
       payload: { situationText: '最近压力很大，想要一句鼓励。', tags: [] },
     });
     expect(noAuthPost.statusCode).toBe(401);
 
     const submit = await ctx.server.inject({
       method: 'POST',
-      url: '/api/wish-requests',
+      url: '/api/plaza',
       headers: author,
       payload: { situationText: '最近压力很大，想要一句鼓励。', tags: [] },
     });
     expect(submit.statusCode).toBe(200);
 
-    const plaza = await ctx.server.inject({ method: 'GET', url: '/api/wish-requests' });
+    const plaza = await ctx.server.inject({ method: 'GET', url: '/api/plaza' });
     expect(plaza.statusCode).toBe(200);
     expect(plaza.json<{ id: string }[]>().length).toBeGreaterThan(0);
 
@@ -110,7 +110,7 @@ describe('HTTP 端到端：祝福请求 + 音频回应', () => {
 
     const submit = await ctx.server.inject({
       method: 'POST',
-      url: '/api/wish-requests',
+      url: '/api/plaza',
       headers: author,
       payload: {
         situationText: '最近考研压力很大，每天都很焦虑，希望有人能鼓励我一下。',
@@ -132,13 +132,18 @@ describe('HTTP 端到端：祝福请求 + 音频回应', () => {
     const inbox = await ctx.server.inject({ method: 'GET', url: '/api/inbox', headers: author });
     expect(inbox.json<unknown[]>()).toHaveLength(1);
 
-    const responses = await ctx.server.inject({
+    const detail = await ctx.server.inject({
       method: 'GET',
-      url: `/api/wish-requests/${requestId}/responses`,
+      url: `/api/plaza/${requestId}`,
       headers: author,
     });
-    expect(responses.statusCode).toBe(200);
-    expect(responses.json<{ fromNickname: string }[]>()[0]?.fromNickname).toBe('回应者');
+    expect(detail.statusCode).toBe(200);
+    const detailJson = detail.json<{
+      responseCount: number;
+      responses: { fromNickname: string }[];
+    }>();
+    expect(detailJson.responses[0]?.fromNickname).toBe('回应者');
+    expect(detailJson.responseCount).toBe(1);
 
     // 请求人能拉音频文件
     const audioAsAuthor = await ctx.server.inject({
@@ -181,7 +186,7 @@ describe('HTTP 端到端：祝福请求 + 音频回应', () => {
 
     const submit = await ctx.server.inject({
       method: 'POST',
-      url: '/api/wish-requests',
+      url: '/api/plaza',
       headers: author,
       payload: { situationText: '希望有人能鼓励我一下，最近很低落。', tags: [] },
     });

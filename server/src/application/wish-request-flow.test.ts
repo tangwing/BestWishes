@@ -15,6 +15,12 @@ function goodTranscript(phrase: string): string {
   return `听说你最近考研压力很大，${phrase}，愿你放下焦虑，一步一步来，你已经很努力了，一切都会好起来的。`;
 }
 
+async function plazaIds(ctx: App, filter: 'all' | 'mine' = 'all', viewer: string | null = null): Promise<string[]> {
+  const r = await ctx.app.wishRequests.plaza(viewer, filter);
+  if (!r.ok) throw new Error('plaza failed');
+  return r.value.map((p) => p.id);
+}
+
 describe('祝福请求 + 音频回应', () => {
   let ctx: App;
   let author: string;
@@ -46,8 +52,7 @@ describe('祝福请求 + 音频回应', () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
 
-    const plaza = await ctx.app.wishRequests.plaza();
-    expect(plaza.map((p) => p.id)).toContain(r.value.id);
+    expect(await plazaIds(ctx)).toContain(r.value.id);
 
     const notifications = await ctx.app.notifications.list(responder);
     const matched = notifications.items.find((n) => n.kind === 'wish_request_matched');
@@ -62,8 +67,7 @@ describe('祝福请求 + 音频回应', () => {
     });
     if (!r.ok) throw new Error('publish failed');
 
-    const plaza = await ctx.app.wishRequests.plaza();
-    expect(plaza.map((p) => p.id)).toContain(r.value.id);
+    expect(await plazaIds(ctx)).toContain(r.value.id);
   });
 
   it('不能回应自己发布的请求', async () => {
@@ -110,10 +114,16 @@ describe('祝福请求 + 音频回应', () => {
     expect(inbox).toHaveLength(1);
     expect(inbox[0]?.status).toBe('content');
 
-    const responses = await ctx.app.wishRequests.responses(author, r.value.id);
-    if (!responses.ok) throw new Error('responses failed');
-    expect(responses.value).toHaveLength(1);
-    expect(responses.value[0]?.fromNickname).toBe('回应者');
+    const detail = await ctx.app.wishRequests.detail(r.value.id, author);
+    if (!detail) throw new Error('detail failed');
+    expect(detail.responses).toHaveLength(1);
+    expect(detail.responses[0]?.fromNickname).toBe('回应者');
+    // 聚合计数对账：responseCount 与实际 published 回应数一致
+    expect(detail.responseCount).toBe(1);
+    const publishedResponses = (await ctx.repos.blessings.listByRequestId(r.value.id)).filter(
+      (b) => b.state === 'published',
+    );
+    expect(detail.responseCount).toBe(publishedResponses.length);
 
     const feedback = await ctx.app.audioScoring.myFeedback(responder, submitted.value.id);
     expect(feedback.ok).toBe(true);
@@ -251,8 +261,7 @@ describe('祝福请求 + 音频回应', () => {
     const withdrawn = await ctx.app.wishRequests.withdraw(author, r.value.id);
     expect(withdrawn.ok).toBe(true);
 
-    const plaza = await ctx.app.wishRequests.plaza();
-    expect(plaza.map((p) => p.id)).not.toContain(r.value.id);
+    expect(await plazaIds(ctx)).not.toContain(r.value.id);
 
     const challenge = ctx.app.audioScoring.issueLivenessChallenge();
     const submitted = await ctx.app.audioScoring.submit(responder, {
@@ -292,7 +301,7 @@ describe('祝福请求 + 音频回应', () => {
     if (!r.ok) return;
 
     // 命中疑似的这段时间：广场看不到，responder 也没收到匹配通知
-    expect((await ctx.app.wishRequests.plaza()).map((p) => p.id)).not.toContain(r.value.id);
+    expect(await plazaIds(ctx)).not.toContain(r.value.id);
     const beforeNotif = await ctx.app.notifications.list(responder);
     expect(beforeNotif.items.some((n) => n.requestId === r.value.id)).toBe(false);
 
@@ -304,9 +313,97 @@ describe('祝福请求 + 音频回应', () => {
     await ctx.app.moderationQueue.resolve(ticket!.id, 'pass', '误判，正常求助', author);
 
     // 通过后才公开、才触发匹配推送
-    expect((await ctx.app.wishRequests.plaza()).map((p) => p.id)).toContain(r.value.id);
+    expect(await plazaIds(ctx)).toContain(r.value.id);
     const afterNotif = await ctx.app.notifications.list(responder);
     expect(afterNotif.items.some((n) => n.requestId === r.value.id)).toBe(true);
+  });
+
+  it('祈福广场列表只给摘要 + 统计，不含任何回应内容', async () => {
+    const r = await ctx.app.wishRequests.publish(author, {
+      situationText: SITUATION,
+      scriptText: SCRIPT,
+      tags: [],
+    });
+    if (!r.ok) throw new Error('publish failed');
+
+    const challenge = ctx.app.audioScoring.issueLivenessChallenge();
+    await ctx.app.audioScoring.submit(responder, {
+      requestId: r.value.id,
+      audio: Buffer.from('fake-audio-bytes'),
+      durationSec: 25,
+      occasion: 'daily',
+      challengeToken: challenge.token,
+      clientTranscript: `${SCRIPT}。${challenge.phrase}`,
+    });
+    ctx.clock.advance(6000);
+    await ctx.app.scans.publishReady();
+
+    const list = await ctx.app.wishRequests.plaza(null, 'all');
+    if (!list.ok) throw new Error('plaza failed');
+    const item = list.value.find((p) => p.id === r.value.id);
+    expect(item).toBeDefined();
+    expect(item?.responseCount).toBe(1);
+    // 摘要项的字段里没有任何 "回应内容" 形态的东西
+    expect(JSON.stringify(item)).not.toContain('fake-audio');
+    expect(Object.keys(item ?? {})).not.toContain('responses');
+    expect(Object.keys(item ?? {})).not.toContain('situationText'); // 只有 situationExcerpt
+  });
+
+  it('回应撤回后 responseCount 回落，且与实际 published 回应数一致', async () => {
+    const r = await ctx.app.wishRequests.publish(author, { situationText: SITUATION, tags: [] });
+    if (!r.ok) throw new Error('publish failed');
+    const challenge = ctx.app.audioScoring.issueLivenessChallenge();
+    const submitted = await ctx.app.audioScoring.submit(responder, {
+      requestId: r.value.id,
+      audio: Buffer.from('fake-audio-bytes'),
+      durationSec: 25,
+      occasion: 'daily',
+      challengeToken: challenge.token,
+      clientTranscript: goodTranscript(challenge.phrase),
+    });
+    if (!submitted.ok) throw new Error('submit failed');
+    ctx.clock.advance(6000);
+    await ctx.app.scans.publishReady();
+
+    let detail = await ctx.app.wishRequests.detail(r.value.id, author);
+    expect(detail?.responseCount).toBe(1);
+
+    await ctx.app.blessings.withdraw(responder, submitted.value.id);
+
+    detail = await ctx.app.wishRequests.detail(r.value.id, author);
+    expect(detail?.responseCount).toBe(0);
+    expect(detail?.responses).toHaveLength(0);
+    const published = (await ctx.repos.blessings.listByRequestId(r.value.id)).filter(
+      (b) => b.state === 'published',
+    );
+    expect(detail?.responseCount).toBe(published.length);
+  });
+
+  it('"我的祈福"筛选：只列自己的，含 pending_review / withdrawn', async () => {
+    const mine = await ctx.app.wishRequests.publish(author, {
+      situationText: SITUATION,
+      tags: [],
+    });
+    if (!mine.ok) throw new Error('publish failed');
+    const suspect = await ctx.app.wishRequests.publish(author, {
+      situationText: '最近很焦虑，加我微信详细聊聊，希望有人能鼓励我一下。',
+      tags: [],
+    });
+    if (!suspect.ok) throw new Error('publish failed');
+    const others = await ctx.app.wishRequests.publish(responder, {
+      situationText: SITUATION,
+      tags: [],
+    });
+    if (!others.ok) throw new Error('publish failed');
+
+    const ids = await plazaIds(ctx, 'mine', author);
+    expect(ids).toContain(mine.value.id);
+    expect(ids).toContain(suspect.value.id); // pending_review 也在"我的"里
+    expect(ids).not.toContain(others.value.id);
+
+    // 默认广场只列 published
+    const all = await plazaIds(ctx, 'all');
+    expect(all).not.toContain(suspect.value.id);
   });
 
   it('人工驳回一条待审的请求 → 直接进终态，不公开', async () => {
@@ -320,7 +417,7 @@ describe('祝福请求 + 音频回应', () => {
     const ticket = queue.find((q) => q.wishRequest?.id === r.value.id);
     await ctx.app.moderationQueue.resolve(ticket!.id, 'takedown', '确实不合适', author);
 
-    expect((await ctx.app.wishRequests.plaza()).map((p) => p.id)).not.toContain(r.value.id);
+    expect(await plazaIds(ctx)).not.toContain(r.value.id);
     const stillPendingWithdraw = await ctx.app.wishRequests.withdraw(author, r.value.id);
     expect(stillPendingWithdraw.ok).toBe(false); // 已经是终态，连撤回都不行
   });

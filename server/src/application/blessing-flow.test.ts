@@ -61,7 +61,7 @@ describe('群发到陌生人 + 收件箱 + 通知', () => {
     expect(r.value.sample.map((x) => x.nickname).sort()).toEqual(['阿波', '阿离']);
   });
 
-  it('提交 → verifying → hold 后发布 → 两人收件箱各一条 + 未读通知；回响 +1', async () => {
+  it('提交 → verifying → hold 后发布 → 两人收件箱各一条 + 未读通知；累计善意 +1', async () => {
     const r = await ctx.app.blessings.submit(sender, {
       contentType: 'text',
       body: GOOD_BODY,
@@ -90,7 +90,7 @@ describe('群发到陌生人 + 收件箱 + 通知', () => {
     const notif = await ctx.app.notifications.list(bob);
     expect(notif.items[0]?.from.nickname).toBe('发送者');
 
-    expect((await ctx.app.streak.view(sender))?.total).toBe(1);
+    expect((await ctx.app.profile.view(sender))?.kindnessCount).toBe(1);
   });
 
   it('范围内没有人 → audience_empty', async () => {
@@ -379,8 +379,8 @@ describe('回复（不能对话，只能回一段祝福）', () => {
   });
 });
 
-describe('作者管理 + 回响回撤', () => {
-  it('撤回后收件人看到占位，回响回撤', async () => {
+describe('作者管理 + 累计善意回撤', () => {
+  it('撤回后收件人看到占位，累计善意回撤', async () => {
     const ctx = makeApp();
     const sender = await seedUser(ctx, {
       nickname: '发送者',
@@ -399,13 +399,13 @@ describe('作者管理 + 回响回撤', () => {
     if (!r.ok) throw new Error('submit failed');
     ctx.clock.advance(6000);
     await ctx.app.scans.publishReady();
-    expect((await ctx.app.streak.view(sender))?.total).toBe(1);
+    expect((await ctx.app.profile.view(sender))?.kindnessCount).toBe(1);
 
     await ctx.app.blessings.withdraw(sender, r.value.id);
     const inbox = await ctx.app.inbox.list(alice);
     expect(inbox[0]?.status).toBe('withdrawn');
     expect(inbox[0]?.body).toBeNull();
-    expect((await ctx.app.streak.view(sender))?.total).toBe(0);
+    expect((await ctx.app.profile.view(sender))?.kindnessCount).toBe(0);
   });
 
   it('撤回后没有重新发送的路子 —— 只能复制正文另投一条新的，且新的一条能正常送达', async () => {
@@ -476,10 +476,10 @@ describe('作者管理 + 回响回撤', () => {
     ctx.clock.advance(121 * 86_400_000);
     expect(await ctx.app.scans.expire()).toBe(1);
     expect((await ctx.app.blessings.getPublicPage(r.value.slug)).type).toBe('expired');
-    expect((await ctx.app.streak.view(sender))?.total).toBe(1);
+    expect((await ctx.app.profile.view(sender))?.kindnessCount).toBe(1);
 
     await ctx.app.blessings.renew(sender, r.value.id);
     expect((await ctx.app.blessings.getPublicPage(r.value.slug)).type).toBe('content');
-    expect((await ctx.app.streak.view(sender))?.total).toBe(1);
+    expect((await ctx.app.profile.view(sender))?.kindnessCount).toBe(1);
   });
 });

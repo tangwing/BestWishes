@@ -3,15 +3,38 @@
 
 import {
   applyBlessingTransition,
-  localDateFor,
-  recordPublish,
-  recordUnpublish,
   type LifecycleActor,
   type LifecycleTrigger,
 } from '@bestwishes/domain';
 import { appError, err, ok, type Result } from '@bestwishes/shared';
 import type { AppDeps } from './deps';
 import type { BlessingRecord } from '../ports/records';
+
+/**
+ * 一条祈福回应（scope='wish_response'）进入 / 离开 published 时，
+ * 增量维护它所属祈福（Topic）的聚合统计——不在广场列表渲染时扫 blessings。
+ * 见 wish-request spec「回应数聚合统计」。
+ */
+async function maintainWishRequestCounter(
+  deps: AppDeps,
+  before: BlessingRecord,
+  after: BlessingRecord,
+  now: string,
+): Promise<void> {
+  if (after.scope !== 'wish_response' || !after.requestId) return;
+  const enteredPublished = before.state !== 'published' && after.state === 'published';
+  const leftPublished = before.state === 'published' && after.state !== 'published';
+  if (!enteredPublished && !leftPublished) return;
+
+  const req = await deps.repos.wishRequests.findById(after.requestId);
+  if (!req) return;
+  await deps.repos.wishRequests.save({
+    ...req,
+    responseCount: Math.max(0, req.responseCount + (enteredPublished ? 1 : -1)),
+    // lastResponseAt 单调：只在有新回应发布时前移，回应下架不回拨
+    lastResponseAt: enteredPublished ? now : req.lastResponseAt,
+  });
+}
 
 /**
  * 祝福首次进入 published 时，把它扇出到每个收件人的收件箱 + 发通知。
@@ -70,18 +93,7 @@ export async function transitionAndPersist(
     blessingId: blessing.id,
   });
 
-  if (r.streakDelta !== 0) {
-    const user = await deps.repos.users.findById(blessing.authorId);
-    const offset = user?.utcOffsetMinutes ?? 480;
-    // +1：用刚设的 publishedAt；-1：用原始 publishedAt（撤回 / 删除不改它）
-    const at = next.publishedAt ?? now;
-    const localDate = localDateFor(new Date(at), offset);
-    const days = await deps.repos.streaks.getDays(blessing.authorId);
-    await deps.repos.streaks.setDays(
-      blessing.authorId,
-      r.streakDelta > 0 ? recordPublish(days, localDate) : recordUnpublish(days, localDate),
-    );
-  }
+  await maintainWishRequestCounter(deps, blessing, next, now);
 
   next = await deliverIfNeeded(deps, next);
   return ok(next);

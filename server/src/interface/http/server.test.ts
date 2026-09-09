@@ -19,7 +19,7 @@ describe('server 骨架', () => {
 
   it('未登录访问需要会话的接口 → 401', async () => {
     const { server } = await makeServer();
-    const res = await server.inject({ method: 'GET', url: '/api/streak/me' });
+    const res = await server.inject({ method: 'GET', url: '/api/profile/me' });
     expect(res.statusCode).toBe(401);
     await server.close();
   });

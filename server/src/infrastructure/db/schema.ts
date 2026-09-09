@@ -106,6 +106,9 @@ export const wishRequests = pgTable('wish_requests', {
   createdAt: ts('created_at').notNull(),
   recipientCandidateIds: jsonb('recipient_candidate_ids').$type<string[]>().notNull().default([]),
   moderation: jsonb('moderation').$type<ModerationResult>(),
+  // 祈福广场（Topic）的聚合统计——写入时增量维护，见 wish-request spec「回应数聚合统计」。
+  responseCount: integer('response_count').notNull().default(0),
+  lastResponseAt: ts('last_response_at'),
 });
 
 export const blessings = pgTable('blessings', {

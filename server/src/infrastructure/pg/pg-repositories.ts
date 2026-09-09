@@ -703,6 +703,8 @@ function toWishRequest(row: typeof t.wishRequests.$inferSelect): WishRequestReco
     createdAt: iso(row.createdAt),
     recipientCandidateIds: row.recipientCandidateIds,
     moderation: row.moderation,
+    responseCount: row.responseCount,
+    lastResponseAt: row.lastResponseAt ? iso(row.lastResponseAt) : null,
   };
 }
 
@@ -717,6 +719,8 @@ function wishRequestValues(r: WishRequestRecord): typeof t.wishRequests.$inferIn
     createdAt: new Date(r.createdAt),
     recipientCandidateIds: r.recipientCandidateIds,
     moderation: r.moderation,
+    responseCount: r.responseCount,
+    lastResponseAt: r.lastResponseAt ? new Date(r.lastResponseAt) : null,
   };
 }
 

@@ -15,6 +15,9 @@ export interface ProfileView {
   featuredByDefault: boolean;
   /** 位置 + 至少能被别人筛到的最小画像是否齐备（群发要求发送者有位置） */
   canBroadcast: boolean;
+  /** 累计传递的善意数：当前处于 published / expired（曾发布、因链接过期失效）的祝福数。
+   * 只对本人可见、不可变现（承接被移除的「回响」，见 user-profile spec「累计善意数」）。 */
+  kindnessCount: number;
 }
 
 /** 供别人的受众筛选命中的建议标签。 */
@@ -40,6 +43,10 @@ export function createProfileService(deps: AppDeps) {
     const p = await deps.repos.profiles.get(userId);
     const lat = p?.lat ?? null;
     const lng = p?.lng ?? null;
+    const mine = await deps.repos.blessings.listByAuthor(userId);
+    const kindnessCount = mine.filter(
+      (b) => b.state === 'published' || b.state === 'expired',
+    ).length;
     return {
       senderName: p?.senderName ?? user.nickname,
       regionCity: p?.regionCity ?? '',
@@ -51,6 +58,7 @@ export function createProfileService(deps: AppDeps) {
       locationGranted: p?.locationGranted ?? false,
       featuredByDefault: p?.featuredByDefault ?? deps.config.featuredDefaultOn,
       canBroadcast: lat !== null && lng !== null,
+      kindnessCount,
     };
   }
 

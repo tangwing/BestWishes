@@ -161,13 +161,6 @@ export function registerRoutes(app: FastifyInstance, application: Application): 
     return unwrap(await application.blessings.renew(requireUserId(request), id));
   });
 
-  // ---- streak / 回响 ----
-  app.get('/api/streak/me', async (request) => {
-    const view = await application.streak.view(requireUserId(request));
-    if (!view) throw new AppException('unauthorized', 'stale session');
-    return view;
-  });
-
   // ---- public landing page 数据 (no session)。/p/:slug 本身是前端路由。 ----
   app.get('/api/p/:slug', async (request) => {
     const { slug } = parse(z.object({ slug: z.string() }), request.params);
@@ -184,38 +177,35 @@ export function registerRoutes(app: FastifyInstance, application: Application): 
     return { ok: true };
   });
 
-  // ---- 祝福请求 + 音频回应 ----
-  app.post('/api/wish-requests', async (request) => {
+  // ---- 祈福广场 + 音频回应 ----
+  app.post('/api/plaza', async (request) => {
     const input = parse(submitWishRequestSchema, request.body);
     return unwrap(await application.wishRequests.publish(requireUserId(request), input));
   });
 
-  app.get('/api/wish-requests', async () => application.wishRequests.plaza());
+  app.get('/api/plaza', async (request) => {
+    const { filter } = parse(
+      z.object({ filter: z.enum(['all', 'mine']).default('all') }),
+      request.query,
+    );
+    return unwrap(await application.wishRequests.plaza(getUserId(request), filter));
+  });
 
-  app.get('/api/wish-requests/mine', async (request) =>
-    application.wishRequests.myRequests(requireUserId(request)),
-  );
-
-  app.get('/api/wish-requests/:id', async (request) => {
+  app.get('/api/plaza/:id', async (request) => {
     const { id } = parse(idParam, request.params);
-    const view = await application.wishRequests.getById(id);
-    if (!view) throw new AppException('not_found', 'wish request not found', '找不到这条请求');
+    const view = await application.wishRequests.detail(id, getUserId(request));
+    if (!view) throw new AppException('not_found', 'wish request not found', '找不到这条祈福');
     return view;
   });
 
-  app.post('/api/wish-requests/:id/withdraw', async (request) => {
+  app.post('/api/plaza/:id/withdraw', async (request) => {
     const { id } = parse(idParam, request.params);
     return unwrap(await application.wishRequests.withdraw(requireUserId(request), id));
   });
 
-  app.delete('/api/wish-requests/:id', async (request) => {
+  app.delete('/api/plaza/:id', async (request) => {
     const { id } = parse(idParam, request.params);
     return unwrap(await application.wishRequests.remove(requireUserId(request), id));
-  });
-
-  app.get('/api/wish-requests/:id/responses', async (request) => {
-    const { id } = parse(idParam, request.params);
-    return unwrap(await application.wishRequests.responses(requireUserId(request), id));
   });
 
   app.get('/api/audio-challenge', (request) => {
@@ -230,7 +220,7 @@ export function registerRoutes(app: FastifyInstance, application: Application): 
     clientTranscript: z.string().optional(),
   });
 
-  app.post('/api/wish-requests/:id/respond', async (request) => {
+  app.post('/api/plaza/:id/respond', async (request) => {
     const { id } = parse(idParam, request.params);
     const body = request.body as Record<string, unknown>;
     const fields = parse(wishResponseFieldsSchema, body);

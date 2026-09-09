@@ -7,7 +7,6 @@ export * from './lifecycle';
 export * from './blessing-transition';
 export * from './visibility';
 export * from './audience';
-export * from './streak';
 export * from './wish-request-lifecycle';
 export * from './audio-signals';
 export * from './script-coverage';

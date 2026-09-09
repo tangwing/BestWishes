@@ -1,5 +1,8 @@
-// 一次祝福状态转移的全部纯逻辑：算出新状态、要追加的事件、以及对坚持记录的增减。
-// 不做 IO；时间和有效期天数由调用方传进来。application 层负责持久化和把 streakDelta 落到 streak 仓储。
+// 一次祝福状态转移的全部纯逻辑：算出新状态、要追加的事件。
+// 不做 IO；时间和有效期天数由调用方传进来。application 层负责持久化。
+// 注：`streakDelta` / `countedInStreak` 是「回响」时代的遗留字段，B-71 后已无消费方
+//（回响页删除，个人空间的累计善意数直接对 published 祝福计数）；保留是为了不动 P1 状态机
+// 与其成套测试，属 dormant，日后可单独清理。
 
 import { applyTrigger } from './lifecycle';
 import type { Blessing, BlessingEvent, LifecycleActor, LifecycleTrigger } from './types';

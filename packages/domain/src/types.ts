@@ -195,6 +195,11 @@ export interface WishRequest {
   /** 发布时按标签 / 距离算出的候选响应人快照；此后画像变化不影响它。 */
   recipientCandidateIds: string[];
   moderation: ModerationResult | null;
+  /** 当前处于 `published` 的回应条数。写入时增量维护（回应进/出 published 时 ±1），
+   * 不在祈福广场列表渲染时对 blessings 扫表——面向大规模的 Topic 统计做法。 */
+  responseCount: number;
+  /** 最近一条回应发布的时间（ISO）。单调：回应下架不回拨（"最后活跃"是软信号）。 */
+  lastResponseAt: string | null;
 }
 
 /** 音频打分的输出：多维标签 + 置信度，恒不产出单一可比较分数（vision.md 硬约束）。 */

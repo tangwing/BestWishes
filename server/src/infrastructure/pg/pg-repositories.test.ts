@@ -76,7 +76,7 @@ describe('PG 仓储：核心流程', () => {
     expect(list.length).toBeGreaterThanOrEqual(18);
   });
 
-  it('群发：预览受众 → 提交 → hold 后发布 → 收件箱 + 通知 + 回响 +1 → 事件从子表拼回', async () => {
+  it('群发：预览受众 → 提交 → hold 后发布 → 收件箱 + 通知 + 累计善意 +1 → 事件从子表拼回', async () => {
     const sender = await seedUser('小林', { ...CENTER, consent: true });
     const alice = await seedUser('阿离', NEAR_A);
     await seedUser('阿波', NEAR_B);
@@ -102,14 +102,14 @@ describe('PG 仓储：核心流程', () => {
     expect(inbox[0]?.status).toBe('content');
     expect(inbox[0]?.body).toContain('温柔以待');
     expect(await app.notifications.unreadCount(alice)).toBe(1);
-    expect((await app.streak.view(sender))?.total).toBe(1);
+    expect((await app.profile.view(sender))?.kindnessCount).toBe(1);
 
     const b = await repos.blessings.findById(r.value.id);
     expect(b?.events.some((e) => e.to === 'published')).toBe(true);
     expect(b?.recipientIds).toHaveLength(2);
   });
 
-  it('撤回 → 收件人看占位 → 回响回撤到 0', async () => {
+  it('撤回 → 收件人看占位 → 累计善意回撤到 0', async () => {
     const sender = await seedUser('小林', { ...CENTER, consent: true });
     const alice = await seedUser('阿离', NEAR_A);
     const r = await app.blessings.submit(sender, {
@@ -125,7 +125,7 @@ describe('PG 仓储：核心流程', () => {
 
     await app.blessings.withdraw(sender, r.value.id);
     expect((await app.inbox.list(alice))[0]?.status).toBe('withdrawn');
-    expect((await app.streak.view(sender))?.total).toBe(0);
+    expect((await app.profile.view(sender))?.kindnessCount).toBe(0);
   });
 
   it('缺协议 → 提交被拒 consent_required', async () => {
