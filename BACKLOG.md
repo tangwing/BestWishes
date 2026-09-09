@@ -15,7 +15,8 @@
 - **工作方式**：用户按点评提改动 → 记进本文件 → 持续完成。每轮结束自动 commit + push。
 - **2026-09-08 用户 Demo 走查反馈（B-69~B-73）**：Safari 录音失败（B-69，两轮修复 + 加了可见诊断行，等 Safari 真机复测）；协议页硬编码跳转 bug（B-72，已修 + e2e 回归）；demo 数据持久化（B-73，`pnpm demo` 现在落盘 PGlite，重启不丢个人资料）；验证码校验确实实现了但校验的是客户端转写文本（B-70，P2 信任边界，无需改）；**B-71 导航改名/结构调整需要用户先回答 4 个歧义点**（见待办区），没动。
 - **UAT 自动化**：用户问有没有框架能自动跑他手动做的走查——**有，就是 `e2e/`（Playwright + 真实系统 Chrome）**，`pnpm test:e2e` 跑，13 个用例覆盖 P1 群发 + P2 请求/录音/打分/审核全链路（录音用 `--use-fake-device-for-media-stream` 真的走 MediaRecorder）。本轮把用户手动发现的 B-72 也补成了回归用例。唯一盖不到的是 Safari（macOS 12 装不了 Playwright webkit）。
-- **下一步**：① 用户回答 B-71 的 4 个歧义点后做导航改名。② `add-p2-wish-request-audio` 审阅通过 → `/opsx:archive`，再谈 P3。审阅若提改动，按内容判断走 BACKLOG 点状修复还是回 change 里改。`add-moderation-rbac` 仍"先放着"（B-65）。B-66 待单独设计讨论。
+- **B-71 祈福广场重构（2026-09-09）**：用户点评把"祝福请求"重塑为社区式「祈福广场」（Topic + 聚合统计、列表只摘要、详情才看回应）+ 导航精简（8→6 项，删「回响」，「收件箱」→「我的福袋」，「写祝福」→「传递善意」并入发件箱）。**已通过 `/opsx:update` 把这套并进 `add-p2-wish-request-audio` 的 spec**（未写任何代码），`validate --strict` 通过。**等用户 review spec** → 通过后 `/opsx:apply` 落代码。
+- **下一步**：① 用户 review `add-p2-wish-request-audio` 的 spec（现在含祈福广场重构）→ 通过后 `/opsx:apply` 落地 §9 的代码。② 全部实现完 + 用户审阅通过 → `/opsx:archive`，再谈 P3。`add-moderation-rbac` 仍"先放着"（B-65）。B-66 待单独设计讨论。
 
 <details>
 <summary>P1 存档（点开查看）</summary>
@@ -40,7 +41,7 @@
 
 - [x] **B-69 Safari 录音失败** — 见上方恢复点 + `add-p2-wish-request-audio/tasks.md` §8.6。已两轮修复 + 加可见诊断，等 Safari 真机复测。
 - [ ] **B-70（问题，非 bug）验证码校验是真的实现了吗** — 是。`audio-scoring-service.submit` 里 `transcriptContainsPhrase(transcript, tokenCheck.phrase)` 检查转写文本是否包含挑战短语，不含 → `livenessPassed=false` → 转人工复核队列（不直接驳回）。但 P2 不接真实 ASR，`transcript` = 用户自己在"补充文字"框里敲的 `clientTranscript`（`RuleBasedAsrProvider` 原样返回），这个信任边界写在代码注释和 design.md 里。所以现在校验的是"用户声称自己说了验证码"，不是"音频里真的有验证码"——真实云 ASR 接入后（B 待办）才变成对音频本身的校验。**无需改代码**，除非要在 UI 上把这个边界对用户说清楚。
-- [~] **B-71 导航 / 页面改名 + 结构调整**（2026-09-09 用户已澄清，改动较大 → 走 openspec change，spec 产出后用户 review 再推进）。目标结构：
+- [~] **B-71 祈福广场重构 + 导航精简** — **spec 已产出**（2026-09-09 `/opsx:update` 并入 `add-p2-wish-request-audio`：proposal + design §7-8 + `wish-request` delta 重写 + 新增 `blessing-records`/`user-profile` MODIFIED delta + `blessing-streak` REMOVED delta + tasks §9；`openspec validate --strict` 通过）。**等用户 review spec**，通过后 `/opsx:apply` 落代码。关键决策：方案 A（回应仍是 Blessing，`WishRequest` 加 `responseCount`/`lastResponseAt` 聚合字段，独立 `WishResponse` 推到 P3 悬赏明确后）；福袋保留祈福回应投递；回响整个删（`blessing-streak` REMOVED），累计"善意"数并入个人空间；路由 `/plaza` `/plaza/:id` `/plaza/:id/respond` `/give` `/pouch`。目标结构：
   - **祈福广场**（替代「祝福请求」）：列表显示所有人的祈福，**列表只给摘要 + 统计**（如"已收到 N 条回应"），回应/祝福内容**要点进详情页才能看**。「我的请求」降为广场内部的**筛选项**（不是独立页）。
   - **底层建模**：把「一条祈福」建成**独立实体**，所有回应是它的关联——**参考社区论坛成熟的 Topic + Reply 建模**（Topic 有回复数/最后回复时间等聚合统计，Reply 挂在 Topic 下）。当前是 `Blessing(scope='wish_response', requestId=…)` 挂靠，需要重新审视是否要独立的 Topic 聚合 / Reply 实体。可能需要 design.md 甚至 ADR。
   - **传递善意**（替代「写祝福」/`/compose`）：既能写新祝福（P1 群发），也能看**之前发出的**——把「发出的」/发件箱（`Records`/`Sent`）合并进来。

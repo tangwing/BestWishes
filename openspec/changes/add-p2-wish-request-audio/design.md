@@ -135,6 +135,62 @@ P1 交付的架构（见归档的 `add-p1-text-blessing`、`openspec/specs/`）�
 
 **理由**：用户明确说"先把视频推到 P3"，且这次讨论的响应形态就是针对请求场景。P1 的群发/回复要不要开放音频是独立的产品决策，留到后续再讨论，不在本变更里顺带扩大范围（"外科式改动"原则）。
 
+### 7. 祈福广场：把 `WishRequest` 当社区 Topic 建模（2026-09-09 用户点评后并入）
+
+**背景**：用户试用 Demo 后要求把"祝福请求"重塑成一个社区式的**祈福广场**——列表只看摘要 + 统计，回应内容点进详情才看，并明确"参考社区成熟的 Topic + Reply 建模"。
+
+**决定（方案 A）**：`WishRequest` 就是 Topic，回应**保持是一条 `Blessing`**（`scope='wish_response'` + `requestId`，现状不动）。为支撑"列表只给统计"，`WishRequest` 新增两个**写入时维护**的聚合字段：
+
+| 字段 | 含义 | 维护时机 |
+|---|---|---|
+| `responseCount` | 当前处于 `published` 的回应条数 | 一条 `wish_response` Blessing 进入 `published` 时 `+1`；离开 `published`（撤回 / 下架 / 删除）时 `-1`（下限 0） |
+| `lastResponseAt` | 最近一条回应发布的时间（ISO） | 回应进入 `published` 时刷新；单调，不随回应下架回拨（"最后活跃"是软信号，近似即可） |
+
+```
+   祈福广场列表 GET /api/plaza                      祈福详情 GET /api/plaza/:id
+   -----------------------------                    ---------------------------
+   [ WishRequestSummary, ... ]                      { ...situation, script,
+     - id                                             responseCount, lastResponseAt,
+     - situationExcerpt (截断)                         responses: [ ResponseView, ... ] }
+     - tags                                                        ^
+     - responseCount    <- 直接读聚合列，O(1)                       |
+     - lastResponseAt                                    点进来才 listByRequestId 拉回应
+   不含任何回应正文 / 音频 URL
+```
+
+**为什么不现在引入独立的 `WishResponse` 实体（方案 B）**：`WishResponse` 目前唯一能独占的字段是"是否被采纳/获得悬赏"——而悬赏机制（谁出资、如何托管、如何验收）在 AGENTS.md §6 里仍是未定的开放问题。按"不为假设中的未来做设计"，现在引入等于过度设计。留一条平滑升级路径：P3 悬赏若确实需要"请求人从回应里挑一条给赏金"（= 论坛"接受回答"），那时再引入 `WishResponse`，把 `blessingId` 迁进去即可——`responseCount` / `lastResponseAt` 这层 Topic 统计无论 A/B 都要有，不白做。
+
+**为什么聚合字段写入维护、不在列表渲染时 `COUNT(*)`**：config.yaml 写明目标 100M+ 用户。广场列表每次渲染都对 `blessings` 按 `request_id` 分组计数 = N+1 扫描，规模一大就崩。所有成熟论坛（Discourse 的 `topics.posts_count`、Flarum 的 `discussions.comment_count`）都是在帖子增删时维护一个反规范化计数列。本项目照做。一致性风险：维护逻辑漏一处会导致计数漂移——用一个可单独跑的对账查询（`SELECT count(*) FROM blessings WHERE request_id=? AND state='published'` 对比 `wish_requests.response_count`）作为测试断言 + 运维兜底，不做分布式事务。
+
+**"我的请求"降为筛选项**：`GET /api/plaza?filter=mine` 复用同一个列表接口 + 查询，不再有独立路由 / 服务方法 / 页面。作者视角额外能看到 `pending_review` / `withdrawn` 状态的自己那几条（广场默认只列 `published`）。
+
+### 8. 导航精简 + 回响移除
+
+**决定**：导航从 8 项砍到 6 项，路由重命名，删除"回响"。
+
+```
+  旧                          新                        路由变化
+  --------------------------  ------------------------  --------------------------------
+  祝福请求  /wish-requests     祈福广场  /plaza          + /plaza/:id 详情页（新）
+  我的请求  /wish-requests/mine   -> 并入 /plaza?filter=mine
+  写祝福    /compose           传递善意  /give           /give 里合并"我发出的"
+  发出的    /records              -> 并入 /give
+  收件箱    /inbox             我的福袋  /pouch          仅改名
+  回响      /streak              -> 删除，累计数进个人空间
+  个人空间  /profile           个人空间  /profile        + 展示"你已传递 N 份善意"
+  审核台    /moderation        审核台    /moderation     不动
+```
+
+保留不变的路由：`/`、`/login`、`/agreement`、`/moderation`、`/p/:slug`、`/blessings/:id/feedback`。发送成功确认页从 `/sent/:id` 挪到 `/give/sent/:id`（跟父页对齐）。
+
+**回响移除的处理**：
+- `packages/domain` 的 `streak` 模块（按用户所在地区自然日聚合、连续天数计算）**整块删除**——这套日期 / 时区逻辑是回响独有的，没有别处复用。
+- 累计善意数改为对 `blessings` 直接计数：`count(state='published' AND authorId=?)`。不分桶、不算连续。语义上就是"你至今送出去、且还有效的祝福有多少份"。
+- 展示位置：个人空间的一个只读数字（"你已传递 N 份善意"），只对本人可见，MUST NOT 转成积分 / 等级 / 可变现物——这几条硬约束从 `blessing-streak` 原样继承到 `user-profile`。
+- `blessing-streak` 能力 spec 整体 REMOVED；`user-profile` 补一条"累计善意数"Requirement。
+
+**口径统一为"善意"**：写祝福 → 传递善意、发出的 → 我的善意（列表标题）、回响累计 → "你已传递 N 份善意"。"祝福"仍用于指单条内容（一条祝福 / 回一段祝福），"善意"用于指行为和累计。
+
 ## Risks / Trade-offs
 
 - **[风险] 云 ASR 成本随音频时长线性增长，且演示/开发环境没有真实 API key**
@@ -146,6 +202,9 @@ P1 交付的架构（见归档的 `add-p1-text-blessing`、`openspec/specs/`）�
 - **[风险] 打分管线全异步，回应人提交后要等多久才能看到反馈不确定**
   → **缓解**：`audio-scoring-service` 的处理复用 P1 `scans.ts` 的"定时扫描 + 幂等标记"模式（不是新发明一套排队系统），配置一个 `audioScoringTimeoutSeconds` 超时保守策略——超时未出结果时按"进人工队列"处理，不无限期挂起用户体验，回应人侧看到"评估中"占位（类比 P1 的"校验中"）。
 - **[权衡] 请求人看不到回应人的具体评分**：这是有意为之（避免攀比场），但也意味着请求人无法用分数做"自动精选排序"，只能自己看内容。若未来产品需要"精选靠前展示"，需要另开讨论要不要暴露一个内部的、不可比较的"精选建议"布尔位——这次不做，等有真实需求再说。
+- **[风险] `responseCount` / `lastResponseAt` 反规范化计数漂移**：任何一条"回应进/出 `published`"的路径漏维护计数，广场列表就会显示错误的回应数。
+  → **缓解**：维护点收敛到一处——`wish_response` 的状态落地统一走 `audio-scoring-service` / `transitionAndPersist`，在那里 hook 计数增减，不散落在多个 service。加对账测试：跑完一段生命周期后断言 `wish_requests.response_count == COUNT(published wish_response blessings)`。不引入分布式事务（同进程 + PGlite，一次请求内顺序写即可）。
+- **[权衡] 删除回响 = 丢掉"连续天数"这个留存钩子**：连续天数确实能提升日活，但它是 KPI 味的激励，跟 vision.md"不做攀比、不做 KPI"的调性有张力，用户明确要求砍掉。累计善意数保留了"个人成长感"的核心，去掉了打卡压力。若日后要重做留存机制，另立 change 讨论，不在这里留半套。
 
 ## Migration Plan
 
@@ -156,3 +215,12 @@ P1 交付的架构（见归档的 `add-p1-text-blessing`、`openspec/specs/`）�
 5. 前端：请求广场页、发布请求页（含可选稿子输入框）、录音组件（`MediaRecorder` + `AnalyserNode` 波形 + 提交后的多维反馈展示）、请求人查看回应列表页。
 6. 测试：领域层信号打分规则的纯函数单测（合成转写+时间戳数据，不依赖真实音频）；集成测试用 `RuleBasedAudioScoringProvider` 跑通"发布请求→匹配推送→录音提交→打分→反馈"全链路；e2e 用预置音频文件模拟上传（无头浏览器不稳定触发真实麦克风录制）。
 7. 回滚：全部是新增表 / 新增字段（`request_id` 可空）/ 新增可插拔 provider，没有修改已有表结构或已有状态机的合法转移路径，出问题可整体回退代码，不需要专门的数据回滚脚本。
+
+### 祈福广场重构 + 导航精简（追加步骤，2026-09-09）
+
+8. 领域层：`WishRequest` 加 `responseCount` / `lastResponseAt`；**删除 `packages/domain/src/streak.ts`** 及其测试；累计善意数改为纯计数（可放 `blessing-records` 或直接在服务层算）。
+9. 数据层：`wish_requests` 加 `response_count`（int，默认 0）/ `last_response_at`（timestamptz，可空）两列；drizzle 迁移；内存仓储同步。**不新增表**。
+10. 服务端：回应进/出 `published` 时维护聚合列（收敛到 `audio-scoring-service` / 状态落地处）；`GET /api/plaza`（列表，带 `?filter=mine`，只返回摘要 + 统计）、`GET /api/plaza/:id`（详情，含回应列表）取代 `GET /api/wish-requests` + `/wish-requests/:id/responses`；累计善意数进个人空间的 `GET /api/me` 或 profile 接口。删除 streak 相关路由 / 服务。
+11. 前端：`WishRequests.tsx` → 广场列表（摘要 + 统计 + `?filter=mine`）；新增祈福详情页；`Compose.tsx` 重做为"传递善意"并入 `Records.tsx` 的发件箱；`Inbox.tsx` 改名"我的福袋"；**删除 `Streak.tsx`**；`Profile.tsx` 展示累计善意数；`App.tsx` 导航 8 → 6 项；路由表重写。
+12. 测试：`responseCount` 对账断言（生命周期跑完后计数一致）；广场列表断言"不含回应正文 / 音频 URL"；详情页断言"点进去才有回应"；e2e 更新为新路由 + 新导航文案；删除 streak 的测试。
+13. spec 同步：`wish-request` delta 改（广场列表 / 详情 / 我的祈福筛选 / 聚合计数 / 回应进福袋）；新增 `blessing-records`（发件箱并入传递善意、收件箱入口改名福袋）/ `user-profile`（去坚持记录入口、加累计善意数）的 MODIFIED delta；`blessing-streak` 整体 REMOVED delta。`blessing-delivery` 不动——那里的"收件箱"是投递条目概念本身，只有导航入口的展示名变了（归 `blessing-records` 管）。

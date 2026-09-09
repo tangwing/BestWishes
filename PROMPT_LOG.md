@@ -278,3 +278,22 @@
 5. **UAT 自动化**——已有，就是 `e2e/`（Playwright + 真实系统 Chrome，`pnpm test:e2e`，13 用例覆盖 P1+P2 全链路，录音走 fake-device 真 MediaRecorder）。本轮把 B-72 补成回归用例。Safari 盖不到（macOS 12 无 Playwright webkit）。已把此事说清，不额外搭新框架。
 
 `pnpm verify` 205 / `pnpm test:e2e` 13 全绿。demo 以持久化模式重启，留给用户明早走查。
+
+### 祈福广场重构：探索建模 → 并入 P2 spec（B-71）
+
+> 祈福广场是显示所有人的这个祈福……实际上的祝福内容还是要点进去才能看到……我们整体底层建模应该参考社区的成熟的这种建模方式。我的请求是祈福广场内部的筛选项。写祝福的话，可能更多的改成传递善意……把那个发件箱看看怎么能够合并过来。然后回响页的话，整个删掉……可以先以Spec的形式产出相关的记录，然后再推进，最后我会再Review一遍。
+>
+> （追问后）A；保留；可以，但是看看是否统一表述为善意；路由命名你自己定。
+
+**结果**：先用 `/opsx:explore` 把"祈福 = 社区 Topic，回应 = ?"这个建模岔路口聊清楚——画了"回应保持是 Blessing + Topic 补聚合字段（方案 A）" vs "引入独立 WishResponse 实体（方案 B）"的对比，关键判断点是 P3 悬赏机制（"采纳某条回应"= 论坛最佳答案 = 方案 B 的自然落点），而悬赏规则在 AGENTS §6 仍未定。用户选 A + 福袋保留回应投递 + 回响整删（累计数进个人空间、口径统一为"善意"）+ 路由我定。
+
+然后 `/opsx:update` 把整套并入 `add-p2-wish-request-audio`（**只改 spec，没写代码**）：
+- `proposal.md`：加"祈福广场重构 + 导航精简"小节、Modified/Removed Capabilities（`blessing-records` / `user-profile` / `blessing-streak` REMOVED）
+- `design.md`：新增 §7（Topic 建模：方案 A，`responseCount`/`lastResponseAt` 写入维护、为何不引入 WishResponse、100M 规模为何不扫表）、§8（导航 8→6 映射表、回响移除处理、"善意"口径统一）+ 3 条 Risks + Migration §8-13
+- `specs/wish-request/spec.md`：重写——祈福广场列表（只摘要+统计，MUST NOT 含回应内容）、我的祈福筛选、回应数聚合统计（增量维护 + 对账）、查看祈福详情（点进去才看回应、无评分细节）、回应投递到福袋
+- 新增 `specs/blessing-records/spec.md`（MODIFIED：发件箱并入传递善意页、收件箱入口改名"我的福袋"）
+- 新增 `specs/user-profile/spec.md`（MODIFIED 账户管理去坚持记录入口 + ADDED 累计善意数）
+- 新增 `specs/blessing-streak/spec.md`（3 条 Requirement 全 REMOVED，Reason/Migration 齐）
+- `tasks.md`：新增 §9（8 个子任务，领域/数据/服务端/前端/测试/文档/spec）
+
+`openspec validate add-p2-wish-request-audio --strict` 通过。**等用户 review 这版 spec** → 通过后 `/opsx:apply` 落 §9 的代码。

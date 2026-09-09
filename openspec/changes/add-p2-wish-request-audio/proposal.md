@@ -14,10 +14,22 @@ P1 只有一种互动：注册用户主动群发一段文本祝福给筛选出�
 - 一条请求 **SHALL NOT** 限制回应数量；请求人在自己的"收到的回应"列表里自行挑选、查看全部。
 - 请求 SHALL 可撤回 / 删除，规则复用 `blessing-delivery` 已有的"撤回是终态"模式（B-63 的教训——不再引入"重新发布"这类会被幂等逻辑坑的操作）。
 
+> 注：本小节描述的是 P2 首版实现（"待用户审阅"的那套）。广场的呈现方式、"我的请求"的位置、回应内容在列表还是详情可见，均以下方「祈福广场重构」小节为准——它是审阅期间用户点评后的修订。
+
 ### 音频祝福 + 打分（P2 只做音频，视频推给 P3）
 - `blessing.contentType = 'audio'` 从"类型占位"变成真正可提交：浏览器录音（Web Audio API / MediaRecorder），**录制过程 SHALL 展示实时波形**，帮助录音人确认"正在录"、感受自己的语速语调。
 - 录音上传后 SHALL 经过一条**打分管线**（本变更的技术重点，见 design.md）：语音转写 → （有稿子时）朗读对齐与完整性判定 → 专注度 / 流畅度信号 → 真诚度 / 个性化 LLM 评估 → 真人校验（挑战式，MVP 不做声纹 / 深伪检测）。输出 **SHALL 是多维标签 + 置信度，不是单一分数**（vision.md 的"不打负面标签"硬约束），转写文本复用现有 `ModerationProvider` 接口做安全审核。
 - 回应者提交后 SHALL 看到自己录音的多维反馈（"用心反馈，始终提供"）；请求人看到的是回应内容本身 + 是否命中"精选建议"，不看到回应者的评分细节（避免变成互相比较打分的攀比场）。
+
+### 祈福广场重构 + 导航精简（2026-09-09 用户点评后并入本变更）
+
+用户试用 P2 Demo 后要求把"祝福请求"这条线重塑成一个**社区式的祈福广场**，并顺手精简导航。因为改的正是本变更 P2 新做的那套 UI，且尚未归档，所以并进来一起改，而不是先发一版再立刻推翻。
+
+- **祈福广场**（取代"祝福请求"页）：把一条祈福（`WishRequest`）当作社区 **Topic** 建模。广场列表**只展示摘要 + 聚合统计**（处境摘录、标签、"已收到 N 条回应"、最后回应时间），**回应内容 MUST 点进详情页才可见**。为此 `WishRequest` 新增写入时维护的聚合字段 `responseCount` / `lastResponseAt`（不在列表渲染时扫全表——面向 100M 规模的正确做法，也是所有论坛的做法）。回应仍是一条 `Blessing`（`scope='wish_response'`）——独立的 `WishResponse` 实体推迟到 P3 悬赏机制明确后再引入（那时才有"采纳某条回应"这个论坛式动作作为它的落点）。
+- **"我的请求" 降为广场的一个筛选项**（`?filter=mine`），不再是独立页面 / 导航项。
+- **传递善意**（取代"写祝福"页）：一个页面两块——上面写新祝福（原 Compose），下面"我发出的祝福 + 状态"（原发件箱 / Records）。发件箱不再是独立入口。
+- **我的福袋**（取代"收件箱"）：纯改名，收件箱的全部行为（`blessing-delivery`）不动；祈福的回应照旧投进福袋 + 通知（被动收到）与详情页看到（主动查看）两条路并存。
+- **回响页整个删除**：`blessing-streak` 能力移除（连续天数、按自然日分桶这套一并删掉）；个人空间保留一个**"你已传递 N 份善意"**的累计数（口径统一为"善意"，与"传递善意 / 我的善意"同词），只对本人可见、不可变现——这部分并入 `user-profile`。
 
 ### 非目标（本变更明确不做）
 - **视频**祝福形态——contentType 的 `video` 分支继续留白，UI 继续禁用，推到 P3。
@@ -39,14 +51,20 @@ P1 只有一种互动：注册用户主动群发一段文本祝福给筛选出�
 - `blessing-authoring`：「祝福形式（内容形态留白）」要求目前写死"P1 只允许创作 text...提交 `contentType != text` 的祝福 MUST 被拒绝"——需要放开 `audio`（`video` 继续拒绝）。
 - `notification`：新增一种通知类型（请求收到新回应 / 候选人被匹配到一条可能感兴趣的请求），复用现有的通知列表 + 未读数机制，不改其结构性行为。
 - `content-moderation`：「统一人工复核队列」要求原文写的是"工单 MUST 记录目标祝福"——命中疑似的祝福请求现在也会进这同一个队列，工单的目标不再总是一条祝福。实现过程中发现这是个真实缺口（祝福请求的发布一开始完全没走复核，见 tasks.md §8.1 的记录），补一条 delta 把队列的"目标"泛化为"祝福或祝福请求二选一"。
+- `blessing-records`（祈福广场重构）：「发件箱」并入"传递善意"页——不再是独立导航入口；「收件箱入口」导航项改名"我的福袋"（`blessing-delivery` 里描述的"收件箱"是投递条目这个概念本身，不动；变的只是这一个导航入口的展示名）。
+- `user-profile`（祈福广场重构）：「账户管理」去掉"入口通向坚持记录"；新增"累计善意数"——个人空间展示本人累计已发布祝福数，只对本人可见、不可变现（承接被移除的 `blessing-streak`）。
+
+### Removed Capabilities
+
+- `blessing-streak`（祈福广场重构）：删除"回响 / 坚持记录"整套——连续天数、按用户所在地区自然日分桶聚合都移除。保留的只有"累计传递了多少份善意"这一个数字，迁移到 `user-profile`。**Reason**：用户点评要求精简，连续天数是 KPI 味的激励、与 vision.md"不做攀比"的调性有张力。**Migration**：累计口径从"按自然日的发布计数 + 连续天数"简化为"当前处于 `published` 的祝福总数"，展示位置从独立页面移到个人空间。
 
 ## Impact
 
-- **领域层**（`packages/domain`）：`BlessingScope` 加 `'wish_response'`；新增 `WishRequest` 聚合与状态机（比 `Blessing` 简单：`draft → published → withdrawn/deleted`，不需要审核 hold，因为请求本身的文字仍会过现有的 `ModerationProvider`）；新增音频评分的纯函数部分（信号打分的规则层，可单测，不含网络调用）。
+- **领域层**（`packages/domain`）：`BlessingScope` 加 `'wish_response'`；新增 `WishRequest` 聚合与状态机（比 `Blessing` 简单：`draft → published → withdrawn/deleted`，不需要审核 hold，因为请求本身的文字仍会过现有的 `ModerationProvider`）；`WishRequest` 加聚合字段 `responseCount` / `lastResponseAt`（写入时维护的 Topic 统计）；新增音频评分的纯函数部分（信号打分的规则层，可单测，不含网络调用）；**移除 `streak` 模块**（连续天数 / 自然日聚合的日期逻辑整块删掉），累计善意数改为对 `published` 祝福直接计数。
 - **共享层**（`packages/shared`）：新增 `WishRequest` 的 Zod schema；`submitBlessingSchema` 的 `contentType` 校验放开 `audio`。
 - **服务端**（`server/`）：新增 `wish-request-service`（CRUD + 生命周期 + 广场查询）、`wish-matching-service`（候选人计算 + 推送，很大程度复用 `audience-service` 的 haversine/标签匹配逻辑）、`audio-upload`（新依赖 `@fastify/multipart` 接收音频文件）、`audio-scoring-service`（转写 + 打分管线的编排层，转写/打分的具体供应商通过可插拔接口注入，同 `ModerationProvider` 的既有模式）；音频文件存储需要一个新的 port（本机 / 演示落盘，生产可换对象存储，同 PGlite→独立 PG 的既有"换驱动不换契约"套路）。
-- **前端**（`client/`）：新增"请求广场"页、"发布请求"页（含可选稿子输入）、录音组件（波形 + 计时 + 提交后的多维反馈展示）。
-- **数据层**：新增 `wish_requests` 表；`blessings` 表的 `media` 字段（已存在，目前恒 null）真正落数据；新增音频评分结果的存储（`blessing.moderation` 之外的另一份评分记录，因为语义不同——moderation 是"能不能过审"，评分是"用心反馈"）。
+- **前端**（`client/`）：新增"祈福广场"页（列表只给摘要 + 统计、`?filter=mine` 筛选、点进详情才看回应）、"发布祈福"页（含可选稿子输入）、祈福详情页、录音组件（波形 + 计时 + 提交后的多维反馈展示）；"写祝福"页重做为"传递善意"（合并原发件箱）；"收件箱"改名"我的福袋"；**删除"回响"页**（`Streak.tsx`），累计善意数移进个人空间；导航项从 8 个精简到 6 个（首页 · 祈福广场 · 传递善意 · 我的福袋 · 个人空间 · 审核台）。路由：`/plaza`、`/plaza/new`、`/plaza/:id`、`/plaza/:id/respond`、`/give`、`/pouch`；移除 `/wish-requests*`、`/compose`、`/records`、`/inbox`、`/streak`。
+- **数据层**：新增 `wish_requests` 表（含 `response_count` / `last_response_at` 聚合列）；`blessings` 表的 `media` 字段（已存在，目前恒 null）真正落数据；新增音频评分结果的存储（`blessing.moderation` 之外的另一份评分记录，因为语义不同——moderation 是"能不能过审"，评分是"用心反馈"）。祈福重构不新增表，只加 `wish_requests` 的两列 + 一次写入维护逻辑。
 - **依赖新增**：`@fastify/multipart`（音频上传）；云 ASR SDK（阿里云或腾讯云，design.md 给选型建议）；不新增自建 ML 依赖（P2 阶段不自建模型）。
 - **不涉及**：`content-moderation` 能力本身不用改——它的原始需求已经写了"输入为祝福文本（音视频形态传转写）"，本来就预留了音频场景，直接复用。
 - **测试**：需要新增音频评分规则层的纯函数单测（可解释信号工程部分，如停顿检测、语速方差——这些不依赖真实 ASR 调用，可用合成的转写+时间戳数据测）；集成测试用 fake ASR/LLM provider（同现有 `ModerationProvider` 的测试模式）跑通"提交音频 → 转写 → 打分 → 反馈"全链路；e2e 用预置的音频文件模拟录音上传（真实浏览器录音无法在无头测试里稳定触发麦克风）。
