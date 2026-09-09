@@ -40,7 +40,13 @@
 
 - [x] **B-69 Safari 录音失败** — 见上方恢复点 + `add-p2-wish-request-audio/tasks.md` §8.6。已两轮修复 + 加可见诊断，等 Safari 真机复测。
 - [ ] **B-70（问题，非 bug）验证码校验是真的实现了吗** — 是。`audio-scoring-service.submit` 里 `transcriptContainsPhrase(transcript, tokenCheck.phrase)` 检查转写文本是否包含挑战短语，不含 → `livenessPassed=false` → 转人工复核队列（不直接驳回）。但 P2 不接真实 ASR，`transcript` = 用户自己在"补充文字"框里敲的 `clientTranscript`（`RuleBasedAsrProvider` 原样返回），这个信任边界写在代码注释和 design.md 里。所以现在校验的是"用户声称自己说了验证码"，不是"音频里真的有验证码"——真实云 ASR 接入后（B 待办）才变成对音频本身的校验。**无需改代码**，除非要在 UI 上把这个边界对用户说清楚。
-- [ ] **B-71 导航 / 页面改名 + 结构调整** — 用户提的映射：祝福请求 → **祈福广场**（显示大家的祈福，内部也能新增/查看自己的祝福请求，即把「我的请求」并入）；收件箱 → **我的福袋**；发出的 → **我的善意**；「回响」并入「个人空间」（去掉独立入口，把累计数展示放进 Profile）。属较大 UX 改动，**动手前要用户确认几处歧义**：① 「祈福广场」显示的"大家的祈福"是指祝福请求本身，还是也要把已发布的音频回应/祝福一起铺进去？② 「我的请求」是并成广场里的一个 tab / 筛选，还是保留独立页只是从导航挪走？③ 「写祝福」（`/compose`，P1 群发）这个入口保留原样吗？④ 「回响」页整个删掉，还是保留可从个人空间点进？触及 openspec `blessing-records` 等能力的文案层，spec 同步待定。
+- [~] **B-71 导航 / 页面改名 + 结构调整**（2026-09-09 用户已澄清，改动较大 → 走 openspec change，spec 产出后用户 review 再推进）。目标结构：
+  - **祈福广场**（替代「祝福请求」）：列表显示所有人的祈福，**列表只给摘要 + 统计**（如"已收到 N 条回应"），回应/祝福内容**要点进详情页才能看**。「我的请求」降为广场内部的**筛选项**（不是独立页）。
+  - **底层建模**：把「一条祈福」建成**独立实体**，所有回应是它的关联——**参考社区论坛成熟的 Topic + Reply 建模**（Topic 有回复数/最后回复时间等聚合统计，Reply 挂在 Topic 下）。当前是 `Blessing(scope='wish_response', requestId=…)` 挂靠，需要重新审视是否要独立的 Topic 聚合 / Reply 实体。可能需要 design.md 甚至 ADR。
+  - **传递善意**（替代「写祝福」/`/compose`）：既能写新祝福（P1 群发），也能看**之前发出的**——把「发出的」/发件箱（`Records`/`Sent`）合并进来。
+  - **我的福袋**（替代「收件箱」/`Inbox`）：纯改名。
+  - **回响页（`Streak`）整个删掉**；想保留的累计数等放进「个人空间」。
+  - spec 同步：触及 `wish-request` / `blessing-records` / `blessing-streak` 等能力。**注意**：`wish-request` 等 P2 能力还只活在未归档的 `add-p2-wish-request-audio` 的 delta 里（见恢复点）——这个 change 的基线依赖 P2 先归档，或在提案里说明基线假设。
 - [x] **B-72 偶发：祝福请求点「回应」跳到写祝福页** — 根因不是偶发随机，是**未同意协议时**才触发：`RespondToWishRequest` / `PublishWishRequest` 未同意 → 跳 `/agreement`，而 `Agreement.tsx` 同意后**硬编码** `nav('/compose')`，不管来处。已同意过的会话不会触发，所以看着"偶发"。已修：`/agreement` 支持 `?returnTo=`（`safeReturnTo` 挡开放重定向），两个页面跳转时带上来处，同意后回到来处（默认仍 `/compose`）。加了 e2e 回归（wish-request.spec.ts #12：未同意用户点回应 → 协议页 → 同意后回到 `/respond`）。
 - [x] **B-73 个人资料每次测试都要重输** — `demo` 脚本用默认 `BW_DB=memory`，重启即清空。已改 `demo` 为 `BW_DB=pglite BW_PGDATA=.pgdata` 落盘持久化（`.pgdata/` 已在 `.gitignore`），会话 cookie 存 userId + 30 天有效期，重启仍登录。新增 `pnpm demo:fresh` 干净重来。`docs/DEMO.md` 已更新。
 
