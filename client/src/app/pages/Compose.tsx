@@ -10,6 +10,7 @@ import {
   type Template,
 } from '../../api/client';
 import { useSession } from '../session';
+import { OutboxSection } from '../components/OutboxSection';
 import s from '../app.module.css';
 
 const OCCASIONS: [Occasion, string][] = [
@@ -91,7 +92,7 @@ export function Compose() {
       setCanBroadcast(prof.canBroadcast);
     });
     void api.agreement().then((a) => {
-      if (!a.alreadyConsented) nav('/agreement');
+      if (!a.alreadyConsented) nav('/agreement?returnTo=%2Fgive');
     });
   }, [user, nav]);
 
@@ -102,6 +103,15 @@ export function Compose() {
   useEffect(() => {
     setPreview(null);
   }, [filter]);
+
+  // "复制以供编辑" 从「我的善意」跳过来时（同一个 /give 路由，组件不重挂），
+  // location.key 每次导航都变，据此把要复制的正文 / 场景灌进来。
+  useEffect(() => {
+    if (isReply) return;
+    const st = location.state as ComposeNavState | null;
+    if (st?.copyBody !== undefined) setBody(st.copyBody);
+    if (st?.copyOccasion !== undefined) setOccasion(st.copyOccasion);
+  }, [location.key, location.state, isReply]);
 
   function addCustomTag() {
     const tag = customTag.trim().slice(0, MAX_TAG_LEN);
@@ -145,7 +155,7 @@ export function Compose() {
       })
       .catch((e: unknown) => {
         if (e instanceof ApiCallError && e.code === 'consent_required') {
-          nav('/agreement');
+          nav('/agreement?returnTo=%2Fgive');
           return;
         }
         setErr(e instanceof ApiCallError ? e.message : '出错了');
@@ -159,7 +169,7 @@ export function Compose() {
 
   return (
     <div className={s.page}>
-      <h1>{isReply ? `回一段祝福给 ${replyToName}` : '给陌生人写一段祝福'}</h1>
+      <h1>{isReply ? `回一段祝福给 ${replyToName}` : '传递善意'}</h1>
       <div className="breathe" />
       <div className={s.intention}>
         {isReply
@@ -396,7 +406,7 @@ export function Compose() {
       )}
 
       {isReply && (
-        <p className={s.hint}>这段祝福只会送到 {replyToName} 的收件箱，同样会先过一遍内容校验。</p>
+        <p className={s.hint}>这段祝福只会送到 {replyToName} 的福袋，同样会先过一遍内容校验。</p>
       )}
 
       {err && <div className={s.error}>{err}</div>}
@@ -405,6 +415,8 @@ export function Compose() {
           {isReply ? '回过去' : '发送'}
         </button>
       </div>
+
+      {!isReply && <OutboxSection />}
     </div>
   );
 }

@@ -42,7 +42,7 @@ export function Sent() {
       <p className={s.lead}>
         你的心意正在送往 <b>{target}</b>。
         {item.state === 'published'
-          ? ' 校验已通过，已经进了 TA 们的收件箱。'
+          ? ' 校验已通过，已经进了 TA 们的福袋。'
           : item.state === 'verifying'
             ? ' 平台正在做一次内容校验（通常几分钟），通过后才会投递并通知对方。'
             : ' 这次没有通过校验。'}
@@ -62,7 +62,7 @@ export function Sent() {
         <h2>把 BestWishes 讲给朋友</h2>
         <p className={s.hint}>
           这份祝福有一个公开链接，可以转发到微信，让更多人来这里给陌生人写祝福。
-          （祝福本身已经进了收件人的收件箱，不需要靠链接送达。）
+          （祝福本身已经进了收件人的福袋，不需要靠链接送达。）
         </p>
         <button
           onClick={() => {
@@ -77,7 +77,7 @@ export function Sent() {
       </div>
 
       <p>
-        <Link to="/records">去「发出的」管理</Link> · <Link to="/compose">再写一段</Link>
+        <Link to="/give">回「传递善意」</Link>
       </p>
     </div>
   );

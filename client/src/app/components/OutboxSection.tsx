@@ -1,7 +1,9 @@
+// "我的善意"——当前用户发出的祝福 + 状态 + 管理操作。
+// 原「发件箱」页（Records.tsx），B-71 后并入「传递善意」页（/give）作为下半部分。
+
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, type OutboxItem } from '../../api/client';
-import { useSession } from '../session';
 import s from '../app.module.css';
 
 const STATE_LABEL: Record<string, string> = {
@@ -21,14 +23,9 @@ const OCC: Record<string, string> = {
   daily: '日常问候',
 };
 
-export function Records() {
-  const { user, loading } = useSession();
+export function OutboxSection() {
   const nav = useNavigate();
   const [list, setList] = useState<OutboxItem[]>([]);
-
-  useEffect(() => {
-    if (!loading && !user) nav('/login');
-  }, [loading, user, nav]);
 
   const load = useCallback(() => {
     void api.outbox().then(setList);
@@ -40,12 +37,11 @@ export function Records() {
   };
 
   return (
-    <div className={s.page}>
-      <h1>发出的祝福</h1>
-      <p className={s.lead}>你群发和回复出去的祝福，以及它们现在的状态。</p>
-
+    <>
+      <h2 style={{ marginTop: 32 }}>我的善意</h2>
+      <p className={s.hint}>你群发和回复出去的祝福，以及它们现在的状态。</p>
       <div className={s.card}>
-        {list.length === 0 && <p className={s.lead}>还没有写过。</p>}
+        {list.length === 0 && <p className={s.lead}>还没有传递过。</p>}
         {list.map((b) => (
           <div className={s.listItem} key={b.id}>
             <div style={{ flex: 1 }}>
@@ -79,7 +75,7 @@ export function Records() {
                 <button
                   className="ghost"
                   onClick={() => {
-                    nav('/compose', { state: { copyBody: b.body, copyOccasion: b.occasion } });
+                    nav('/give', { state: { copyBody: b.body, copyOccasion: b.occasion } });
                   }}
                 >
                   复制以供编辑
@@ -99,7 +95,7 @@ export function Records() {
                 className="link"
                 onClick={() => {
                   if (
-                    confirm('删除后不可恢复。已送达的祝福，对方收件箱里的那份不受影响。确定删除？')
+                    confirm('删除后不可恢复。已送达的祝福，对方福袋里的那份不受影响。确定删除？')
                   ) {
                     act(api.remove(b.id));
                   }
@@ -111,7 +107,6 @@ export function Records() {
           </div>
         ))}
       </div>
-      <p className={s.hint}>撤回 / 删除 / 下架会即时回撤回响计数；链接过期不回撤。</p>
-    </div>
+    </>
   );
 }

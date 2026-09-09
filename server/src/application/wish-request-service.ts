@@ -304,7 +304,7 @@ export function createWishRequestService(deps: AppDeps) {
 
     async withdraw(userId: string, id: string): Promise<Result<null>> {
       const r = await deps.repos.wishRequests.findById(id);
-      if (!r || r.authorId !== userId) {
+      if (r?.authorId !== userId) {
         return err(appError('not_found', 'wish request not found', '找不到这条请求'));
       }
       const result = applyWishRequestTrigger(r.state, 'withdraw');
@@ -317,7 +317,7 @@ export function createWishRequestService(deps: AppDeps) {
 
     async remove(userId: string, id: string): Promise<Result<null>> {
       const r = await deps.repos.wishRequests.findById(id);
-      if (!r || r.authorId !== userId) {
+      if (r?.authorId !== userId) {
         return err(appError('not_found', 'wish request not found', '找不到这条请求'));
       }
       const result = applyWishRequestTrigger(r.state, 'delete');

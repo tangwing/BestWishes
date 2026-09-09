@@ -14,6 +14,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - **音频打分管线**（本次改动的技术重点）：转写 → （复用现成 `ModerationProvider`）安全审核 → 完整度判定（有稿子按分句字符覆盖率，无稿子复用 `isLowEffort`/`looksGarbled` 判有效表达）→ 专注度信号工程（停顿分布、语速方差、犹豫词密度，全部可解释、非黑盒）→ 真诚度/个性化评估 → 挑战式真人校验（下发随机验证词，HMAC 无状态签名，MVP 不做声纹/深伪检测——研究报告认为那是"军备竞赛"，不能当唯一闸门）。评分输出恒为**多维标签 + 置信度**，不是单一分数（vision.md 硬约束，避免变成互相比较打分的攀比场）。所有环节走可插拔接口（`AsrProvider`/`SincerityEvaluator`/`LivenessChallengePort`/`AudioStoragePort`），P2 默认接不需要真实云账号的规则实现（`RuleBasedAsrProvider` 采信客户端提供的转写文本，这个信任边界写进了代码注释；`RuleBasedSincerityEvaluator` 用字符重合度做启发式评估），同 P1 `ModerationProvider`/PGlite 的既有套路，可测、可 demo、换真实云 API 时只换驱动不换契约。
 - 回应者提交后立即看到自己录音的多维反馈；请求人在"我的请求"里查看全部回应（不设数量上限）并可播放，但看不到评分细节。
 
+### Changed — 祈福广场重构 + 导航精简（B-71，随 add-p2-wish-request-audio §9）
+
+用户试用 P2 Demo 后要求把"祝福请求"这条线重塑成社区式的**祈福广场**，并精简导航。因为改的正是 P2 这次新做的 UI、且还没归档，所以并进同一个 change。
+
+- **祈福广场**（`/plaza`，取代"祝福请求"页）：一条祈福（`WishRequest`）按社区 **Topic** 建模。广场列表**只给摘要 + 聚合统计**（处境摘录、标签、"已收到 N 条回应"、最后活跃时间），回应内容**点进详情页（`/plaza/:id`）才可见**。为此 `WishRequest` 加两个写入时维护的聚合字段 `responseCount` / `lastResponseAt`——在 `transitionAndPersist` 里，`wish_response` 回应进 / 出 `published` 时增量 ±1，不在列表渲染时扫 `blessings`（面向 100M 规模的正确做法，也是所有论坛的做法）。回应仍是一条 `Blessing`；独立的 `WishResponse` 实体推迟到 P3 悬赏机制明确后再引入（"采纳某条回应"= 论坛最佳答案，是它的自然落点）。
+- **"我的请求" 降为筛选项**：`/plaza?filter=mine`，复用同一个列表接口，不再是独立页面 / 导航项。作者视角额外能看到 `pending_review` / `withdrawn` 的自己那几条。
+- **传递善意**（`/give`，取代"写祝福"）：一页两块——上面写新祝福（原 Compose），下面"我的善意"（原发件箱 / Records，抽成 `OutboxSection` 组件）。发件箱不再是独立导航入口。
+- **我的福袋**（`/pouch`，取代"收件箱"）：改名。收件箱的全部行为（`blessing-delivery`）不变；祈福的回应照旧投进福袋 + 通知（被动收到）与详情页看到（主动查看）两条路并存。
+- **回响页删除**：`blessing-streak` 能力移除（连续天数、按自然日分桶都删）。个人空间底部保留一个只读的**"你已传递 N 份善意"**累计数（N = 本人 `published` + `expired` 的祝福数），只对本人可见、不可变现——并入 `user-profile`。**务实删**：`streak.ts` 纯函数模块 + `streak-service` + `/api/streak/me` 删掉；`blessing-transition` 里的 `countedInStreak` / `streakDelta` + `streak_days` 表暂留为 dormant（和 P1 状态机及其成套测试耦合，硬拆是 Runaway Refactor，留 B-74 单独清理）。
+- **导航 8 → 6 项**：首页 · 祈福广场 · 传递善意 · 我的福袋 · 个人空间 · 审核台。路由 `/wish-requests*` → `/plaza*`、`/compose` → `/give`、`/inbox` → `/pouch`；旧路径不做重定向（内测期直接换）。
+- 迁移 `0005_past_revanche.sql`（`wish_requests` 加两列）。openspec：`wish-request` delta 重写 + 新增 `blessing-records` / `user-profile` MODIFIED delta + `blessing-streak` REMOVED delta。`pnpm verify` 196 测试、`pnpm test:e2e` 13 个全绿。
+
 ### Fixed（P2 期间发现，随 B-68 一起交付）
 
 - **"偶发"点「回应」跳到写祝福页**（B-72，用户 2026-09-08 走查发现）：根因不是随机——`RespondToWishRequest` / `PublishWishRequest` 在用户没同意过协议时会跳 `/agreement`，而 `Agreement.tsx` 同意后**硬编码** `nav('/compose')`，完全不管用户是从哪来的。已同意过的会话不触发，所以看着像"偶发"。修：`/agreement` 认 `?returnTo=` 查询参数（`safeReturnTo` 只放行站内相对路径，挡 `//evil.com` 这类开放重定向），两个页面跳转时带上来处，同意后回到来处，默认仍是 `/compose`。加 e2e 回归：未同意用户点「回应」→ 协议页 → 同意 → 回到 `/wish-requests/:id/respond`（而不是 `/compose`）。

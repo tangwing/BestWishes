@@ -10,17 +10,13 @@ import { Profile } from './app/pages/Profile';
 import { Agreement } from './app/pages/Agreement';
 import { Compose } from './app/pages/Compose';
 import { Sent } from './app/pages/Sent';
-import { Records } from './app/pages/Records';
 import { Inbox } from './app/pages/Inbox';
-import { Streak } from './app/pages/Streak';
 import { Moderation } from './app/pages/Moderation';
 import { PublicPage } from './app/pages/PublicPage';
 import { WishRequests } from './app/pages/WishRequests';
 import { PublishWishRequest } from './app/pages/PublishWishRequest';
 import { WishRequestDetail } from './app/pages/WishRequestDetail';
 import { RespondToWishRequest } from './app/pages/RespondToWishRequest';
-import { WishRequestResponses } from './app/pages/WishRequestResponses';
-import { MyWishRequests } from './app/pages/MyWishRequests';
 import { AudioFeedback } from './app/pages/AudioFeedback';
 
 const router = createBrowserRouter([
@@ -32,18 +28,14 @@ const router = createBrowserRouter([
       { path: 'login', element: <Login /> },
       { path: 'profile', element: <Profile /> },
       { path: 'agreement', element: <Agreement /> },
-      { path: 'compose', element: <Compose /> },
+      { path: 'give', element: <Compose /> },
       { path: 'sent/:id', element: <Sent /> },
-      { path: 'records', element: <Records /> },
-      { path: 'inbox', element: <Inbox /> },
-      { path: 'streak', element: <Streak /> },
+      { path: 'pouch', element: <Inbox /> },
       { path: 'moderation', element: <Moderation /> },
-      { path: 'wish-requests', element: <WishRequests /> },
-      { path: 'wish-requests/new', element: <PublishWishRequest /> },
-      { path: 'wish-requests/mine', element: <MyWishRequests /> },
-      { path: 'wish-requests/:id', element: <WishRequestDetail /> },
-      { path: 'wish-requests/:id/respond', element: <RespondToWishRequest /> },
-      { path: 'wish-requests/:id/responses', element: <WishRequestResponses /> },
+      { path: 'plaza', element: <WishRequests /> },
+      { path: 'plaza/new', element: <PublishWishRequest /> },
+      { path: 'plaza/:id', element: <WishRequestDetail /> },
+      { path: 'plaza/:id/respond', element: <RespondToWishRequest /> },
       { path: 'blessings/:id/feedback', element: <AudioFeedback /> },
     ],
   },

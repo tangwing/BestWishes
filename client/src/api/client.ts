@@ -52,6 +52,8 @@ export interface ProfileView {
   locationGranted: boolean;
   featuredByDefault: boolean;
   canBroadcast: boolean;
+  /** 累计传递的善意数（承接被移除的「回响」）。只对本人可见、不可变现。 */
+  kindnessCount: number;
 }
 
 export interface AgreementView {
@@ -154,11 +156,6 @@ export type PublicPage =
       placeholderText: string;
     };
 
-export interface StreakView {
-  total: number;
-  streak: number;
-  byDay: { date: string; count: number }[];
-}
 
 export interface QueueItem {
   id: string;
@@ -182,23 +179,45 @@ export interface SubmitBlessingInput {
   audience?: AudienceFilter;
 }
 
-export interface WishRequestView {
+/** 祈福广场列表项：只有摘要 + 聚合统计，不含任何回应内容。 */
+export interface WishRequestSummary {
   id: string;
-  authorId: string;
   authorNickname: string;
-  situationText: string;
-  scriptText: string | null;
+  authorCity: string | null;
+  situationExcerpt: string;
   tags: string[];
+  responseCount: number;
+  lastResponseAt: string | null;
   state: string;
   createdAt: string;
+  isMine: boolean;
 }
 
-export interface ResponseSummary {
+/** 祈福详情里的一条回应。 */
+export interface ResponseView {
   id: string;
   fromNickname: string;
   fromCity: string | null;
   audioUrl: string | null;
+  transcript: string | null;
   createdAt: string;
+}
+
+/** 祈福详情：处境全文 + 稿子 + 聚合统计 + 全部 published 回应（无评分细节）。 */
+export interface WishRequestDetail {
+  id: string;
+  authorId: string;
+  authorNickname: string;
+  authorCity: string | null;
+  situationText: string;
+  scriptText: string | null;
+  tags: string[];
+  responseCount: number;
+  lastResponseAt: string | null;
+  state: string;
+  createdAt: string;
+  isMine: boolean;
+  responses: ResponseView[];
 }
 
 export interface AudioChallenge {
@@ -266,23 +285,18 @@ export const api = {
   report: (slug: string, category: string, note: string) =>
     call<{ ok: true }>('POST', `/api/p/${slug}/report`, { category, note }),
 
-  streak: () => call<StreakView>('GET', '/api/streak/me'),
-
   queue: () => call<QueueItem[]>('GET', '/api/moderation/queue'),
   resolve: (id: string, action: string, reason: string) =>
     call<{ ok: true }>('POST', `/api/moderation/${id}/resolve`, { action, reason }),
 
-  // ---- 祝福请求 + 音频回应 ----
+  // ---- 祈福广场 + 音频回应 ----
   publishWishRequest: (input: { situationText: string; scriptText?: string | undefined; tags: string[] }) =>
-    call<WishRequestView>('POST', '/api/wish-requests', input),
-  wishRequestPlaza: () => call<WishRequestView[]>('GET', '/api/wish-requests'),
-  myWishRequests: () => call<WishRequestView[]>('GET', '/api/wish-requests/mine'),
-  getWishRequest: (id: string) => call<WishRequestView>('GET', `/api/wish-requests/${id}`),
-  withdrawWishRequest: (id: string) =>
-    call<{ ok: true }>('POST', `/api/wish-requests/${id}/withdraw`),
-  deleteWishRequest: (id: string) => call<{ ok: true }>('DELETE', `/api/wish-requests/${id}`),
-  wishRequestResponses: (id: string) =>
-    call<ResponseSummary[]>('GET', `/api/wish-requests/${id}/responses`),
+    call<WishRequestSummary>('POST', '/api/plaza', input),
+  plaza: (filter: 'all' | 'mine' = 'all') =>
+    call<WishRequestSummary[]>('GET', `/api/plaza?filter=${filter}`),
+  wishRequestDetail: (id: string) => call<WishRequestDetail>('GET', `/api/plaza/${id}`),
+  withdrawWishRequest: (id: string) => call<{ ok: true }>('POST', `/api/plaza/${id}/withdraw`),
+  deleteWishRequest: (id: string) => call<{ ok: true }>('DELETE', `/api/plaza/${id}`),
 
   issueAudioChallenge: () => call<AudioChallenge>('GET', '/api/audio-challenge'),
 
@@ -304,7 +318,7 @@ export const api = {
     form.append('challengeToken', input.challengeToken);
     if (input.clientTranscript) form.append('clientTranscript', input.clientTranscript);
 
-    const res = await fetch(`/api/wish-requests/${requestId}/respond`, {
+    const res = await fetch(`/api/plaza/${requestId}/respond`, {
       method: 'POST',
       credentials: 'same-origin',
       body: form,

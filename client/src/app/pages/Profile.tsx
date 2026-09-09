@@ -242,12 +242,16 @@ export function Profile() {
         {p.tags.length >= MAX_TAGS && <p className={s.hint}>最多 {MAX_TAGS} 个标签。</p>}
       </div>
 
+      <div className={s.card} style={{ textAlign: 'center' }}>
+        <div className={s.streakNum}>{p.kindnessCount}</div>
+        <div className={s.hint}>你已传递 {p.kindnessCount} 份善意</div>
+        <p className={s.hint} style={{ marginTop: 6 }}>
+          只有你看得到，没有排名、没有积分。撤回 / 删除 / 下架会即时回撤；链接过期不影响。
+        </p>
+      </div>
       <div className={s.card}>
-        <button className="ghost" onClick={() => nav('/streak')}>
-          回响
-        </button>{' '}
-        <button className="ghost" onClick={() => nav('/compose')}>
-          去写祝福
+        <button className="ghost" onClick={() => nav('/give')}>
+          去传递善意
         </button>
       </div>
       {saved && <p className={s.hint}>已保存。</p>}

@@ -79,7 +79,7 @@ export function AudioFeedback() {
       )}
 
       <div style={{ marginTop: 20 }}>
-        <a onClick={() => nav('/wish-requests')}>回到请求广场</a>
+        <a onClick={() => nav('/plaza')}>回到祈福广场</a>
       </div>
     </div>
   );

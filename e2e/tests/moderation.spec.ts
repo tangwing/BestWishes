@@ -14,7 +14,7 @@ test('命中拉客护栏词 → 停在校验中 → 审核台通过 → 投递�
   await agree(page);
   await broadcast(page, { body: SUSPECT_BODY });
 
-  await rPage.goto('/inbox');
+  await rPage.goto('/pouch');
   await expect(rPage.getByText('还没有收到祝福。')).toBeVisible();
 
   await page.goto('/moderation');
@@ -22,7 +22,7 @@ test('命中拉客护栏词 → 停在校验中 → 审核台通过 → 投递�
   await page.getByRole('button', { name: '通过' }).first().click();
   await expect(page.getByText('队列为空')).toBeVisible();
 
-  await rPage.goto('/inbox');
+  await rPage.goto('/pouch');
   await expect(rPage.getByText('如需超度收费')).toBeVisible({ timeout: 20_000 });
   await recipientCtx.close();
 });

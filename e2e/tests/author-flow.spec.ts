@@ -3,8 +3,8 @@ import { agree, broadcast, GOOD_BODY, login, region, setLocation } from './suppo
 
 test('新用户没同意协议就进写祝福 → 被引导去协议页', async ({ page }) => {
   await login(page, 'af-新来的');
-  await page.goto('/compose');
-  await page.waitForURL('**/agreement');
+  await page.goto('/give');
+  await page.waitForURL('**/agreement**');
   await expect(page.getByRole('heading', { name: '《用户内容与授权协议》' })).toBeVisible();
 });
 
@@ -20,7 +20,7 @@ test('群发给附近的陌生人 → 对方收件箱收到 → 对方回一段�
   await setLocation(page, r.sender);
   await agree(page);
 
-  await page.goto('/compose');
+  await page.goto('/give');
   await page.getByPlaceholder('慢慢写，写给一个具体的人。').fill(GOOD_BODY);
   // 范本不能粘贴
   await page.evaluate(() => navigator.clipboard.writeText('从别处复制来的祝福词'));
@@ -34,23 +34,23 @@ test('群发给附近的陌生人 → 对方收件箱收到 → 对方回一段�
   await page.waitForURL('**/sent/**');
   await expect(page.getByText(/送往.*1 位陌生人/)).toBeVisible();
 
-  await rPage.goto('/inbox');
+  await rPage.goto('/pouch');
   await expect(rPage.getByText(GOOD_BODY)).toBeVisible({ timeout: 20_000 });
   await expect(rPage.getByText(/来自 af2-发送者/)).toBeVisible();
 
   // 回一段祝福
   await rPage.goto('/agreement');
   await rPage.getByRole('button', { name: '同意并继续' }).click();
-  await rPage.goto('/inbox');
+  await rPage.goto('/pouch');
   await rPage.getByRole('button', { name: '回一段祝福' }).click();
-  await rPage.waitForURL('**/compose**');
+  await rPage.waitForURL('**/give**');
   await rPage
     .getByPlaceholder('慢慢写，写给一个具体的人。')
     .fill('谢谢你的祝福，也愿你一切都顺，平安喜乐安稳。');
   await rPage.getByRole('button', { name: '回过去' }).click();
   await rPage.waitForURL('**/sent/**');
 
-  await page.goto('/inbox');
+  await page.goto('/pouch');
   await expect(page.getByText('谢谢你的祝福，也愿你一切都顺，平安喜乐安稳。')).toBeVisible({
     timeout: 20_000,
   });
@@ -64,7 +64,7 @@ test('范围里没有人 → 发送按钮不可用', async ({ page }) => {
   await login(page, 'af3-孤独');
   await setLocation(page, r.sender);
   await agree(page);
-  await page.goto('/compose');
+  await page.goto('/give');
   await page.getByPlaceholder('慢慢写，写给一个具体的人。').fill(GOOD_BODY);
   await page.getByRole('button', { name: '预览收件人' }).click();
   await expect(page.getByText('这个范围里还没有人。放宽条件或扩大距离。')).toBeVisible();
@@ -84,14 +84,14 @@ test('撤回后收件人看到占位', async ({ page, browser }) => {
   await agree(page);
   await broadcast(page, { body: GOOD_BODY });
 
-  await rPage.goto('/inbox');
+  await rPage.goto('/pouch');
   await expect(rPage.getByText(GOOD_BODY)).toBeVisible({ timeout: 20_000 });
 
-  await page.goto('/records');
+  await page.goto('/give');
   await page.getByRole('button', { name: '撤回' }).first().click();
   await expect(page.getByText('已撤回')).toBeVisible();
 
-  await rPage.goto('/inbox');
+  await rPage.goto('/pouch');
   await expect(rPage.getByText('这份祝福已被收回')).toBeVisible({ timeout: 20_000 });
 
   await recipientCtx.close();
@@ -113,10 +113,10 @@ test('撤回后没有「重新发布」按钮，只能「复制以供编辑」�
   await agree(page);
   await broadcast(page, { body: GOOD_BODY });
 
-  await rPage.goto('/inbox');
+  await rPage.goto('/pouch');
   await expect(rPage.getByText(GOOD_BODY)).toBeVisible({ timeout: 20_000 });
 
-  await page.goto('/records');
+  await page.goto('/give');
   await page.getByRole('button', { name: '撤回' }).first().click();
   await expect(page.getByText('已撤回')).toBeVisible();
 
@@ -125,11 +125,11 @@ test('撤回后没有「重新发布」按钮，只能「复制以供编辑」�
 
   // 只能复制正文去编辑；跳转到写祝福页，正文已预填，但没有重新触发投递
   await page.getByRole('button', { name: '复制以供编辑' }).click();
-  await page.waitForURL('**/compose');
+  await page.waitForURL('**/give');
   await expect(page.getByPlaceholder('慢慢写，写给一个具体的人。')).toHaveValue(GOOD_BODY);
 
   // 撤回的那条对收件人仍然是占位，没有因为「复制」而重新送达
-  await rPage.goto('/inbox');
+  await rPage.goto('/pouch');
   await expect(rPage.getByText('这份祝福已被收回')).toBeVisible({ timeout: 20_000 });
 
   await recipientCtx.close();

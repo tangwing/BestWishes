@@ -14,11 +14,14 @@ export function Home() {
           你不认识 TA。选一个范围——比如"三公里内、正在熬夜的人"——把一句好话送过去。
         </p>
         <div className={s.card}>
-          <Link to="/compose">
-            <button>写一段祝福</button>
+          <Link to="/give">
+            <button>传递一段善意</button>
           </Link>{' '}
-          <Link to="/inbox">
-            <button className="ghost">看看我收到的</button>
+          <Link to="/plaza">
+            <button className="ghost">去祈福广场</button>
+          </Link>{' '}
+          <Link to="/pouch">
+            <button className="ghost">我的福袋</button>
           </Link>
         </div>
         <p className={s.hint}>先去个人空间设好位置和标签，别人才筛得到你、你也才能群发。</p>
@@ -30,7 +33,7 @@ export function Home() {
     <div className={s.page}>
       <h1>BestWishes</h1>
       <p className={s.lead}>
-        练习专注，传递善意。给附近的陌生人写一段认真的祝福；也在收件箱里，收到别人给你的。
+        练习专注，传递善意。给附近的陌生人写一段认真的祝福；也在福袋里，收到别人给你的。
       </p>
       <div className={s.card}>
         <Link to="/login">

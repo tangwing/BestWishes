@@ -297,3 +297,14 @@
 - `tasks.md`：新增 §9（8 个子任务，领域/数据/服务端/前端/测试/文档/spec）
 
 `openspec validate add-p2-wish-request-audio --strict` 通过。**等用户 review 这版 spec** → 通过后 `/opsx:apply` 落 §9 的代码。
+
+> `/opsx:apply add-p2-wish-request-audio`
+
+**结果**（B-71 §9 全部落地，~35 文件）：动手前用 `AskUserQuestion` 确认了两处——回响移除深度选"务实删"（删页面/服务/纯函数模块，保留 `countedInStreak`/`streak_days` dormant，避免动 P1 状态机 = Runaway Refactor），推进方式选"一口气做完再报告"。
+
+- **后端**：`WishRequest` 加 `responseCount`/`lastResponseAt`；迁移 0005；`transitionAndPersist` 里 `maintainWishRequestCounter` 增量维护（所有 publish/withdraw/expire 路径都过这里）；`wish-request-service` 重写为 `plaza(viewer, filter)` + `detail(id, viewer)`；路由 `/api/plaza*` 取代 `/api/wish-requests*`；`profile.view` 加 `kindnessCount`；删 `streak-service` + `/api/streak/me` + `packages/domain/src/streak.ts`。
+- **前端**：`WishRequests.tsx` → 祈福广场（摘要 + 统计 + `?filter=mine`）；`WishRequestDetail.tsx` 重写为详情页；删 `WishRequestResponses`/`MyWishRequests`/`Records`/`Streak`；`OutboxSection` 组件并入 `Compose`（→ 传递善意 `/give`）；`Inbox` → 我的福袋 `/pouch`；`Profile` 加"你已传递 N 份善意"；导航 8→6；路由表重写。
+- **测试**：`wish-request-flow.test.ts` +3（列表无回应内容 / `responseCount` 对账 / 我的祈福筛选）；streak 断言迁移到 `kindnessCount`；HTTP + e2e 全量改新路由；协议页跳转断言用 `**/agreement**` 容忍 `?returnTo`。`pnpm verify` 196、`pnpm test:e2e` 13 全绿。
+- **文档**：`docs/DEMO.md` 按新命名重写；P1 规划文档的旧措辞留 B-75。dormant 残留留 B-74。
+
+`openspec validate --strict` 通过。**等用户审阅**（前八节 + §9），通过后 `/opsx:archive`。

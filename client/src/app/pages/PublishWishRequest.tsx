@@ -28,7 +28,7 @@ export function PublishWishRequest() {
       setSuggestedTags(r.tags);
     });
     void api.agreement().then((a) => {
-      if (!a.alreadyConsented) nav('/agreement?returnTo=%2Fwish-requests%2Fnew');
+      if (!a.alreadyConsented) nav('/agreement?returnTo=%2Fplaza%2Fnew');
     });
   }, [user, nav]);
 
@@ -51,11 +51,11 @@ export function PublishWishRequest() {
         tags,
       })
       .then((r) => {
-        nav(`/wish-requests/${r.id}`);
+        nav(`/plaza/${r.id}`);
       })
       .catch((e: unknown) => {
         if (e instanceof ApiCallError && e.code === 'consent_required') {
-          nav('/agreement?returnTo=%2Fwish-requests%2Fnew');
+          nav('/agreement?returnTo=%2Fplaza%2Fnew');
           return;
         }
         setErr(e instanceof ApiCallError ? e.message : '出错了');
@@ -67,7 +67,7 @@ export function PublishWishRequest() {
 
   return (
     <div className={s.page}>
-      <h1>发一条祝福请求</h1>
+      <h1>发一条祈福</h1>
       <div className={s.intention}>
         写下你此刻的处境或心事，让愿意帮你的人知道该往哪个方向送祝福。可以附一段具体的话让对方念，也可以完全交给对方自由发挥。
       </div>

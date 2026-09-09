@@ -40,12 +40,12 @@ export async function setLocation(page: Page, loc: { lat: number; lng: number })
 export async function agree(page: Page): Promise<void> {
   await page.goto('/agreement');
   await page.getByRole('button', { name: '同意并继续' }).click();
-  await page.waitForURL('**/compose');
+  await page.waitForURL('**/give');
 }
 
 /** 在写祝福页填正文 → 预览受众 → 群发。返回落地的 sent 页 id。 */
 export async function broadcast(page: Page, opts: { body: string }): Promise<string> {
-  await page.goto('/compose');
+  await page.goto('/give');
   await page.getByPlaceholder('慢慢写，写给一个具体的人。').fill(opts.body);
   await page.getByRole('button', { name: '预览收件人' }).click();
   await expect(page.getByText(/将送达/)).toBeVisible();

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { api, ApiCallError, type AudioChallenge, type WishRequestView } from '../../api/client';
+import { api, ApiCallError, type AudioChallenge, type WishRequestDetail } from '../../api/client';
 import { useSession } from '../session';
 import { AudioRecorder, type RecordedAudio } from '../components/AudioRecorder';
 import s from '../app.module.css';
@@ -12,7 +12,7 @@ export function RespondToWishRequest() {
   const { user, loading } = useSession();
   const nav = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const [request, setRequest] = useState<WishRequestView | null>(null);
+  const [request, setRequest] = useState<WishRequestDetail | null>(null);
   const [challenge, setChallenge] = useState<AudioChallenge | null>(null);
   const [recorded, setRecorded] = useState<RecordedAudio | null>(null);
   const [transcript, setTranscript] = useState('');
@@ -24,12 +24,12 @@ export function RespondToWishRequest() {
   }, [loading, user, nav]);
 
   const agreementUrl = id
-    ? `/agreement?returnTo=${encodeURIComponent(`/wish-requests/${id}/respond`)}`
+    ? `/agreement?returnTo=${encodeURIComponent(`/plaza/${id}/respond`)}`
     : '/agreement';
 
   useEffect(() => {
     if (!id || !user) return;
-    api.getWishRequest(id).then(setRequest).catch(() => undefined);
+    api.wishRequestDetail(id).then(setRequest).catch(() => undefined);
     api.issueAudioChallenge().then(setChallenge).catch(() => undefined);
     void api.agreement().then((a) => {
       if (!a.alreadyConsented) nav(agreementUrl);

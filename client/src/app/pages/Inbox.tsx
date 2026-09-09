@@ -49,8 +49,10 @@ export function Inbox() {
 
   return (
     <div className={s.page}>
-      <h1>收件箱</h1>
-      <p className={s.lead}>陌生人送给你的祝福。你不能和对方对话，但可以回一段祝福过去。</p>
+      <h1>我的福袋</h1>
+      <p className={s.lead}>
+        陌生人送给你的祝福，还有你发布的祈福收到的回应。你不能和对方对话，但可以回一段祝福过去。
+      </p>
 
       {items.length === 0 && (
         <div className={s.card}>
@@ -80,7 +82,7 @@ export function Inbox() {
                 className="ghost"
                 onClick={() => {
                   nav(
-                    `/compose?replyTo=${encodeURIComponent(it.from.userId)}&to=${encodeURIComponent(
+                    `/give?replyTo=${encodeURIComponent(it.from.userId)}&to=${encodeURIComponent(
                       it.from.nickname,
                     )}&replyBlessing=${encodeURIComponent(it.blessingId)}`,
                   );

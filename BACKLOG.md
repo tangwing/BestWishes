@@ -15,8 +15,8 @@
 - **工作方式**：用户按点评提改动 → 记进本文件 → 持续完成。每轮结束自动 commit + push。
 - **2026-09-08 用户 Demo 走查反馈（B-69~B-73）**：Safari 录音失败（B-69，两轮修复 + 加了可见诊断行，等 Safari 真机复测）；协议页硬编码跳转 bug（B-72，已修 + e2e 回归）；demo 数据持久化（B-73，`pnpm demo` 现在落盘 PGlite，重启不丢个人资料）；验证码校验确实实现了但校验的是客户端转写文本（B-70，P2 信任边界，无需改）；**B-71 导航改名/结构调整需要用户先回答 4 个歧义点**（见待办区），没动。
 - **UAT 自动化**：用户问有没有框架能自动跑他手动做的走查——**有，就是 `e2e/`（Playwright + 真实系统 Chrome）**，`pnpm test:e2e` 跑，13 个用例覆盖 P1 群发 + P2 请求/录音/打分/审核全链路（录音用 `--use-fake-device-for-media-stream` 真的走 MediaRecorder）。本轮把用户手动发现的 B-72 也补成了回归用例。唯一盖不到的是 Safari（macOS 12 装不了 Playwright webkit）。
-- **B-71 祈福广场重构（2026-09-09）**：用户点评把"祝福请求"重塑为社区式「祈福广场」（Topic + 聚合统计、列表只摘要、详情才看回应）+ 导航精简（8→6 项，删「回响」，「收件箱」→「我的福袋」，「写祝福」→「传递善意」并入发件箱）。**已通过 `/opsx:update` 把这套并进 `add-p2-wish-request-audio` 的 spec**（未写任何代码），`validate --strict` 通过。**等用户 review spec** → 通过后 `/opsx:apply` 落代码。
-- **下一步**：① 用户 review `add-p2-wish-request-audio` 的 spec（现在含祈福广场重构）→ 通过后 `/opsx:apply` 落地 §9 的代码。② 全部实现完 + 用户审阅通过 → `/opsx:archive`，再谈 P3。`add-moderation-rbac` 仍"先放着"（B-65）。B-66 待单独设计讨论。
+- **B-71 祈福广场重构（2026-09-09，spec + 代码都已完成）**：用户点评把"祝福请求"重塑为社区式「祈福广场」（Topic + `responseCount`/`lastResponseAt` 聚合统计、列表只摘要、详情才看回应、"我的祈福"= `?filter=mine`）+ 导航精简（8→6 项，删「回响」，「收件箱」→「我的福袋」/`/pouch`，「写祝福」→「传递善意」/`/give` 并入发件箱，路由 `/wish-requests*`→`/plaza*`）。回响用"务实删"（删页面/服务/纯函数模块 + 个人空间显示"你已传递 N 份善意"；`blessing-transition` 的 `countedInStreak`/`streakDelta` + `streak_days` 表保留为 dormant——见 B-74）。`/opsx:update` 同步了 spec（`wish-request` 重写 + `blessing-records`/`user-profile` MODIFIED + `blessing-streak` REMOVED），`/opsx:apply` 落了 §9 代码。`pnpm verify` 196 / `pnpm test:e2e` 13 全绿。详见 tasks.md §9。
+- **下一步**：① 用户审阅 `add-p2-wish-request-audio`（前八节 P2 首版 + §9 祈福广场重构）→ 审阅通过后 `/opsx:archive`，再谈 P3。② Safari 录音（B-69）仍等真机复测。`add-moderation-rbac` 仍"先放着"（B-65）。B-66 待单独设计讨论。
 
 <details>
 <summary>P1 存档（点开查看）</summary>
@@ -90,6 +90,8 @@
 - [ ] **B-28 生产静态托管** — `@fastify/static` 服务 `client/dist` + SPA fallback，让单进程也能跑；或分开部署（ADR 0003 D12 推迟项）。B-28 单进程托管已在 iter 6 落地，剩分开部署方案待定。
 - [ ] **B-29 移除 `prototype/`** — monorepo 已功能对齐；确认后删。
 - [ ] **B-32 E2E 进 CI** — CI 用较新系统装 `playwright install chromium` + 去掉 `channel: 'chrome'`；`e2e/` 依赖单独缓存。
+- [ ] **B-74 清理回响 dormant 残留** — B-71「务实删」保留了 `blessing-transition.ts` 的 `countedInStreak` / `streakDelta`、`ports` 的 `StreakRepository`、`streak_days` 表 + 两套实现、`InMemoryStreakRepository`。它们已无任何消费方（`blessing-write` 不再写 `streak_days`）。彻底删要动 P1 状态机的返回类型 + `blessing-transition.test.ts` / `blessing-flow.test.ts` 的成套断言 + 一次去列迁移——单独一轮做，确认无回归。
+- [ ] **B-75 P1 规划文档里的"回响 / 收件箱"措辞** — `docs/product/{use-cases,capabilities,concept,p1-acceptance-status}.md`、`docs/architecture/p1-architecture.md` 仍按旧命名。属历史规划文档，B-71 没动（避免 Runaway Refactor）。要么按新命名走查一遍，要么在文档头加一句"术语见 CHANGELOG / DEMO.md 的 B-71 更新"。
 
 ### 待澄清 / 需用户或法务
 

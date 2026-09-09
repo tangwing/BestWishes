@@ -7,7 +7,7 @@ import s from '../app.module.css';
 /** 只接受站内相对路径，挡掉 `//evil.com` 这类开放重定向。 */
 function safeReturnTo(raw: string | null): string {
   if (raw && raw.startsWith('/') && !raw.startsWith('//')) return raw;
-  return '/compose';
+  return '/give';
 }
 
 export function Agreement() {
@@ -50,7 +50,7 @@ export function Agreement() {
             <b>群发 / 送达给符合条件的陌生人</b>（必选）
             <br />
             <span className={s.hint}>
-              平台获非独占许可，把这份祝福投递到你所选范围内陌生人的收件箱，并通知对方。
+              平台获非独占许可，把这份祝福投递到你所选范围内陌生人的福袋，并通知对方。
             </span>
           </span>
         </label>
