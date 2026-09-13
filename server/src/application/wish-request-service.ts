@@ -223,10 +223,15 @@ export function createWishRequestService(deps: AppDeps) {
         lastResponseAt: null,
       };
 
+      // 先落库再匹配推送——matchAndNotify() 会写 notifications.request_id 外键指回
+      // 这条祈福，PGlite 开着真实外键约束时，记录还没插入就先写引用会直接 23503
+      // 报错（B-92：内存仓储没有外键约束，从没测出来，只在真的 pglite 下才炸）。
+      await deps.repos.wishRequests.add(record);
+
       if (!needsReview) {
         record.recipientCandidateIds = await matchAndNotify(record);
+        await deps.repos.wishRequests.save(record);
       }
-      await deps.repos.wishRequests.add(record);
 
       if (needsReview) {
         await deps.repos.reports.add({

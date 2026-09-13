@@ -17,6 +17,9 @@ export interface InboxView {
   blessingId: string;
   occasion: Occasion;
   contentType: BlessingContentType;
+  /** contentType='audio' 时的回放地址；文字祝福恒为 null。B-93：没有这个字段，
+   *  收件箱只能显示转写文字，看起来像一条跟录音无关的普通善意。 */
+  mediaUrl: string | null;
   from: {
     userId: string;
     nickname: string;
@@ -80,6 +83,7 @@ export function createInboxService(deps: AppDeps) {
           blessingId: b.id,
           occasion: b.occasion,
           contentType: b.contentType,
+          mediaUrl: b.media?.url ?? null,
           from: {
             userId: item.senderId,
             nickname: senderProfile?.senderName ?? sender?.nickname ?? '一位朋友',

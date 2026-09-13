@@ -79,7 +79,19 @@ export function Inbox() {
             </p>
           )}
           {it.status === 'content' && it.body ? (
-            <p className={s.blessing}>{it.body}</p>
+            <>
+              {it.contentType === 'audio' && it.mediaUrl && (
+                <audio controls src={it.mediaUrl} style={{ width: '100%', marginTop: 6 }} />
+              )}
+              <p className={s.blessing}>
+                {it.contentType === 'audio' && (
+                  <span className={s.hint} style={{ display: 'block' }}>
+                    这段录音的文字记录：
+                  </span>
+                )}
+                {it.body}
+              </p>
+            </>
           ) : (
             <p className={s.lead}>{it.placeholderText ?? '这份祝福暂时无法查看'}</p>
           )}

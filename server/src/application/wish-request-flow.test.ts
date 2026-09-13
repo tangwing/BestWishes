@@ -113,6 +113,10 @@ describe('祝福请求 + 音频回应', () => {
     const inbox = await ctx.app.inbox.list(author);
     expect(inbox).toHaveLength(1);
     expect(inbox[0]?.status).toBe('content');
+    // B-93：请求人在福袋里点开这条音频回应，得能放录音——只有转写文字的话，
+    // 这段文字看起来就像一条跟录音毫无关系的普通善意，没有"绑"在一起的感觉。
+    expect(inbox[0]?.contentType).toBe('audio');
+    expect(inbox[0]?.mediaUrl).toBeTruthy();
 
     const detail = await ctx.app.wishRequests.detail(r.value.id, author);
     if (!detail) throw new Error('detail failed');

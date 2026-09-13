@@ -4,6 +4,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed — 发布祈福命中候选人时 500；福袋音频回应看不到播放器（B-92, B-93）
+
+用户纠正了 B-91 的既有解释——他说的不是"过一会儿又收到一条"，而是"同一次回应（录音+补充文字）点亮福袋两次，第二次点开只看到文字，感觉这段文字跟录音完全没绑在一起"。排查这句话时，先用真实 curl 直接打运行中的 `pnpm demo`（PGlite，真外键约束）复现，顺手撞见一个更严重、无关的 bug，然后才定位到用户报告的真正根源。
+
+- **B-92（严重）发布带地理位置的祈福、命中候选人时直接 500**：`wish-request-service.publish()` 原来先调 `matchAndNotify()`（写 `notifications.request_id` 外键指回这条待发布的祈福）再 `wishRequests.add()`——记录还没插入，外键就先写引用，PGlite 开着真实约束时直接 `23503` 报错，整条发布请求跟着失败。内存仓储没有外键约束，主力测试从没测出来，只有走真 PG 语义的 `pg-repositories.test.ts` 才会炸，而这条路径此前在那个文件里完全没有覆盖。已修：`add()` 先落库，再 `matchAndNotify()` + `save()` 补上 `recipientCandidateIds`；新增回归测试（`git stash` 验证过确实先失败后通过）。这个 bug 在"祈福作者设了位置、附近有候选人"的场景下 100% 必现。
+- **B-93 福袋里的音频回应只显示转写文字，看不到播放器**：用 curl 完整走了一遍链路并反复轮询收件箱/通知接口，确认一次提交只产生一条 Blessing / 一条收件箱记录 / 一条通知——**不存在真正的重复投递**。但收件箱页面点开这条记录只有转写文字，没有播放器或"这是录音"的提示，跟 B-85 是同一类疏漏（`InboxView`/`InboxItem` 一直缺 `mediaUrl` 字段）。这完全能解释用户的感受：不是多投递了一次，是投递的这一条把音频和文字的关联性在 UI 上丢掉了。已修：`inbox-service.ts` 的 `InboxView` 加 `mediaUrl`；`Inbox.tsx` 音频类型加 `<audio controls>` + "这段录音的文字记录："提示语；`wish-request-flow.test.ts` 补回归断言。`wish-request` spec 新增对应场景。遗留：`/p/:slug` 公开落地页有同样的缺口，因音频回放路由要求登录+收发双方鉴权、跟公开页免登录可看的设计冲突，需要先定权限模型，记 BACKLOG 待讨论。
+
 ### Added — 祈福回应下能往返回复了；补充文字不再强制（B-88, B-89）
 
 - **祈福详情页新增"回应下的往返回复"**（B-89，真 bug）：一条祈福不该是一次性的"求祝福 → 收祝福"就结束——用户反馈"收到语音祝福后没法回复"，排查后确认不是后端坏了（`scope=reply` 的回信机制本身工作正常），是 `/plaza/:id`（B-71 后主要的交互入口）从来没提供回复功能。现在每条回应下方展示已有的回复（按时间正序，读起来是连续对话）+ 一个回复输入框；`BlessingRepository` 新增 `listRepliesTo`，`wish-request-service.detail()` 递归拼出每条回应的回复链；复用现成的 `POST /api/blessings`（`scope=reply`）提交，没有新开接口、没建独立的评论系统。祈福作者与该回应的作者双方都能发起，回复目标固定是"这条回应涉及的另一方"。`wish-request` spec 新增对应 Requirement。

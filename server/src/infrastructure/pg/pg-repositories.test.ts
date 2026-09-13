@@ -161,4 +161,24 @@ describe('PG 仓储：核心流程', () => {
     await app.moderationQueue.resolve(queue[0]?.id ?? '', 'pass', '常见用语', 'mod');
     expect((await app.inbox.list(alice))[0]?.status).toBe('content');
   });
+
+  it('B-92：发布祈福 → 匹配到候选人并推送通知，不因外键顺序报错', async () => {
+    // 内存仓储没有真实外键约束，这条路径的顺序 bug 只在真实 PG 下才会炸——
+    // wish-request-service.publish() 曾经先 matchAndNotify()（写 notifications.
+    // request_id 指回这条祈福）再 wishRequests.add()，PGlite 开着 FK 约束时，
+    // 记录还没插入就先写引用会直接 23503 报错，整条发布请求跟着失败。
+    const author = await seedUser('求祝福的人', { ...CENTER, consent: true });
+    const candidate = await seedUser('可能感兴趣的人', NEAR_A);
+
+    const r = await app.wishRequests.publish(author, {
+      situationText: '最近压力很大，希望有人能鼓励我一下。',
+      tags: [],
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.state).toBe('published');
+
+    const notifications = await app.notifications.list(candidate);
+    expect(notifications.items.some((n) => n.kind === 'wish_request_matched')).toBe(true);
+  });
 });

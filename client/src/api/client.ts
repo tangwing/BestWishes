@@ -125,6 +125,8 @@ export interface InboxItem {
   blessingId: string;
   occasion: Occasion;
   contentType: 'text' | 'audio' | 'video';
+  /** contentType='audio' 时的回放地址；文字祝福恒为 null。 */
+  mediaUrl: string | null;
   from: { userId: string; nickname: string; city: string | null; distanceKm: number | null };
   deliveredAt: string;
   read: boolean;
