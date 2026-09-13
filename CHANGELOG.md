@@ -4,6 +4,24 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Planned — 2026-09-13 阶段性复盘：三步路线的 spec change（B-94, B-95, B-96）
+
+用户叫停功能迭代，要求先复盘两件事：现在的 Demo 是否符合最初的理念；下一步是先做移动端 App 还是先把视频打分建完。完整分析见 PROMPT_LOG.md。
+
+**复盘结论**：理念 → 领域模型 → 后端能力这条链路是好的（201 测试、真外键、可插拔审核），但**理念 → 用户此刻的感受**这条链路还没开始建。把首次善意的路径从代码里数出来是 **9 步跨 4 个页面**，且全程没有一个具体的人——用户是在对着人口筛选器写信。vision 的使命第一个动词是"激发"，而能激发的东西（祈福广场）被放在动线旁边而非入口。两个备选方向都被否决：现在做原生是把未验证的动线搬进更难改的容器，缺的"手机形态"PWA 全能给；先建视频打分违反 vision"AI 评估是辅助手段不能主导形态"，且录制门槛远高于音频（刚为降门槛做了 B-88），ASR 信任边界（B-70）还挂着。
+
+改为三步走，全部在现有 Web 栈内，规划 artifact 已写完并 `openspec validate --all --strict` 17/17 通过，实现另开会话：
+
+- **B-94 `redesign-kindness-entry`**：把首次善意压到 2 步。新增 `kindness-entry` 能力；**撤销 B-71 定的"广场列表 MUST NOT 含回应正文"**——那是论坛正确但情绪错误的决策，改为列表必须展示最新一条回应摘录（走写入路径维护，不在渲染时扫表）；访客可读文字 / 音频需登录；祈福加匿名发布；受众预览从发送硬门槛降级为可选辅助。**顺带收口一个既有真实缺口**：`wish-request-service.detail()` 对任何人（含访客）下发 `audioUrl`，而 `audio-scoring-service.readAudio()` 只放行"作者或收件人"——第三方在广场点播放必然 403。权限模型改为"广场上 `published` 的回应音频，任何登录用户可播放"，这也是 B-93 遗留的 `/p/:slug` 权限问题的落点。
+- **B-95 `add-shareable-blessing-card`**：产品使命是"传递"善意，但传递在产品层几乎没实现——只有一个朴素的 `/p/:slug`，没有 og:image、没有任何用户会想发出去的产物。新增 `blessing-card`（确定性生成、可缓存、不进数据库）与 `blessing-feedback`（**文字祝福的用心反馈**——vision 承诺"始终提供"，管线早已建好却只接在音频上，文字群发发出去一直是石沉大海）；落地页补 og 元信息与音频播放器。唯一的重量级决策是卡片图片怎么生成，design.md D1 列了四个候选（选中：手写 SVG + 一个光栅化依赖 + 服务端捆中文字体；明确否决把无头浏览器塞进生产运行时）。微信 JS-SDK 不在范围——需 appId + 已备案域名（B-42 未办），写了无法验证。
+- **B-96 `add-mobile-shell-pwa`**：底部 tab（**首页并入广场 tab**，用户拍板）、390px 版面约束、PWA 可安装、Web Push（`notification` 的 Purpose 里"真实推送通道留到后续"的那个后续）。明确**不做**原生 / RN / 小程序——多端方式仍是 AGENTS.md §6 未决项，要先有留存数据再谈。
+
+三步做完后量三个数：打开→首次善意转化率、收到→24h 回赠率、外链带新占比。这三个数不好看，原生和视频打分都救不了。
+
+### Changed — P2 第一批归档，主 specs 从 10 个能力变成 12 个（B-68）
+
+用户审阅通过后 `/opsx:archive` 了 `add-p2-wish-request-audio`（4 artifact 完成、52/52 tasks 完成）。delta → 主 spec 的同步：新建 `audio-scoring` / `blessing-audio` / `wish-request` / `wish-request-matching` 四个能力共 21 条 Requirement；替换 `blessing-authoring` / `blessing-records` / `content-moderation` / `user-profile` 的 5 条、新增 2 条；`notification` 追加"请求匹配通知"；**`blessing-streak` 整个能力退役**——三条 Requirement 全部 REMOVED，主 spec 的 `## Requirements` 清空，按归档规则删除该文件（"回响/连续天数"这套 KPI 味的激励与 vision"不做攀比"有张力，累计口径已迁到 `user-profile` 的"累计善意数"）。归档前逐条核对了每个 delta 的 Requirement 与主 spec 是否逐字一致，`openspec validate --all --strict` 15/15 通过。代码侧的 dormant 残留（`streak_days` 表、`StreakRepository` 等）仍是 B-74，单独一轮清。
+
 ### Fixed — 发布祈福命中候选人时 500；福袋音频回应看不到播放器（B-92, B-93）
 
 用户纠正了 B-91 的既有解释——他说的不是"过一会儿又收到一条"，而是"同一次回应（录音+补充文字）点亮福袋两次，第二次点开只看到文字，感觉这段文字跟录音完全没绑在一起"。排查这句话时，先用真实 curl 直接打运行中的 `pnpm demo`（PGlite，真外键约束）复现，顺手撞见一个更严重、无关的 bug，然后才定位到用户报告的真正根源。
