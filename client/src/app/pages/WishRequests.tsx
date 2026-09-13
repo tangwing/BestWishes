@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, type WishRequestSummary } from '../../api/client';
 import { useSession } from '../session';
+import { formatTimestamp } from '../formatTime';
 import s from '../app.module.css';
 
 const STATE_LABEL: Record<string, string> = {
@@ -89,7 +90,7 @@ export function WishRequests() {
         >
           <p className={s.hint}>
             来自 {r.authorNickname}
-            {r.authorCity ? ` · ${r.authorCity}` : ''}
+            {r.authorCity ? ` · ${r.authorCity}` : ''} · {formatTimestamp(r.createdAt)}
             {filter === 'mine' && (
               <>
                 {' · '}

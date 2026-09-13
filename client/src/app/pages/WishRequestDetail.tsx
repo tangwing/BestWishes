@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, type WishRequestDetail as Detail } from '../../api/client';
 import { useSession } from '../session';
+import { formatTimestamp } from '../formatTime';
 import s from '../app.module.css';
 
 export function WishRequestDetail() {
@@ -42,7 +43,7 @@ export function WishRequestDetail() {
       <div className={s.card}>
         <p className={s.hint}>
           来自 {r.authorNickname}
-          {r.authorCity ? ` · ${r.authorCity}` : ''}
+          {r.authorCity ? ` · ${r.authorCity}` : ''} · {formatTimestamp(r.createdAt)}
         </p>
         <p className={s.blessing}>{r.situationText}</p>
         {r.scriptText && (
@@ -105,7 +106,7 @@ export function WishRequestDetail() {
         <div className={s.card} key={resp.id}>
           <p className={s.hint}>
             来自 {resp.fromNickname}
-            {resp.fromCity ? ` · ${resp.fromCity}` : ''}
+            {resp.fromCity ? ` · ${resp.fromCity}` : ''} · {formatTimestamp(resp.createdAt)}
           </p>
           {resp.audioUrl && (
             <audio controls src={resp.audioUrl} style={{ width: '100%', marginTop: 8 }} />

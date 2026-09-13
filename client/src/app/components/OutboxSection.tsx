@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, type OutboxItem } from '../../api/client';
 import { moderationReasonText } from '../moderationCategories';
+import { formatTimestamp } from '../formatTime';
 import s from '../app.module.css';
 
 const STATE_LABEL: Record<string, string> = {
@@ -56,11 +57,18 @@ export function OutboxSection() {
               <span className={s.tag}>{OCC[b.occasion]}</span>
               <span className={s.tag}>{SCOPE_LABEL[b.scope] ?? `群发 ${b.recipientCount} 人`}</span>
               <div style={{ fontFamily: 'var(--serif)', fontSize: 15 }}>{b.bodyPreview}</div>
+              {b.contentType === 'audio' && b.mediaUrl && (
+                <audio controls src={b.mediaUrl} style={{ width: '100%', marginTop: 6 }} />
+              )}
               <div className={s.meta}>
+                {formatTimestamp(b.createdAt)}
                 {b.scope !== 'wish_response' && (
-                  <a href={`/p/${b.slug}`} target="_blank" rel="noreferrer">
-                    公开链接
-                  </a>
+                  <>
+                    {' · '}
+                    <a href={`/p/${b.slug}`} target="_blank" rel="noreferrer">
+                      公开链接
+                    </a>
+                  </>
                 )}
                 {b.renewCount > 0 && ` · 已续期 ${String(b.renewCount)} 次`}
               </div>

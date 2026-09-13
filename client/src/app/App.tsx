@@ -43,6 +43,7 @@ export function App() {
           <NavLink to="/plaza">祈福广场</NavLink>
           {user && (
             <>
+              <span className={s.who}>{user.nickname}</span>
               <NavLink to="/give">传递善意</NavLink>
               <NavLink to="/pouch">
                 我的福袋{unread > 0 && <span className={s.badge}>{unread}</span>}

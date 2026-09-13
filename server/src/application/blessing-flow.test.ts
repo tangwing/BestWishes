@@ -320,6 +320,7 @@ describe('回复（不能对话，只能回一段祝福）', () => {
     expect(senderInbox[0]?.inReplyTo).toEqual({
       blessingId: original.value.id,
       bodyPreview: GOOD_BODY.slice(0, 40),
+      slug: original.value.slug,
     });
   });
 

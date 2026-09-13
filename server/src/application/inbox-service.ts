@@ -29,8 +29,8 @@ export interface InboxView {
   body: string | null;
   placeholderText: string | null;
   canReply: boolean;
-  /** 这条是对我某条祝福的回信时，指向原信；否则 null。 */
-  inReplyTo: { blessingId: string; bodyPreview: string } | null;
+  /** 这条是对我某条祝福的回信时，指向原信；否则 null。slug 用于跳转到原信的公开落地页。 */
+  inReplyTo: { blessingId: string; bodyPreview: string; slug: string } | null;
 }
 
 function round1(n: number): number {
@@ -64,11 +64,15 @@ export function createInboxService(deps: AppDeps) {
             haversineKm(myPoint, { lat: senderProfile.lat, lng: senderProfile.lng }),
           );
         }
-        let inReplyTo: { blessingId: string; bodyPreview: string } | null = null;
+        let inReplyTo: { blessingId: string; bodyPreview: string; slug: string } | null = null;
         if (b.scope === 'reply' && b.replyToBlessingId) {
           const original = await deps.repos.blessings.findById(b.replyToBlessingId);
           if (original) {
-            inReplyTo = { blessingId: original.id, bodyPreview: original.body.slice(0, 40) };
+            inReplyTo = {
+              blessingId: original.id,
+              bodyPreview: original.body.slice(0, 40),
+              slug: original.slug,
+            };
           }
         }
         out.push({

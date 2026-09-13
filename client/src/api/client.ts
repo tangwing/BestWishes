@@ -104,6 +104,9 @@ export interface OutboxItem {
   state: string;
   occasion: Occasion;
   scope: 'broadcast' | 'reply' | 'wish_response';
+  contentType: 'text' | 'audio' | 'video';
+  /** contentType='audio' 时的回放地址；文字祝福恒为 null。 */
+  mediaUrl: string | null;
   recipientCount: number;
   bodyPreview: string;
   /** 完整正文，用于「复制以供编辑」——只回给作者本人，不受 bodyPreview 的截断限制。 */
@@ -129,7 +132,7 @@ export interface InboxItem {
   body: string | null;
   placeholderText: string | null;
   canReply: boolean;
-  inReplyTo: { blessingId: string; bodyPreview: string } | null;
+  inReplyTo: { blessingId: string; bodyPreview: string; slug: string } | null;
 }
 
 export interface NotificationItem {

@@ -56,6 +56,10 @@ export interface OutboxItem {
   state: string;
   occasion: Occasion;
   scope: BlessingScope;
+  contentType: BlessingContentType;
+  /** contentType='audio' 时的回放地址；文字祝福恒为 null。B-71 把祈福回应合并进这个列表时
+   * 漏了这个字段，导致"我的善意"里的音频回应只看得到转写文字、放不了原始录音。 */
+  mediaUrl: string | null;
   recipientCount: number;
   bodyPreview: string;
   body: string;
@@ -316,6 +320,8 @@ export function createBlessingService(deps: AppDeps) {
           state: b.state,
           occasion: b.occasion,
           scope: b.scope,
+          contentType: b.contentType,
+          mediaUrl: b.media?.url ?? null,
           recipientCount: b.recipientIds.length,
           bodyPreview: b.body.slice(0, 40),
           body: b.body,

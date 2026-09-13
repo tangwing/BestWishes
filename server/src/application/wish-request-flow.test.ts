@@ -131,6 +131,12 @@ describe('祝福请求 + 音频回应', () => {
     expect(feedback.value.status).toBe('scored');
     if (feedback.value.status !== 'scored') return;
     expect(feedback.value.completeness).toBe('complete');
+
+    // B-85：回应者自己在"我的善意"（outbox）里要能放这段录音，不能只看到转写文字
+    const responderOutbox = await ctx.app.blessings.outbox(responder);
+    const own = responderOutbox.find((o) => o.id === submitted.value.id);
+    expect(own?.contentType).toBe('audio');
+    expect(own?.mediaUrl).toBeTruthy();
   });
 
   it('录音时长超出范围 → 拒绝', async () => {

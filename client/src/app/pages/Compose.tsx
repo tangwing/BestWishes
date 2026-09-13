@@ -11,6 +11,7 @@ import {
 } from '../../api/client';
 import { useSession } from '../session';
 import { OutboxSection } from '../components/OutboxSection';
+import { RangeSlider } from '../components/RangeSlider';
 import s from '../app.module.css';
 
 const OCCASIONS: [Occasion, string][] = [
@@ -45,6 +46,8 @@ const DEFAULT_FILTER: AudienceFilter = {
 
 const MAX_FILTER_TAGS = 10;
 const MAX_TAG_LEN = 20;
+const AGE_SLIDER_MIN = 0;
+const AGE_SLIDER_MAX = 100;
 
 interface ComposeNavState {
   copyBody?: string;
@@ -199,40 +202,17 @@ export function Compose() {
               }}
             />
 
-            <div className={s.row} style={{ marginTop: 10 }}>
-              <div style={{ flex: 1 }}>
-                <label>年龄下限</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={120}
-                  placeholder="不限"
-                  value={filter.ageMin ?? ''}
-                  onChange={(e) => {
-                    setFilter({
-                      ...filter,
-                      ageMin: e.target.value === '' ? null : Number(e.target.value),
-                    });
-                  }}
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label>年龄上限</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={120}
-                  placeholder="不限"
-                  value={filter.ageMax ?? ''}
-                  onChange={(e) => {
-                    setFilter({
-                      ...filter,
-                      ageMax: e.target.value === '' ? null : Number(e.target.value),
-                    });
-                  }}
-                />
-              </div>
-            </div>
+            <label style={{ marginTop: 10 }}>年龄范围</label>
+            <RangeSlider
+              min={AGE_SLIDER_MIN}
+              max={AGE_SLIDER_MAX}
+              valueMin={filter.ageMin}
+              valueMax={filter.ageMax}
+              formatValue={(v) => `${String(v)}岁`}
+              onChange={(ageMin, ageMax) => {
+                setFilter({ ...filter, ageMin, ageMax });
+              }}
+            />
 
             <label style={{ marginTop: 12 }}>性别</label>
             <div className={s.tabs}>

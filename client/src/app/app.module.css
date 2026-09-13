@@ -207,3 +207,83 @@
   font-size: 40px;
   color: var(--accent-ink);
 }
+
+.who {
+  font-size: 13px;
+  color: var(--accent-ink);
+  font-weight: 600;
+  padding: 4px 4px;
+  align-self: center;
+}
+
+/* 双滑块区间选择器（如年龄范围），见 RangeSlider.tsx */
+.rangeSlider {
+  position: relative;
+  height: 34px;
+  margin: 4px 0 2px;
+}
+.rangeTrack {
+  position: absolute;
+  top: 15px;
+  left: 8px;
+  right: 8px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+}
+.rangeFill {
+  position: absolute;
+  top: 15px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.rangeThumb {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  width: 100%;
+  margin: 0;
+  height: 24px;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  pointer-events: none;
+}
+.rangeThumb::-webkit-slider-runnable-track {
+  background: transparent;
+}
+.rangeThumb::-moz-range-track {
+  background: transparent;
+  border: none;
+}
+.rangeThumb::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  pointer-events: auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent-ink);
+  border: 2px solid var(--surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  margin-top: 3px;
+}
+.rangeThumb::-moz-range-thumb {
+  pointer-events: auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent-ink);
+  border: 2px solid var(--surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+.rangeLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--soft);
+  margin-top: 6px;
+}

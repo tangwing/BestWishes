@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, type InboxItem } from '../../api/client';
 import { useSession } from '../session';
+import { formatTimestamp } from '../formatTime';
 import s from '../app.module.css';
 
 const OCC: Record<string, string> = {
@@ -66,10 +67,16 @@ export function Inbox() {
           <p className={s.hint}>
             来自 {it.from.nickname}
             {it.from.city ? ` · ${it.from.city}` : ''}
-            {distanceLabel(it.from.distanceKm)} · {OCC[it.occasion] ?? it.occasion}
+            {distanceLabel(it.from.distanceKm)} · {OCC[it.occasion] ?? it.occasion} ·{' '}
+            {formatTimestamp(it.deliveredAt)}
           </p>
           {it.inReplyTo && (
-            <p className={s.hint}>回的是你那条：「{it.inReplyTo.bodyPreview}」</p>
+            <p className={s.hint}>
+              回的是你那条：
+              <a href={`/p/${it.inReplyTo.slug}`} target="_blank" rel="noreferrer">
+                「{it.inReplyTo.bodyPreview}」
+              </a>
+            </p>
           )}
           {it.status === 'content' && it.body ? (
             <p className={s.blessing}>{it.body}</p>
