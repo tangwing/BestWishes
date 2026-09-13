@@ -224,6 +224,15 @@ class InMemoryBlessingRepository implements BlessingRepository {
         .map(clone),
     );
   }
+
+  listRepliesTo(blessingId: string): Promise<BlessingRecord[]> {
+    return Promise.resolve(
+      [...this.byId.values()]
+        .filter((b) => b.replyToBlessingId === blessingId)
+        .sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1))
+        .map(clone),
+    );
+  }
 }
 
 class InMemoryBlessingEventRepository implements BlessingEventRepository {

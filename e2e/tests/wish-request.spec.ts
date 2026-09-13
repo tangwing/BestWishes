@@ -57,6 +57,18 @@ test('祝福请求：发布 → 广场浏览 → 录音回应（真麦克风假�
   await expect(page.getByText(/来自 wr1-回应者/)).toBeVisible({ timeout: 20_000 });
   await expect(page.locator('audio')).toHaveCount(1);
 
+  // B-89：请求人能就地回复这条回应，形成连续对话（回复也要过 hold，等扫描发布）
+  await page.getByPlaceholder('回一句…').fill('谢谢你，真的很温暖。');
+  await page.getByRole('button', { name: '回复', exact: true }).click();
+  await expect(page.getByText('谢谢你，真的很温暖。')).toBeVisible({ timeout: 15_000 });
+
+  // 回应者刷新详情页也能看到这条回复，并且能接着回过去
+  await rPage.goto(`/plaza/${requestId}`);
+  await expect(rPage.getByText('谢谢你，真的很温暖。')).toBeVisible({ timeout: 15_000 });
+  await rPage.getByPlaceholder('回一句…').fill('不客气，一切都会好起来的！');
+  await rPage.getByRole('button', { name: '回复', exact: true }).click();
+  await expect(rPage.getByText('不客气，一切都会好起来的！')).toBeVisible({ timeout: 15_000 });
+
   await responderCtx.close();
 });
 

@@ -88,3 +88,10 @@
 - [x] 10.4（B-79，纯 UI）传递善意页面重排：「送给谁」移到「场景/正文/范本」前面；「范本」默认折叠（一个链接按钮展开），不再占开屏空间。
 
 全部改动 `pnpm verify` 196 测试、`pnpm test:e2e` 13 个全绿，`openspec validate --strict` 通过。
+
+## 11. 用户走查第四轮：回应无法回复 + 补充文字不再强制（2026-09-13）
+
+- [x] 11.1（B-88，触及 `audio-scoring`/`blessing-audio` spec）补充文字不再强制，录音下限 5→4 秒：`RespondToWishRequest.tsx` 去掉"发出这段祝福"按钮里 `!transcript.trim()` 这个门槛，改成提示"不写也能发，只是没法自动确认验证词，会转人工看一眼"。**发现一个连带问题并修了**：`audio-scoring-service` 原来直接把（可能是空的）转写文本丢给 `ModerationProvider`，而 `RuleBasedProvider` 的"低有效内容"判定对空字符串恒判 `violation`——文字一旦不强制，"不写字"就会被直接误判违规驳回，跟"取消强制"的初衷正好相反。改成没有转写文本时不调用 `ModerationProvider`，直接按"无法自动核验、转人工"处理（同"审核服务不可用"的保守处理原则）。同步把 `packages/domain/src/config.ts` 的 `audioMinDurationSec` 默认值从 5 改成 4。**没做**：录音自动转文字（Web Speech API 之类）——用户明确说了"如果不能就先 pending"，鉴于跨浏览器可靠性差（Safari 支持有限、e2e 假设备录不出真实语音没法测）且"取消强制"已经把主要摩擦点解决了，先不做，记 BACKLOG 待后续设计讨论。
+- [x] 11.2（B-89，真 bug + 新 Requirement，触及 `wish-request` spec）祈福详情页原来完全没有"回复"入口——用户反馈"收到语音祝福后没法回复"，根因不是后端坏了（`scope=reply` 机制本身好用，直接调 API 验证过），是 `/plaza/:id`（B-71 后的主要交互面）从来没提供回复功能，只有旧的"去福袋点回一段祝福"这条路（多数用户不会主动想到）。做法：`BlessingRepository` 加 `listRepliesTo(blessingId)`；`wish-request-service.detail()` 对每条回应递归拼出它下面的往返回复链（`collectReplyChain`，深度封顶 20，纯粹兜底用，正常是 DAG 不会成环）；`WishRequestDetail.tsx` 在每条回应下内联渲染回复列表 + 一个回复输入框（复用现成的 `POST /api/blessings` `scope=reply` 提交，不新开接口）。回复目标固定是"这条回应涉及的另一个人"（请求人 ↔ 回应者），取当前对话链最后一条消息的 id 当 `replyToBlessingId`。`wish-request` spec 新增"回应下的往返回复"Requirement。**没做**：富文本 / 图片回复——用户在同一轮里提了，但这是新的产品面（图片存储、审核、渲染），记 BACKLOG 待讨论，不预先设计。
+
+全部改动 `pnpm verify` 200 测试、`pnpm test:e2e` 13 个全绿，`openspec validate --strict` 通过。

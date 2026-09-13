@@ -5,7 +5,7 @@ import { useSession } from '../session';
 import { AudioRecorder, type RecordedAudio } from '../components/AudioRecorder';
 import s from '../app.module.css';
 
-const MIN_DURATION_SEC = 5;
+const MIN_DURATION_SEC = 4;
 const MAX_DURATION_SEC = 180;
 
 export function RespondToWishRequest() {
@@ -101,7 +101,10 @@ export function RespondToWishRequest() {
         onRecorded={setRecorded}
       />
 
-      <h2>补充文字（帮助我们确认你说了什么，包含验证码）</h2>
+      <h2>补充文字（可选，写了能更快通过验证）</h2>
+      <p className={s.hint} style={{ marginTop: -6 }}>
+        不写也能发出去，只是没法自动确认你说了验证码，会转人工看一眼再决定要不要送达。
+      </p>
       <textarea
         value={transcript}
         onChange={(e) => {
@@ -113,15 +116,14 @@ export function RespondToWishRequest() {
 
       {err && <div className={s.error}>{err}</div>}
       <div style={{ marginTop: 20 }}>
-        <button disabled={busy || !durationOk || !transcript.trim() || !challenge} onClick={submit}>
+        <button disabled={busy || !durationOk || !challenge} onClick={submit}>
           发出这段祝福
         </button>
-        {!busy && (!durationOk || !transcript.trim() || !challenge) && (
+        {!busy && (!durationOk || !challenge) && (
           <p className={s.hint} style={{ marginTop: 8 }}>
             还差：
             {!recorded && '录一段音频；'}
             {recorded && !durationOk && `录音时长要在 ${MIN_DURATION_SEC}–${MAX_DURATION_SEC} 秒之间（当前 ${recorded.durationSec} 秒）；`}
-            {!transcript.trim() && '补充文字；'}
             {!challenge && '验证码加载中；'}
           </p>
         )}

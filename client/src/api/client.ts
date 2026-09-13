@@ -198,14 +198,25 @@ export interface WishRequestSummary {
   isMine: boolean;
 }
 
-/** 祈福详情里的一条回应。 */
+/** 一条回应下面的往返回复。 */
+export interface ReplyView {
+  id: string;
+  fromUserId: string;
+  fromNickname: string;
+  body: string;
+  createdAt: string;
+}
+
+/** 祈福详情里的一条回应，以及它下面连续的往返回复。 */
 export interface ResponseView {
   id: string;
+  fromUserId: string;
   fromNickname: string;
   fromCity: string | null;
   audioUrl: string | null;
   transcript: string | null;
   createdAt: string;
+  replies: ReplyView[];
 }
 
 /** 祈福详情：处境全文 + 稿子 + 聚合统计 + 全部 published 回应（无评分细节）。 */

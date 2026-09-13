@@ -30,14 +30,25 @@ export interface WishRequestSummary {
   isMine: boolean;
 }
 
-/** 祈福详情里的一条回应。 */
+/** 一条回应下面的往返回复（文字，scope='reply' 链）。 */
+export interface ReplyView {
+  id: string;
+  fromUserId: string;
+  fromNickname: string;
+  body: string;
+  createdAt: string;
+}
+
+/** 祈福详情里的一条回应，以及它下面连续的往返回复（B-89：祈福是 Topic，回应下要有对话）。 */
 export interface ResponseView {
   id: string;
+  fromUserId: string;
   fromNickname: string;
   fromCity: string | null;
   audioUrl: string | null;
   transcript: string | null;
   createdAt: string;
+  replies: ReplyView[];
 }
 
 /** 祈福详情：处境全文 + 稿子 + 聚合统计 + 全部 published 回应。不含回应者评分细节。 */
@@ -68,6 +79,32 @@ function excerpt(s: string): string {
 
 export function createWishRequestService(deps: AppDeps) {
   const audience = createAudienceService(deps);
+
+  const MAX_REPLY_DEPTH = 20;
+
+  /** 沿 replyToBlessingId 链往下走，拼出一条回应下面连续的往返回复，按时间正序。
+   * 深度封顶纯为兜底（正常情况下这是个 DAG，不会成环）。 */
+  async function collectReplyChain(rootId: string, depth = 0): Promise<ReplyView[]> {
+    if (depth >= MAX_REPLY_DEPTH) return [];
+    const children = await deps.repos.blessings.listRepliesTo(rootId);
+    const out: ReplyView[] = [];
+    for (const c of children) {
+      if (c.state !== 'published') continue; // 未过审 / 已撤回的不展示
+      const [sender, senderProfile] = await Promise.all([
+        deps.repos.users.findById(c.authorId),
+        deps.repos.profiles.get(c.authorId),
+      ]);
+      out.push({
+        id: c.id,
+        fromUserId: c.authorId,
+        fromNickname: senderProfile?.senderName ?? sender?.nickname ?? '一位朋友',
+        body: c.body,
+        createdAt: c.publishedAt ?? c.createdAt,
+      });
+      out.push(...(await collectReplyChain(c.id, depth + 1)));
+    }
+    return out.sort((x, y) => (x.createdAt < y.createdAt ? -1 : 1));
+  }
 
   async function authorInfo(authorId: string): Promise<{ nickname: string; city: string | null }> {
     const [user, profile] = await Promise.all([
@@ -276,11 +313,13 @@ export function createWishRequestService(deps: AppDeps) {
         ]);
         responses.push({
           id: b.id,
+          fromUserId: b.authorId,
           fromNickname: senderProfile?.senderName ?? sender?.nickname ?? '一位朋友',
           fromCity: senderProfile?.regionCity ?? null,
           audioUrl: b.media?.url ?? null,
           transcript: b.media?.transcript ?? null,
           createdAt: b.publishedAt ?? b.createdAt,
+          replies: await collectReplyChain(b.id),
         });
       }
       responses.sort((x, y) => (x.createdAt < y.createdAt ? 1 : -1));

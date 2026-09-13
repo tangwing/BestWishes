@@ -145,8 +145,17 @@ export function createAudioScoringService(deps: AppDeps) {
       draft = { ...draft, body: transcript, media: { ...draft.media!, transcript } };
       await deps.repos.blessings.save(draft);
 
-      // [1a] 安全检查——复用现成 ModerationProvider，同文本流程
-      const moderation = await deps.moderation.check({ text: transcript, occasion: input.occasion });
+      // [1a] 安全检查——复用现成 ModerationProvider，同文本流程。
+      // 补充文字现在不强制填（B-88）：没有转写文本时，不能拿一句空字符串去过
+      // ModerationProvider——RuleBasedProvider 的"低有效内容"判定会把空文本直接
+      // 判 violation，等于"不写字就必被拒"，跟"取消强制"这个初衷正好反着来。
+      // 没有文本 = 没法自动核验安全 / 真人校验，跟"审核服务不可用"是同一种保守
+      // 处理：不自动拒、不自动过，转人工看一眼（isLowEffort 那套判定本来就是给
+      // "有文本但看得出在划水"设计的，不适用于"压根没提供文本"这种情况）。
+      const moderation =
+        transcript.trim().length > 0
+          ? await deps.moderation.check({ text: transcript, occasion: input.occasion })
+          : { verdict: 'suspect' as const, categories: [], providerRef: 'no-transcript' };
       const outcome = outcomeFor(moderation);
       draft = { ...draft, moderation };
       await deps.repos.blessings.save(draft);

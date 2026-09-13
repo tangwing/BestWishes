@@ -3,7 +3,12 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { api, type WishRequestDetail as Detail } from '../../api/client';
+import {
+  api,
+  ApiCallError,
+  type ResponseView,
+  type WishRequestDetail as Detail,
+} from '../../api/client';
 import { useSession } from '../session';
 import { formatTimestamp } from '../formatTime';
 import s from '../app.module.css';
@@ -14,6 +19,9 @@ export function WishRequestDetail() {
   const { id } = useParams<{ id: string }>();
   const [r, setR] = useState<Detail | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [replyBusy, setReplyBusy] = useState<string | null>(null);
+  const [replyErr, setReplyErr] = useState<Record<string, string>>({});
 
   const load = useCallback(() => {
     if (!id) return;
@@ -33,6 +41,50 @@ export function WishRequestDetail() {
       clearInterval(h);
     };
   }, [load]);
+
+  /** 一条回应下面往返回复的"该回给谁"：固定是这条回应涉及的两个人之一——
+   * 我是请求人就回给回应者，我是回应者（或后面接话的那个人）就回给请求人。 */
+  function otherParty(resp: ResponseView): string | null {
+    if (!user || !r) return null;
+    if (user.id === r.authorId) return resp.fromUserId;
+    if (user.id === resp.fromUserId) return r.authorId;
+    return null; // 不是这条回应的当事人，不能回复
+  }
+
+  function sendReply(resp: ResponseView) {
+    const target = otherParty(resp);
+    const body = (drafts[resp.id] ?? '').trim();
+    if (!target || !body || !id) return;
+    const lastMessageId = resp.replies[resp.replies.length - 1]?.id ?? resp.id;
+    setReplyBusy(resp.id);
+    setReplyErr((e) => ({ ...e, [resp.id]: '' }));
+    void api
+      .submit({
+        contentType: 'text',
+        body,
+        occasion: 'daily',
+        scope: 'reply',
+        replyToUserId: target,
+        replyToBlessingId: lastMessageId,
+      })
+      .then(() => {
+        setDrafts((d) => ({ ...d, [resp.id]: '' }));
+        load();
+      })
+      .catch((e: unknown) => {
+        if (e instanceof ApiCallError && e.code === 'consent_required') {
+          nav(`/agreement?returnTo=${encodeURIComponent(`/plaza/${id}`)}`);
+          return;
+        }
+        setReplyErr((prev) => ({
+          ...prev,
+          [resp.id]: e instanceof ApiCallError ? e.message : '回复失败',
+        }));
+      })
+      .finally(() => {
+        setReplyBusy(null);
+      });
+  }
 
   if (notFound) return <div className={s.page}>找不到这条祈福。</div>;
   if (!r) return <div className={s.page}>…</div>;
@@ -115,6 +167,43 @@ export function WishRequestDetail() {
             <p className={s.meta} style={{ marginTop: 6 }}>
               “{resp.transcript}”
             </p>
+          )}
+
+          {resp.replies.length > 0 && (
+            <div style={{ marginTop: 10, paddingLeft: 12, borderLeft: `2px solid var(--line)` }}>
+              {resp.replies.map((rep) => (
+                <p className={s.meta} key={rep.id} style={{ marginTop: 8 }}>
+                  <b style={{ color: 'var(--accent-ink)' }}>{rep.fromNickname}</b>
+                  {' · '}
+                  {formatTimestamp(rep.createdAt)}
+                  <br />
+                  {rep.body}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {otherParty(resp) && (
+            <div style={{ marginTop: 10 }}>
+              <textarea
+                value={drafts[resp.id] ?? ''}
+                onChange={(e) => {
+                  setDrafts((d) => ({ ...d, [resp.id]: e.target.value }));
+                }}
+                placeholder="回一句…"
+                style={{ minHeight: 50, fontSize: 14 }}
+              />
+              {replyErr[resp.id] && <p className={s.error}>{replyErr[resp.id]}</p>}
+              <button
+                className="ghost"
+                disabled={replyBusy === resp.id || !(drafts[resp.id] ?? '').trim()}
+                onClick={() => {
+                  sendReply(resp);
+                }}
+              >
+                回复
+              </button>
+            </div>
           )}
         </div>
       ))}

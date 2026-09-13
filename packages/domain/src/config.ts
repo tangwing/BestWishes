@@ -61,7 +61,7 @@ export const DEFAULT_CONFIG: P1Config = {
   maxAudienceSize: 10,
   audienceMaxRadiusKm: 50,
   audienceMinRadiusKm: 0.2,
-  audioMinDurationSec: 5,
+  audioMinDurationSec: 4,
   audioMaxDurationSec: 180,
   audioScoringTimeoutSeconds: 60,
   focusScoring: {

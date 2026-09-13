@@ -485,6 +485,15 @@ class PgBlessingRepository implements BlessingRepository {
       .orderBy(desc(t.blessings.createdAt));
     return Promise.all(rows.map(async (row) => toBlessing(row, await this.loadEvents(row.id))));
   }
+
+  async listRepliesTo(blessingId: string): Promise<BlessingRecord[]> {
+    const rows = await this.db
+      .select()
+      .from(t.blessings)
+      .where(eq(t.blessings.replyToBlessingId, blessingId))
+      .orderBy(asc(t.blessings.createdAt));
+    return Promise.all(rows.map(async (row) => toBlessing(row, await this.loadEvents(row.id))));
+  }
 }
 
 class PgBlessingEventRepository implements BlessingEventRepository {

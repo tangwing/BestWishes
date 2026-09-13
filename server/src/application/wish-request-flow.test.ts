@@ -139,6 +139,67 @@ describe('祝福请求 + 音频回应', () => {
     expect(own?.mediaUrl).toBeTruthy();
   });
 
+  it('B-89：请求人能回复一条音频回应，回复出现在祈福详情的连续回复里，回应者也能回过去', async () => {
+    const r = await ctx.app.wishRequests.publish(author, {
+      situationText: SITUATION,
+      scriptText: SCRIPT,
+      tags: [],
+    });
+    if (!r.ok) throw new Error('publish failed');
+
+    const challenge = ctx.app.audioScoring.issueLivenessChallenge();
+    const submitted = await ctx.app.audioScoring.submit(responder, {
+      requestId: r.value.id,
+      audio: Buffer.from('fake-audio-bytes'),
+      durationSec: 25,
+      occasion: 'daily',
+      challengeToken: challenge.token,
+      clientTranscript: `${SCRIPT}。${challenge.phrase}`,
+    });
+    if (!submitted.ok) throw new Error('submit failed');
+    ctx.clock.advance(6000);
+    await ctx.app.scans.publishReady();
+
+    // 请求人回复这条音频回应
+    const reply1 = await ctx.app.blessings.submit(author, {
+      contentType: 'text',
+      body: '谢谢你，真的很温暖，谢谢你愿意花时间录这段。',
+      occasion: 'daily',
+      scope: 'reply',
+      replyToUserId: responder,
+      replyToBlessingId: submitted.value.id,
+    });
+    expect(reply1.ok).toBe(true);
+    if (!reply1.ok) return;
+    ctx.clock.advance(6000);
+    await ctx.app.scans.publishReady();
+
+    let detail = await ctx.app.wishRequests.detail(r.value.id, responder);
+    expect(detail?.responses[0]?.replies).toHaveLength(1);
+    expect(detail?.responses[0]?.replies[0]?.fromUserId).toBe(author);
+    expect(detail?.responses[0]?.replies[0]?.body).toContain('谢谢你');
+
+    // 回应者能接着回过去，形成往返（回复目标是请求人刚发的那条回复）
+    const reply2 = await ctx.app.blessings.submit(responder, {
+      contentType: 'text',
+      body: '不客气，希望你一切顺利！',
+      occasion: 'daily',
+      scope: 'reply',
+      replyToUserId: author,
+      replyToBlessingId: reply1.value.id,
+    });
+    expect(reply2.ok).toBe(true);
+    ctx.clock.advance(6000);
+    await ctx.app.scans.publishReady();
+
+    detail = await ctx.app.wishRequests.detail(r.value.id, author);
+    const replies = detail?.responses[0]?.replies ?? [];
+    expect(replies).toHaveLength(2);
+    // 按时间正序：先是请求人的感谢，再是回应者的回复
+    expect(replies[0]?.fromUserId).toBe(author);
+    expect(replies[1]?.fromUserId).toBe(responder);
+  });
+
   it('录音时长超出范围 → 拒绝', async () => {
     const r = await ctx.app.wishRequests.publish(author, { situationText: SITUATION, tags: [] });
     if (!r.ok) throw new Error('publish failed');
@@ -163,6 +224,29 @@ describe('祝福请求 + 音频回应', () => {
       clientTranscript: goodTranscript(challenge.phrase),
     });
     expect(tooLong.ok).toBe(false);
+  });
+
+  it('不填补充文字 → 转人工复核，不会被误判违规驳回（B-88：文字不再强制）', async () => {
+    const r = await ctx.app.wishRequests.publish(author, { situationText: SITUATION, tags: [] });
+    if (!r.ok) throw new Error('publish failed');
+    const challenge = ctx.app.audioScoring.issueLivenessChallenge();
+
+    const submitted = await ctx.app.audioScoring.submit(responder, {
+      requestId: r.value.id,
+      audio: Buffer.from('fake-audio-bytes'),
+      durationSec: 4,
+      occasion: 'daily',
+      challengeToken: challenge.token,
+      // 故意不传 clientTranscript——RuleBasedProvider 对空文本会判"低有效内容"，
+      // 曾经因此被直接判 violation 驳回，等于"不写字就必被拒"，跟"取消强制"的
+      // 初衷正好相反。
+    });
+    expect(submitted.ok).toBe(true);
+    if (!submitted.ok) return;
+    expect(submitted.value.state).toBe('verifying'); // 不是 rejected
+
+    const queue = await ctx.app.moderationQueue.queue();
+    expect(queue.some((q) => q.blessing?.id === submitted.value.id)).toBe(true);
   });
 
   it('转写命中违禁词 → 驳回，不产生打分反馈', async () => {

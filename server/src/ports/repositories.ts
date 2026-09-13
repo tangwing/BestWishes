@@ -58,6 +58,8 @@ export interface BlessingRepository {
   listByState(state: BlessingState): Promise<BlessingRecord[]>;
   /** 一条祝福请求收到的全部回应（scope=wish_response）。 */
   listByRequestId(requestId: string): Promise<BlessingRecord[]>;
+  /** 直接回复某条祝福的那些回信（scope=reply，replyToBlessingId 指向它）。 */
+  listRepliesTo(blessingId: string): Promise<BlessingRecord[]>;
 }
 
 export interface BlessingEventRepository {
