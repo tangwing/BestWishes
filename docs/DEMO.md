@@ -19,7 +19,18 @@ pnpm demo        # 单进程，http://127.0.0.1:3000（hold 8 秒，方便看"�
 pnpm demo:fresh  # 删掉 .pgdata / .audio-data 再起
 ```
 
-纯内存（进程退出即清空，测试用）：
+**`pnpm demo` 恒 `BW_MODERATION=always_pass`：内容审核直接判 pass，不跑违禁词 /
+护栏词判定**——开发节奏考虑，新功能还在快速迭代阶段，真实判定容易把测试内容
+误挡、干扰的是功能验收而不是审核本身要验的东西。真实三档判定
+（`RuleBasedProvider`）没删，只是demo默认不走它；要验证审核链路本身，加
+`BW_MODERATION=rule_based` 覆盖：
+
+```bash
+BW_MODERATION=rule_based pnpm demo
+```
+
+纯内存（进程退出即清空，测试用；不传 `BW_MODERATION` 时默认 `rule_based`，
+跟正式行为一致）：
 
 ```bash
 pnpm --filter @bestwishes/client build
@@ -85,10 +96,13 @@ BW_HOLD_SECONDS=8 pnpm --filter @bestwishes/server start
 
 ## 试试这些内容（P1）
 
+> 下面几条要看到真实判定效果，得用 `BW_MODERATION=rule_based pnpm demo` 起——
+> 默认的 `pnpm demo` 恒 pass，这些内容也会直接投递。
+
 - 正常祝福（≥5 字）→ hold 后投递到福袋。
 - 含"超度收费" / "加我微信" → 判 suspect，停在校验中、进审核台，人工"通过"后才投递。
 - 含"刷单返利" / 刷屏（"啊啊啊啊啊……"）→ 判 violation，直接"未通过"，不投递。
-- 正文写"祝好"（太短）→ 提交被拒。
+- 正文写"祝好"（太短）→ 提交被拒（字数校验跟审核判定无关，`pnpm demo` 默认状态下依然生效）。
 
 ## 走一遍：P2 祝福请求 + 音频回应（需要至少两个账号）
 
@@ -123,7 +137,7 @@ BW_HOLD_SECONDS=8 pnpm --filter @bestwishes/server start
 
 ## 环境变量
 
-P1：`BW_HOLD_SECONDS`、`BW_MAX_AUDIENCE`（群发人数上限）、`BW_AUDIENCE_MAX_RADIUS_KM`、`BW_BODY_MIN_LEN` / `BW_BODY_MAX_LEN`、`BW_LINK_TTL_DAYS`、`BW_DB`（`memory` / `pglite`）、`BW_PGDATA`。
+P1：`BW_HOLD_SECONDS`、`BW_MAX_AUDIENCE`（群发人数上限）、`BW_AUDIENCE_MAX_RADIUS_KM`、`BW_BODY_MIN_LEN` / `BW_BODY_MAX_LEN`、`BW_LINK_TTL_DAYS`、`BW_DB`（`memory` / `pglite`）、`BW_PGDATA`、`BW_MODERATION`（`rule_based` 默认 / `always_pass`，`pnpm demo` 脚本恒设成 `always_pass`，见上方"起"一节）。
 P2：`BW_AUDIO_MIN_DURATION_SEC` / `BW_AUDIO_MAX_DURATION_SEC`（录音时长上下限）、`BW_AUDIO_DIR`（本机音频落盘目录）、`BW_LIVENESS_SECRET`（挑战式真人校验的签名密钥，生产环境务必换成真随机值）。
 都见 `server/src/config/app-config.ts` / `server/src/config/env.ts`。
 

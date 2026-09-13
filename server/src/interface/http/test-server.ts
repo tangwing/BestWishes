@@ -12,6 +12,7 @@ const testEnv: Env = {
   BW_DB: 'memory',
   BW_AUDIO_DIR: '/tmp/bestwishes-test-audio-server',
   BW_LIVENESS_SECRET: 'test-liveness-secret',
+  BW_MODERATION: 'rule_based',
 };
 
 export async function makeServer(opts?: Parameters<typeof makeApp>[0]) {

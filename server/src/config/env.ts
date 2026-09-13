@@ -14,6 +14,10 @@ const envSchema = z.object({
   BW_AUDIO_DIR: z.string().default('./.audio-data'),
   // 挑战式真人校验的 HMAC 签名密钥。生产环境务必用真正的随机密钥覆盖。
   BW_LIVENESS_SECRET: z.string().default('dev-only-liveness-secret-change-in-prod'),
+  // 内容审核实现：rule_based = 真实三档判定（默认，符合 content-moderation spec
+  // 的"默认不放行"硬约束）；always_pass = 恒通过，开发节奏考虑先跳过审核判定，
+  // 只在 pnpm demo 脚本里覆盖成这个值，不是全局默认。
+  BW_MODERATION: z.enum(['rule_based', 'always_pass']).default('rule_based'),
 });
 
 export type Env = z.infer<typeof envSchema>;

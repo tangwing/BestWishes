@@ -316,3 +316,9 @@
 **结果**：①③④是纯 UI 问题直接修（B-77/78/79）。②⑤合并成一个真 bug（B-76）——追根溯源：`myFeedback()` 把"评估中"和"命中 violation 永远不会有反馈"两种情况都返回同一个 `null`，但打分管线全程同步（提交请求返回前就已经算完），实际上不存在真的"评估中"态，`null` 的歧义纯粹是接口设计缺陷；前端把这个 `null` 误显示成"没通过"，跟旁边"已发出 ✔"的标题自相矛盾。同款问题在 P1 文本祝福的 `Sent.tsx` 也有。用户"至少审核台能看到"这个诉求，没有做成"给 violation 建工单"（那和现有设计矛盾——工单只服务于需要人工判断的场景），而是做成"把原因直接给作者看"：`myFeedback` 改判别式返回、`OutboxItem` 加 `rejectionCategories`，两个页面按真实结果显示文案+原因。过程中顺带发现并修了 `OutboxSection` 把祈福回应误标"群发 N 人"的问题。`blessing-delivery` 主 spec 早写了"作者侧看到大类原因"，这次才真正接上；spec 里"与修改/申诉入口"那半句还没做，是 P1 归档时就有的老缺口，记 B-81 待讨论、不预先设计。
 
 `pnpm verify` 196 测试、`pnpm test:e2e` 13 个全绿，`openspec validate --strict` 通过。仍在等用户对 `add-p2-wish-request-audio` 的整体审阅（未归档）。
+
+### 开发节奏原则：先 mock 复杂逻辑，保证 demo 可用（B-82）
+
+> 我们这样吧，后续的开发为了能够有节奏，就是先适当的mock一些内容，比如说审核的这个功能，我们可以先默认审核都是通过的，然后在后面的阶段里再加入相应的这个复杂的判定逻辑，这样的话我们先保证我们有一个Demo可以试用。
+
+**结果**：这是一条通用原则（举的例子是审核），不只是这一处的改动，已记进持久化 memory（`mock-complexity-for-demo-pace`）供后续功能复用。第一个落地：新增 `AlwaysPassProvider`（`ModerationProvider` 的另一实现，恒 pass，真实的 `RuleBasedProvider` 不删）+ `BW_MODERATION` 环境变量，`pnpm demo` 脚本显式设成 `always_pass`。**没有改全局默认值**——`content-moderation` 主 spec（已归档 P1）"审核服务不可用 MUST NOT 默认放行"是硬约束，字面上的"默认审核都通过"如果改的是这个全局默认会跟已归档 spec 冲突，所以按"demo 脚本的显式覆盖"来理解用户的意图（保证有 demo 可用），全局默认、e2e、单测都仍是 `rule_based`，没有掉真实判定的测试覆盖。`docs/DEMO.md` 补充提示——不然按旧文档手动验证审核触发词会以为是新 bug。`pnpm verify` 198 测试、`pnpm test:e2e` 13 个全绿。

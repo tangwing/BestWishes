@@ -97,3 +97,18 @@ export class UnavailableProvider implements ModerationProvider {
     });
   }
 }
+
+/**
+ * 恒 pass，不跑任何判定逻辑——开发节奏考虑：新功能还在快速迭代阶段，真实
+ * 审核判定容易造成"内容莫名被挡"的困惑（干扰的是功能验收，不是审核本身要
+ * 验的东西），先用这个把审核这一步"焊死"成不拦路，把 RuleBasedProvider
+ * 的复杂判定逻辑留到功能稳定后的阶段再切回来（见 server/config/env.ts
+ * 的 BW_MODERATION，只在 demo 脚本里生效，不改 spec 里"默认不放行"的
+ * 硬约束——见 content-moderation spec「自动检查的三档判定」）。
+ */
+export class AlwaysPassProvider implements ModerationProvider {
+  readonly name = 'always-pass';
+  check(_input: ModerationInput): Promise<ModerationResult> {
+    return Promise.resolve({ verdict: 'pass', categories: [], providerRef: this.name });
+  }
+}

@@ -17,6 +17,7 @@
 - **UAT 自动化**：用户问有没有框架能自动跑他手动做的走查——**有，就是 `e2e/`（Playwright + 真实系统 Chrome）**，`pnpm test:e2e` 跑，13 个用例覆盖 P1 群发 + P2 请求/录音/打分/审核全链路（录音用 `--use-fake-device-for-media-stream` 真的走 MediaRecorder）。本轮把用户手动发现的 B-72 也补成了回归用例。唯一盖不到的是 Safari（macOS 12 装不了 Playwright webkit）。
 - **B-71 祈福广场重构（2026-09-09，spec + 代码都已完成）**：用户点评把"祝福请求"重塑为社区式「祈福广场」（Topic + `responseCount`/`lastResponseAt` 聚合统计、列表只摘要、详情才看回应、"我的祈福"= `?filter=mine`）+ 导航精简（8→6 项，删「回响」，「收件箱」→「我的福袋」/`/pouch`，「写祝福」→「传递善意」/`/give` 并入发件箱，路由 `/wish-requests*`→`/plaza*`）。回响用"务实删"（删页面/服务/纯函数模块 + 个人空间显示"你已传递 N 份善意"；`blessing-transition` 的 `countedInStreak`/`streakDelta` + `streak_days` 表保留为 dormant——见 B-74）。`/opsx:update` 同步了 spec（`wish-request` 重写 + `blessing-records`/`user-profile` MODIFIED + `blessing-streak` REMOVED），`/opsx:apply` 落了 §9 代码。`pnpm verify` 196 / `pnpm test:e2e` 13 全绿。详见 tasks.md §9。
 - **2026-09-13 用户走查 §9 后的 5 点反馈（B-76~B-79 已修，见下方 P2 走查反馈一节）**：拒绝时"成功"文案自相矛盾且不给理由（B-76，真 bug，`myFeedback` 改判别式返回 + `OutboxItem` 加 `rejectionCategories`）、审核台空队列仍显示默认处理理由（B-77）、个人空间密度太低缺免责声明（B-78）、传递善意页送给谁该排到正文前 + 范本默认折叠（B-79）。`pnpm verify` 196 / `pnpm test:e2e` 13 全绿，`audio-scoring` delta spec 补场景。B-81（编辑重发/申诉入口，P1 归档时就有的老缺口）记待讨论，未做。
+- **开发节奏原则（2026-09-13 起生效，B-82）**：用户定的通用原则——功能快速迭代期，复杂判定逻辑先用可切换的简单 mock 顶上（不删，留到后面阶段再切回），保证随时有可用 demo。第一个落地：内容审核新增 `AlwaysPassProvider` + `BW_MODERATION` 环境变量，`pnpm demo` 恒 `always_pass`，全局默认仍是 `rule_based`（不跟 `content-moderation` 已归档 spec 的"默认不放行"硬约束冲突）。**后续做新功能，复杂逻辑要先想一下是否也适用这个模式**（先上可插拔接口 + mock 实现，demo 脚本切换，真实逻辑晚点接）。
 - **下一步**：① 用户审阅 `add-p2-wish-request-audio`（前八节 P2 首版 + §9 祈福广场重构 + §10 本轮 5 点修复）→ 审阅通过后 `/opsx:archive`，再谈 P3。② Safari 录音（B-69）仍等真机复测。③ B-81（申诉/编辑重发入口）要不要做、做成什么样，待讨论。`add-moderation-rbac` 仍"先放着"（B-65）。B-66 待单独设计讨论。
 
 <details>
@@ -59,6 +60,7 @@
 - [x] **B-78 个人空间信息密度太低 + 缺免责声明** — 顶部加"这些信息我们不会验证真伪，但会影响别人筛选到你"；昵称/城市/性别/出生年从三个大卡片压缩进一个卡片的两行布局。
 - [x] **B-79 传递善意页面重排** — 「送给谁」移到「场景/正文/范本」前面；「范本」默认折叠（链接按钮展开），不占开屏空间。按草稿推荐范本是用户提的未来方向，不在本轮做。
 - [ ] **B-81（新，B-76 过程中发现的遗留）祝福被拒后没有"编辑重发/申诉"入口** — `blessing-delivery` 主 spec 的"自动判定违规"场景要求"作者侧看到大类原因**与修改/申诉入口**"；B-76 把"看到大类原因"这半句做了，"修改/申诉入口"从 P1 归档起就没实现过（`LifecycleTrigger` 里的 `edit_resubmit` 从未被调用）。现状：作者知道被拒了、也知道为什么，但只能去"传递善意"重新写一条全新的，没有"基于这条改一改再发"的路径。是否要做、做成什么样（原地编辑复用 slug，还是同 B-63 的"复制以供编辑"模式）需要先讨论，不预先设计。
+- [x] **B-82 内容审核默认恒 pass，供 demo 节奏用** — 用户定了一条通用开发节奏原则：功能快速迭代期，复杂判定逻辑先用简单 mock 顶上（不删，留到后面阶段再切回），保证随时有可用 demo。第一个落地对象是内容审核——新增 `AlwaysPassProvider`（domain，恒 `pass`，不跑任何判定）+ `BW_MODERATION` 环境变量（`rule_based` 默认 / `always_pass`）。**只改了 `pnpm demo` 脚本的显式覆盖，没改全局默认值**——`content-moderation` 主 spec（已归档 P1）"审核服务不可用 MUST NOT 默认放行"是硬约束，悄悄把全局默认改成放行会跟这条 MUST 冲突，所以默认值仍是 `rule_based`（跟 e2e / 单测行为一致，不掉真实判定的测试覆盖）。`docs/DEMO.md` 补了这条 + "要看真实判定效果需要 `BW_MODERATION=rule_based pnpm demo`"的提示（不然会以为触发词场景是新 bug）。已记进持久化 memory（`mock-complexity-for-demo-pace`），后续功能要复用这个模式（先 mock，接口留在可插拔的 port 后面）时不用重新讨论一遍。
 
 ## 刚完成（下轮挪进 CHANGELOG）
 

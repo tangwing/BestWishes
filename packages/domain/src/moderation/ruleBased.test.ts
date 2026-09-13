@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { RuleBasedProvider, UnavailableProvider } from './ruleBased';
+import { AlwaysPassProvider, RuleBasedProvider, UnavailableProvider } from './ruleBased';
 import type { ModerationInput, ModerationProvider } from '../types';
 
 function input(text: string): ModerationInput {
@@ -70,8 +70,20 @@ describe('UnavailableProvider — 保守', () => {
   });
 });
 
+describe('AlwaysPassProvider — 开发节奏用的恒 pass mock', () => {
+  it('任何内容都判 pass，不命中任何大类', async () => {
+    const r = await new AlwaysPassProvider().check(input('刷单返利，加我微信，超度收费'));
+    expect(r.verdict).toBe('pass');
+    expect(r.categories).toEqual([]);
+  });
+});
+
 describe('契约测试 — 更换实现不改调用方契约', () => {
-  const providers: ModerationProvider[] = [new RuleBasedProvider(), new UnavailableProvider()];
+  const providers: ModerationProvider[] = [
+    new RuleBasedProvider(),
+    new UnavailableProvider(),
+    new AlwaysPassProvider(),
+  ];
   for (const prov of providers) {
     it(`${prov.name} 返回 {verdict, categories}`, async () => {
       const r = await prov.check(input('祝你一切都好，平安顺遂常在。'));

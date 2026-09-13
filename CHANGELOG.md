@@ -4,6 +4,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added — 内容审核 mock 开关，供开发节奏用（B-82）
+
+用户定了一条通用开发节奏原则：功能快速迭代期，复杂判定逻辑先用可切换的简单 mock 顶上（不删旧实现，留到后面阶段再切回），保证随时有一个可用 demo。第一个落地对象是内容审核——真实三档判定（`RuleBasedProvider`）在功能还在快速迭代时容易把测试内容误挡，干扰的是别的功能验收，不是审核本身要验的东西。
+
+- `packages/domain`：新增 `AlwaysPassProvider`（`ModerationProvider` 的另一个实现，恒 `pass`，不跑任何判定），单测覆盖 + 加入既有的"更换实现不改契约"契约测试组。
+- `server/src/config/env.ts`：新增 `BW_MODERATION`（`rule_based` 默认 / `always_pass`）。
+- `pnpm demo`：脚本里显式设成 `BW_MODERATION=always_pass`。
+- **全局默认值没有改**——仍是 `rule_based`，跟 e2e / 单测行为一致：`content-moderation` 主 spec（已归档 P1）"审核服务不可用 MUST NOT 默认放行"是硬约束，悄悄把全局默认改成放行会跟这条 MUST 冲突，只做 demo 脚本的显式覆盖。
+- `docs/DEMO.md` 补充说明 + "要看真实判定效果需要 `BW_MODERATION=rule_based pnpm demo`"的提示。
+
 ### Fixed — 拒绝时的误导性"成功"文案 + 缺失拒绝原因（B-76）
 
 用户回应祈福被内容审核判 `violation` 后，`AudioFeedback.tsx` 标题恒显示"已发出这段祝福 ✔"，下面却同时显示"这条内容没有通过安全审核，不会送达，也没有反馈"——两句话互相矛盾。`Sent.tsx`（P1 文本祝福）有同样的问题，`rejected` 时标题仍是"已发送 ✓"。

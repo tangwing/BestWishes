@@ -1,6 +1,6 @@
 // 组合根：装配依赖、启动、跑扫描任务。这是唯一 new 具体实现的地方。
 
-import { RuleBasedProvider } from '@bestwishes/domain';
+import { AlwaysPassProvider, RuleBasedProvider } from '@bestwishes/domain';
 import { loadEnv, type Env } from './config/env';
 import { loadP1Config } from './config/app-config';
 import { createApplication } from './application';
@@ -46,7 +46,10 @@ async function main(): Promise<void> {
     clock,
     ids: new RandomIdGenerator(),
     slugs: new RandomSlugGenerator(),
-    moderation: new RuleBasedProvider({ config }),
+    moderation:
+      env.BW_MODERATION === 'always_pass'
+        ? new AlwaysPassProvider()
+        : new RuleBasedProvider({ config }),
     config,
     audioStorage: new LocalAudioStorage(env.BW_AUDIO_DIR),
     asr: new RuleBasedAsrProvider(),
