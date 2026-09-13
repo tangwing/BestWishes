@@ -35,7 +35,10 @@ export function App() {
   return (
     <div className={s.app}>
       <div className={s.topbar}>
-        <span className={s.brand}>BestWishes</span>
+        <div className={s.topbarTop}>
+          <span className={s.brand}>BestWishes</span>
+          {user && <span className={s.who}>{user.nickname}</span>}
+        </div>
         <nav className={s.nav}>
           <NavLink to="/" end>
             首页
@@ -43,7 +46,6 @@ export function App() {
           <NavLink to="/plaza">祈福广场</NavLink>
           {user && (
             <>
-              <span className={s.who}>{user.nickname}</span>
               <NavLink to="/give">传递善意</NavLink>
               <NavLink to="/pouch">
                 我的福袋{unread > 0 && <span className={s.badge}>{unread}</span>}

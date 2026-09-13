@@ -7,14 +7,20 @@
 
 .topbar {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 8px;
   padding: 14px 20px;
   border-bottom: 1px solid var(--line);
   position: sticky;
   top: 0;
   background: var(--bg);
   z-index: 10;
+}
+
+.topbarTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .brand {
@@ -212,8 +218,6 @@
   font-size: 13px;
   color: var(--accent-ink);
   font-weight: 600;
-  padding: 4px 4px;
-  align-self: center;
 }
 
 /* 双滑块区间选择器（如年龄范围），见 RangeSlider.tsx */
