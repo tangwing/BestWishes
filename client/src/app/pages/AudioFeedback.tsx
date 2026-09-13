@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, type MyAudioFeedback } from '../../api/client';
 import { useSession } from '../session';
+import { moderationReasonText } from '../moderationCategories';
 import s from '../app.module.css';
 
 const COMPLETENESS_LABEL: Record<string, string> = {
@@ -20,7 +21,7 @@ export function AudioFeedback() {
   const { user, loading } = useSession();
   const nav = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const [feedback, setFeedback] = useState<MyAudioFeedback | null | undefined>(undefined);
+  const [feedback, setFeedback] = useState<MyAudioFeedback | undefined>(undefined);
 
   useEffect(() => {
     if (!loading && !user) nav('/login');
@@ -45,22 +46,32 @@ export function AudioFeedback() {
     };
   }, [id, user]);
 
+  const rejectedFeedback = feedback?.status === 'rejected' ? feedback : null;
+  const rejected = rejectedFeedback !== null;
+
   return (
     <div className={s.page}>
-      <h1>已发出这段祝福 ✔</h1>
-      <p className={s.lead}>你的录音已经送出去了。这里是它的用心反馈——只有你自己能看到。</p>
+      {/* 拒绝时不能再说"已发出 ✔"——B-76：这两句话曾经同屏出现，自相矛盾。 */}
+      <h1>{rejected ? '这段祝福没有通过审核' : '已发出这段祝福 ✔'}</h1>
+      <p className={s.lead}>
+        {rejected
+          ? '不会送达给 TA，也不会有用心反馈。'
+          : '你的录音已经送出去了。这里是它的用心反馈——只有你自己能看到。'}
+      </p>
 
-      {feedback === undefined && (
+      {(feedback === undefined || feedback.status === 'pending') && (
         <div className={s.card}>
           <p className={s.lead}>评估中，稍等一下…</p>
         </div>
       )}
-      {feedback === null && (
+      {rejectedFeedback && (
         <div className={s.card}>
-          <p className={s.lead}>这条内容没有通过安全审核，不会送达，也没有反馈。</p>
+          <p className={s.error}>
+            没有通过安全审核：{moderationReasonText(rejectedFeedback.categories)}。
+          </p>
         </div>
       )}
-      {feedback && (
+      {feedback?.status === 'scored' && (
         <div className={s.card}>
           <div className={s.tabs}>
             <span className={s.tab}>完整度：{COMPLETENESS_LABEL[feedback.completeness] ?? feedback.completeness}</span>

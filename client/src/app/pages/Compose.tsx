@@ -74,6 +74,7 @@ export function Compose() {
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const [canBroadcast, setCanBroadcast] = useState(true);
+  const [showTemplates, setShowTemplates] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) nav('/login');
@@ -176,73 +177,6 @@ export function Compose() {
           ? '不必客套。就着 TA 的祝福，说一句你此刻真实想说的话。'
           : '你不认识 TA，TA 也不认识你。想一想此刻某个可能正需要一句好话的人，写给 TA。'}
       </div>
-
-      <h2>形式</h2>
-      <div className={s.tabs}>
-        {CONTENT_TYPES.map(([k, label, enabled]) => (
-          <span
-            key={k}
-            className={`${s.tab} ${k === 'text' ? s.on : ''} ${enabled ? '' : s.disabled}`}
-            title={enabled ? '' : '即将支持'}
-          >
-            {label}
-            {!enabled && ' · 即将支持'}
-          </span>
-        ))}
-      </div>
-
-      <h2>场景</h2>
-      <div className={s.tabs}>
-        {OCCASIONS.map(([k, v]) => (
-          <span
-            key={k}
-            className={`${s.tab} ${k === occasion ? s.on : ''}`}
-            onClick={() => {
-              setOccasion(k);
-            }}
-          >
-            {v}
-          </span>
-        ))}
-      </div>
-
-      <h2>范本（只作参考，不能一键套用）</h2>
-      {byOccasion.map((t) => (
-        <div className={s.card} key={t.id} style={{ padding: 12 }}>
-          <b style={{ fontSize: 14 }}>{t.title}</b>
-          <p className={s.hint} style={{ margin: '2px 0 4px' }}>
-            {t.promptText}
-          </p>
-          <p className={s.blessing} style={{ fontSize: 14, userSelect: 'none' }}>
-            {t.sampleText}
-          </p>
-        </div>
-      ))}
-
-      <h2>祝福正文（自己写）</h2>
-      <textarea
-        value={body}
-        onChange={(e) => {
-          setBody(e.target.value);
-        }}
-        onPaste={(e) => {
-          e.preventDefault();
-          setPasteBlocked(true);
-        }}
-        placeholder="慢慢写，写给一个具体的人。"
-        style={{ minHeight: 150, fontFamily: 'var(--serif)', fontSize: 16 }}
-      />
-      <div className={s.count}>{bodyLen} 字 · 建议 5–500</div>
-      {pasteBlocked && (
-        <p
-          className={s.error}
-          onClick={() => {
-            setPasteBlocked(false);
-          }}
-        >
-          用你自己的话写出来，TA 会感受到不一样。（点这里关掉）
-        </p>
-      )}
 
       {!isReply && (
         <>
@@ -408,6 +342,99 @@ export function Compose() {
       {isReply && (
         <p className={s.hint}>这段祝福只会送到 {replyToName} 的福袋，同样会先过一遍内容校验。</p>
       )}
+
+      <h2>形式</h2>
+      <div className={s.tabs}>
+        {CONTENT_TYPES.map(([k, label, enabled]) => (
+          <span
+            key={k}
+            className={`${s.tab} ${k === 'text' ? s.on : ''} ${enabled ? '' : s.disabled}`}
+            title={enabled ? '' : '即将支持'}
+          >
+            {label}
+            {!enabled && ' · 即将支持'}
+          </span>
+        ))}
+      </div>
+
+      <h2>场景</h2>
+      <div className={s.tabs}>
+        {OCCASIONS.map(([k, v]) => (
+          <span
+            key={k}
+            className={`${s.tab} ${k === occasion ? s.on : ''}`}
+            onClick={() => {
+              setOccasion(k);
+            }}
+          >
+            {v}
+          </span>
+        ))}
+      </div>
+
+      <h2>祝福正文（自己写）</h2>
+      <textarea
+        value={body}
+        onChange={(e) => {
+          setBody(e.target.value);
+        }}
+        onPaste={(e) => {
+          e.preventDefault();
+          setPasteBlocked(true);
+        }}
+        placeholder="慢慢写，写给一个具体的人。"
+        style={{ minHeight: 150, fontFamily: 'var(--serif)', fontSize: 16 }}
+      />
+      <div className={s.count}>{bodyLen} 字 · 建议 5–500</div>
+      {pasteBlocked && (
+        <p
+          className={s.error}
+          onClick={() => {
+            setPasteBlocked(false);
+          }}
+        >
+          用你自己的话写出来，TA 会感受到不一样。（点这里关掉）
+        </p>
+      )}
+
+      {byOccasion.length > 0 &&
+        (showTemplates ? (
+          <>
+            <div className={s.row} style={{ alignItems: 'baseline' }}>
+              <h2 style={{ flex: 1 }}>范本（只作参考，不能一键套用）</h2>
+              <button
+                type="button"
+                className="link"
+                onClick={() => {
+                  setShowTemplates(false);
+                }}
+              >
+                收起
+              </button>
+            </div>
+            {byOccasion.map((t) => (
+              <div className={s.card} key={t.id} style={{ padding: 12 }}>
+                <b style={{ fontSize: 14 }}>{t.title}</b>
+                <p className={s.hint} style={{ margin: '2px 0 4px' }}>
+                  {t.promptText}
+                </p>
+                <p className={s.blessing} style={{ fontSize: 14, userSelect: 'none' }}>
+                  {t.sampleText}
+                </p>
+              </div>
+            ))}
+          </>
+        ) : (
+          <button
+            type="button"
+            className="link"
+            onClick={() => {
+              setShowTemplates(true);
+            }}
+          >
+            不知道怎么写？看几个范本
+          </button>
+        ))}
 
       {err && <div className={s.error}>{err}</div>}
       <div style={{ marginTop: 20 }}>

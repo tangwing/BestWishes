@@ -79,3 +79,12 @@
 - [x] 9.6 文档：`docs/DEMO.md` 标题 / 模型一句话 / 导航说明 / P1+P2 走查表全部按新命名重写。`docs/product/*` / `docs/architecture/*` 里的"回响 / 收件箱"是 P1 规划期描述，属历史文档，不在这次动（避免 Runaway Refactor）；BACKLOG 记一笔留作后续清理。
 - [x] 9.7 spec 已在 `/opsx:update` 同步：`wish-request` delta 重写、新增 `blessing-records` / `user-profile` MODIFIED delta、`blessing-streak` REMOVED delta。`openspec validate --strict` 通过。
 - [x] 9.8 `pnpm verify`（196）/ `pnpm test:e2e`（13）全绿；BACKLOG / CHANGELOG / PROMPT_LOG 更新。**等用户审阅**（含前八节 + 本节），审阅通过后 `/opsx:archive`。
+
+## 10. 用户审阅期间发现的问题（2026-09-13，逐点提）
+
+- [x] 10.1（B-76，真 bug，触及 `audio-scoring` spec）拒绝时的误导性"成功"文案 + 缺失拒绝原因：`audio-scoring-service.myFeedback()` 把"还没打完分"和"命中 violation 永远不会有分"都返回同一个 `null`——但打分管线全程同步（见 5.5 的既有说明），实际上只可能是"已驳回"，不存在真的"评估中"态；`null` 的歧义纯粹是接口设计问题。改判别式返回 `{status:'pending'|'rejected'|'scored', ...}`，`rejected` 分支带 `categories`。`AudioFeedback.tsx` / `Sent.tsx`（P1 文本祝福同款问题——标题恒"已发送 ✓"，即便 state 已是 `rejected`）按真实结果显示对应文案，不再同屏出现"成功"和"没通过"两句互相矛盾的话。`OutboxItem` 加 `rejectionCategories`，`OutboxSection.tsx` 内联展示原因；顺带修了 `OutboxSection` 把 `wish_response` 回应误标成"群发 N 人"的问题（改标"回应祈福"）。`blessing-delivery` 主 spec 早就写了"作者侧看到大类原因"这个场景，这次才真正把这部分接到前端——"修改/申诉入口"那半句仍未实现，记 BACKLOG 单独跟进。`audio-scoring` delta spec 补充这条区分要求。测试：`wish-request-flow.test.ts` 改「转写命中违禁词」用例断言新判别式；`blessing-flow.test.ts` 新增 `outbox().rejectionCategories` 断言。**明确不做**：给 `auto_violation` 建审核工单——违反现有设计（工单只服务于需要人工判断的场景）。
+- [x] 10.2（B-77，纯 UI）审核台空队列时仍显示默认"处理理由"输入框——改成队列非空才渲染；顺带用已有的 `categoryLabel`（客户端侧新建 `moderationCategories.ts` 镜像，架构边界不让 client 依赖 domain）把队列项的审核大类从原始英文代码换成中文。
+- [x] 10.3（B-78，纯 UI）个人空间信息密度太低 + 缺免责声明：顶部加"这些信息我们不会验证真伪，但会影响别人筛选到你"；昵称/城市/性别/出生年从三个大卡片压缩进一个卡片的两行 row 布局。
+- [x] 10.4（B-79，纯 UI）传递善意页面重排：「送给谁」移到「场景/正文/范本」前面；「范本」默认折叠（一个链接按钮展开），不再占开屏空间。
+
+全部改动 `pnpm verify` 196 测试、`pnpm test:e2e` 13 个全绿，`openspec validate --strict` 通过。

@@ -169,7 +169,7 @@ describe('HTTP 端到端：祝福请求 + 音频回应', () => {
       headers: responder,
     });
     expect(feedback.statusCode).toBe(200);
-    expect(feedback.json()).not.toBeNull();
+    expect(feedback.json<{ status: string }>().status).toBe('scored');
 
     await ctx.server.close();
   });

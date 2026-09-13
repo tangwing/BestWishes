@@ -4,6 +4,28 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed — 拒绝时的误导性"成功"文案 + 缺失拒绝原因（B-76）
+
+用户回应祈福被内容审核判 `violation` 后，`AudioFeedback.tsx` 标题恒显示"已发出这段祝福 ✔"，下面却同时显示"这条内容没有通过安全审核，不会送达，也没有反馈"——两句话互相矛盾。`Sent.tsx`（P1 文本祝福）有同样的问题，`rejected` 时标题仍是"已发送 ✓"。
+
+根因：`audio-scoring-service.myFeedback()` 把"还没打完分"和"命中 violation 永远不会有分"都返回同一个 `null`——但打分管线全程同步（提交请求返回前就已经算完），实际上不存在真的"评估中"态，这个 `null` 的歧义纯粹是接口设计缺陷；也从没把具体的审核大类暴露给作者。`blessing-delivery` 主 spec 早就写了"作者侧看到大类原因"这条场景，但从没真正接到前端。
+
+- `myFeedback` 改判别式返回：`{status:'pending'}` / `{status:'rejected', categories}` / `{status:'scored', ...}`。
+- `OutboxItem` 加 `rejectionCategories: string[] | null`（`state='rejected'` 时命中的审核大类）。
+- `AudioFeedback.tsx` / `Sent.tsx` 按真实结果显示对应标题 + 具体原因，不再同屏出现自相矛盾的两句话。
+- 顺带修了 `OutboxSection.tsx` 把祈福回应（`scope='wish_response'`）误标成"群发 N 人"的问题，改标"回应祈福"；隐藏了这类条目不适用的"公开链接"。
+- 新建 `client/src/app/moderationCategories.ts`（审核大类的中文映射，client 不依赖 domain，镜像 `packages/domain` 的 `categoryLabel`），`Moderation.tsx` 的审核台队列也用它把大类代码换成中文。
+- **明确不做**：给 `auto_violation` 建审核工单——工单机制只服务于需要人工判断的场景（suspect / 举报 / 申诉），自动违规是确定性终态，不需要人工看。
+- **遗留**：`blessing-delivery` spec 里"大类原因**与修改/申诉入口**"的后半句仍未实现（`edit_resubmit` 触发器从未被任何 service 调用），是 P1 归档时就有的老缺口，记 BACKLOG B-81 待讨论。
+
+测试：`wish-request-flow.test.ts` 的"转写命中违禁词"用例改断言新判别式；`blessing-flow.test.ts` 新增 `outbox().rejectionCategories` 断言。`audio-scoring`（未归档 delta）补充"区分驳回与评估中、带审核大类"的场景。
+
+### Changed — 审核台 / 个人空间 / 传递善意页面打磨（B-77~B-79）
+
+- 审核台（`Moderation.tsx`）：队列为空时不再显示默认"处理理由"输入框（此前不管队列是否为空都渲染，显得莫名其妙）。
+- 个人空间（`Profile.tsx`）：顶部加一句"这些信息我们不会验证真伪，但会影响别人筛选到你"；昵称 / 城市 / 性别 / 出生年从三个大卡片压缩进一个卡片的两行布局，降低信息密度过低的问题。
+- 传递善意（`Compose.tsx`）：「送给谁」（受众范围）移到「场景 / 正文 / 范本」前面——这是主动发起的善意，不需要先想好场景才决定传播范围；「范本」默认折叠，点开才展开，不占开屏空间。
+
 ### Added — P2 第一批：祝福请求 + 匹配 + 音频打分（B-68, [openspec/changes/add-p2-wish-request-audio](openspec/changes/add-p2-wish-request-audio/)）
 
 > 待用户审阅，未归档。

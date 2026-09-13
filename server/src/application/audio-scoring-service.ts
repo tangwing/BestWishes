@@ -39,13 +39,21 @@ export interface SubmittedAudioResponse {
   state: string;
 }
 
-export interface MyAudioFeedback {
-  completeness: string;
-  focus: string;
-  sincerity: string;
-  personalization: string;
-  livenessPassed: boolean;
-}
+/**
+ * 判别式返回，不能把"还在评估中"和"命中 violation、永远不会有反馈"都塞进同一个
+ * null——B-76：两者一旦不可区分，前端就没法知道该显示"发出成功"还是"没有通过审核"。
+ */
+export type MyAudioFeedback =
+  | { status: 'pending' }
+  | { status: 'rejected'; categories: string[] }
+  | {
+      status: 'scored';
+      completeness: string;
+      focus: string;
+      sincerity: string;
+      personalization: string;
+      livenessPassed: boolean;
+    };
 
 const LIVENESS_CHALLENGE_TTL_SECONDS = 300;
 
@@ -225,20 +233,29 @@ export function createAudioScoringService(deps: AppDeps) {
       return ok(buf);
     },
 
-    async myFeedback(userId: string, blessingId: string): Promise<Result<MyAudioFeedback | null>> {
+    async myFeedback(userId: string, blessingId: string): Promise<Result<MyAudioFeedback>> {
       const b = await deps.repos.blessings.findById(blessingId);
-      if (!b || b.authorId !== userId) {
+      if (b?.authorId !== userId) {
         return err(appError('not_found', 'blessing not found', '找不到这条回应'));
       }
       const score = await deps.repos.audioScores.findByBlessingId(blessingId);
-      if (!score) return ok(null); // 还没打完分（评估中）或命中 violation（没有反馈）
-      return ok({
-        completeness: score.completeness,
-        focus: score.focus,
-        sincerity: score.sincerity,
-        personalization: score.personalization,
-        livenessPassed: score.livenessPassed,
-      });
+      if (score) {
+        return ok({
+          status: 'scored',
+          completeness: score.completeness,
+          focus: score.focus,
+          sincerity: score.sincerity,
+          personalization: score.personalization,
+          livenessPassed: score.livenessPassed,
+        });
+      }
+      // 没有分数只有一种原因：命中 violation 被直接驳回（打分管线是同步的，
+      // suspect/pass 两条路径在 submit() 返回前就已经把分数写好了，不存在
+      // "还没打完分"这种异步等待态；`pending` 分支是给未来接真实异步云 ASR 留的）。
+      if (b.state === 'rejected') {
+        return ok({ status: 'rejected', categories: b.moderation?.categories ?? [] });
+      }
+      return ok({ status: 'pending' });
     },
   };
 }

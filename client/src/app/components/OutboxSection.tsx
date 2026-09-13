@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, type OutboxItem } from '../../api/client';
+import { moderationReasonText } from '../moderationCategories';
 import s from '../app.module.css';
 
 const STATE_LABEL: Record<string, string> = {
@@ -21,6 +22,10 @@ const OCC: Record<string, string> = {
   recovery: '康复祈愿',
   remembrance: '纪念 / 追思',
   daily: '日常问候',
+};
+const SCOPE_LABEL: Record<string, string> = {
+  reply: '回复',
+  wish_response: '回应祈福',
 };
 
 export function OutboxSection() {
@@ -49,16 +54,21 @@ export function OutboxSection() {
                 {STATE_LABEL[b.state] ?? b.state}
               </span>
               <span className={s.tag}>{OCC[b.occasion]}</span>
-              <span className={s.tag}>
-                {b.scope === 'reply' ? '回复' : `群发 ${b.recipientCount} 人`}
-              </span>
+              <span className={s.tag}>{SCOPE_LABEL[b.scope] ?? `群发 ${b.recipientCount} 人`}</span>
               <div style={{ fontFamily: 'var(--serif)', fontSize: 15 }}>{b.bodyPreview}</div>
               <div className={s.meta}>
-                <a href={`/p/${b.slug}`} target="_blank" rel="noreferrer">
-                  公开链接
-                </a>
+                {b.scope !== 'wish_response' && (
+                  <a href={`/p/${b.slug}`} target="_blank" rel="noreferrer">
+                    公开链接
+                  </a>
+                )}
                 {b.renewCount > 0 && ` · 已续期 ${String(b.renewCount)} 次`}
               </div>
+              {b.state === 'rejected' && (
+                <p className={s.error} style={{ marginTop: 4 }}>
+                  没有通过安全审核：{moderationReasonText(b.rejectionCategories ?? [])}。
+                </p>
+              )}
             </div>
             <div className={s.actions}>
               {(b.state === 'published' || b.state === 'verifying') && (

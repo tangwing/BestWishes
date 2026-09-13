@@ -128,8 +128,9 @@ describe('祝福请求 + 音频回应', () => {
     const feedback = await ctx.app.audioScoring.myFeedback(responder, submitted.value.id);
     expect(feedback.ok).toBe(true);
     if (!feedback.ok) return;
-    expect(feedback.value).not.toBeNull();
-    expect(feedback.value?.completeness).toBe('complete');
+    expect(feedback.value.status).toBe('scored');
+    if (feedback.value.status !== 'scored') return;
+    expect(feedback.value.completeness).toBe('complete');
   });
 
   it('录音时长超出范围 → 拒绝', async () => {
@@ -175,10 +176,14 @@ describe('祝福请求 + 音频回应', () => {
     if (!submitted.ok) return;
     expect(submitted.value.state).toBe('rejected');
 
+    // 关键：区分"驳回、永远不会有反馈"和"还在评估中"——不能都返回同一个 null
+    // （B-76：曾经两者不可区分，前端把"驳回"误显示成"发出成功"）
     const feedback = await ctx.app.audioScoring.myFeedback(responder, submitted.value.id);
     expect(feedback.ok).toBe(true);
     if (!feedback.ok) return;
-    expect(feedback.value).toBeNull();
+    expect(feedback.value.status).toBe('rejected');
+    if (feedback.value.status !== 'rejected') return;
+    expect(feedback.value.categories).toContain('fraud');
 
     ctx.clock.advance(6000);
     await ctx.app.scans.publishReady();

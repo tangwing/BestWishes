@@ -225,6 +225,11 @@ describe('审核', () => {
     ctx.clock.advance(60000);
     await ctx.app.scans.publishReady();
     expect(await ctx.app.inbox.list(alice)).toHaveLength(0);
+
+    // B-76：作者要能在发件箱看到拒绝原因，不能只有一个"未通过"标签
+    const outbox = await ctx.app.blessings.outbox(sender);
+    const item = outbox.find((o) => o.id === r.value.id);
+    expect(item?.rejectionCategories).toContain('fraud');
   });
 });
 

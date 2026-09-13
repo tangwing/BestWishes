@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, type QueueItem } from '../../api/client';
 import { useSession } from '../session';
+import { MODERATION_CATEGORY_LABEL } from '../moderationCategories';
 import s from '../app.module.css';
 
 export function Moderation() {
@@ -29,19 +30,21 @@ export function Moderation() {
       <p className={s.lead}>
         队列按优先级：高危举报 &gt; 申诉 &gt; 自动疑似 &gt; 抽检。（演示：任何会话都能进）
       </p>
-      <label>处理理由（写入留痕）</label>
-      <input
-        type="text"
-        value={reason}
-        onChange={(e) => {
-          setReason(e.target.value);
-        }}
-      />
-
-      {queue.length === 0 && (
+      {queue.length === 0 ? (
         <p className={s.lead} style={{ marginTop: 20 }}>
           队列为空。
         </p>
+      ) : (
+        <>
+          <label>处理理由（写入留痕）</label>
+          <input
+            type="text"
+            value={reason}
+            onChange={(e) => {
+              setReason(e.target.value);
+            }}
+          />
+        </>
       )}
       <div className={s.card}>
         {queue.map((r) => (
@@ -57,7 +60,7 @@ export function Moderation() {
                 {r.blessing?.body ?? r.wishRequest?.situationText ?? '（内容已不存在）'}
               </div>
               <div className={s.meta}>
-                大类：{r.category} · 计数 {r.count}
+                大类：{MODERATION_CATEGORY_LABEL[r.category] ?? r.category} · 计数 {r.count}
                 {r.note ? ` · ${r.note}` : ''}
               </div>
             </div>

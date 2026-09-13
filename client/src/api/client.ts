@@ -103,13 +103,15 @@ export interface OutboxItem {
   slug: string;
   state: string;
   occasion: Occasion;
-  scope: 'broadcast' | 'reply';
+  scope: 'broadcast' | 'reply' | 'wish_response';
   recipientCount: number;
   bodyPreview: string;
   /** 完整正文，用于「复制以供编辑」——只回给作者本人，不受 bodyPreview 的截断限制。 */
   body: string;
   renewCount: number;
   createdAt: string;
+  /** state='rejected' 时命中的审核大类；其它状态恒为 null。 */
+  rejectionCategories: string[] | null;
 }
 
 export type BlessingStatus =
@@ -231,13 +233,17 @@ export interface SubmittedAudioResponse {
   state: string;
 }
 
-export interface MyAudioFeedback {
-  completeness: string;
-  focus: string;
-  sincerity: string;
-  personalization: string;
-  livenessPassed: boolean;
-}
+export type MyAudioFeedback =
+  | { status: 'pending' }
+  | { status: 'rejected'; categories: string[] }
+  | {
+      status: 'scored';
+      completeness: string;
+      focus: string;
+      sincerity: string;
+      personalization: string;
+      livenessPassed: boolean;
+    };
 
 export const api = {
   me: () => call<SessionUser>('GET', '/api/me'),
@@ -333,5 +339,5 @@ export const api = {
   },
 
   audioFeedback: (blessingId: string) =>
-    call<MyAudioFeedback | null>('GET', `/api/blessings/${blessingId}/audio-feedback`),
+    call<MyAudioFeedback>('GET', `/api/blessings/${blessingId}/audio-feedback`),
 };

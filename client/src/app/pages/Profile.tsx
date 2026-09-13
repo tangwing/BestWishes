@@ -89,38 +89,79 @@ export function Profile() {
       <p className={s.lead}>
         这是别人给你送祝福时能筛到的画像。填得越清楚，越可能收到贴近你的祝福。
       </p>
+      <p className={s.hint}>这些信息我们不会验证真伪，但会影响别人能不能筛选到你。</p>
 
       <div className={s.card}>
-        <label>昵称 / 落款（别人会看到）</label>
-        <input
-          type="text"
-          value={p.senderName}
-          onChange={(e) => {
-            setP({ ...p, senderName: e.target.value });
-          }}
-          onBlur={() => {
-            save({ senderName: p.senderName });
-          }}
-        />
-        <label>城市 / 地区（显示用，只到城市）</label>
-        <input
-          type="text"
-          value={p.regionCity}
-          placeholder="如 杭州"
-          onChange={(e) => {
-            setP({ ...p, regionCity: e.target.value });
-          }}
-          onBlur={() => {
-            save({ regionCity: p.regionCity });
-          }}
-        />
+        <div className={s.row}>
+          <div style={{ flex: 1 }}>
+            <label>昵称 / 落款</label>
+            <input
+              type="text"
+              value={p.senderName}
+              onChange={(e) => {
+                setP({ ...p, senderName: e.target.value });
+              }}
+              onBlur={() => {
+                save({ senderName: p.senderName });
+              }}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label>城市 / 地区</label>
+            <input
+              type="text"
+              value={p.regionCity}
+              placeholder="如 杭州"
+              onChange={(e) => {
+                setP({ ...p, regionCity: e.target.value });
+              }}
+              onBlur={() => {
+                save({ regionCity: p.regionCity });
+              }}
+            />
+          </div>
+        </div>
+        <div className={s.row} style={{ marginTop: 10 }}>
+          <div style={{ flex: 1 }}>
+            <label>性别</label>
+            <div className={s.tabs}>
+              {GENDERS.map(([g, label]) => {
+                const on = g === 'unset' ? p.gender === null : p.gender === g;
+                return (
+                  <span
+                    key={g}
+                    className={`${s.tab} ${on ? s.on : ''}`}
+                    onClick={() => {
+                      save({ gender: g === 'unset' ? null : g });
+                    }}
+                  >
+                    {label}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <label>出生年份</label>
+            <input
+              type="number"
+              min={1900}
+              max={CURRENT_YEAR}
+              placeholder="如 1996"
+              value={p.birthYear ?? ''}
+              onChange={(e) => {
+                setP({ ...p, birthYear: e.target.value === '' ? null : Number(e.target.value) });
+              }}
+              onBlur={() => {
+                save({ birthYear: p.birthYear });
+              }}
+            />
+          </div>
+        </div>
       </div>
 
       <div className={s.card}>
-        <h2>位置</h2>
-        <p className={s.hint}>
-          用于按距离筛选。只存经纬度，别人看到的只有城市和大致距离，看不到精确位置。
-        </p>
+        <label>位置（用于按距离筛选，别人只看得到城市和大致距离）</label>
         <button className="ghost" disabled={geoBusy} onClick={useBrowserLocation}>
           {geoBusy ? '定位中…' : '用浏览器定位'}
         </button>
@@ -162,40 +203,6 @@ export function Profile() {
         ) : (
           <p className={s.hint}>还没设置位置——群发和被别人筛到都需要它。</p>
         )}
-      </div>
-
-      <div className={s.card}>
-        <h2>性别</h2>
-        <div className={s.tabs}>
-          {GENDERS.map(([g, label]) => {
-            const on = g === 'unset' ? p.gender === null : p.gender === g;
-            return (
-              <span
-                key={g}
-                className={`${s.tab} ${on ? s.on : ''}`}
-                onClick={() => {
-                  save({ gender: g === 'unset' ? null : g });
-                }}
-              >
-                {label}
-              </span>
-            );
-          })}
-        </div>
-        <label style={{ marginTop: 14 }}>出生年份</label>
-        <input
-          type="number"
-          min={1900}
-          max={CURRENT_YEAR}
-          placeholder="如 1996"
-          value={p.birthYear ?? ''}
-          onChange={(e) => {
-            setP({ ...p, birthYear: e.target.value === '' ? null : Number(e.target.value) });
-          }}
-          onBlur={() => {
-            save({ birthYear: p.birthYear });
-          }}
-        />
       </div>
 
       <div className={s.card}>

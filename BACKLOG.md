@@ -16,7 +16,8 @@
 - **2026-09-08 用户 Demo 走查反馈（B-69~B-73）**：Safari 录音失败（B-69，两轮修复 + 加了可见诊断行，等 Safari 真机复测）；协议页硬编码跳转 bug（B-72，已修 + e2e 回归）；demo 数据持久化（B-73，`pnpm demo` 现在落盘 PGlite，重启不丢个人资料）；验证码校验确实实现了但校验的是客户端转写文本（B-70，P2 信任边界，无需改）；**B-71 导航改名/结构调整需要用户先回答 4 个歧义点**（见待办区），没动。
 - **UAT 自动化**：用户问有没有框架能自动跑他手动做的走查——**有，就是 `e2e/`（Playwright + 真实系统 Chrome）**，`pnpm test:e2e` 跑，13 个用例覆盖 P1 群发 + P2 请求/录音/打分/审核全链路（录音用 `--use-fake-device-for-media-stream` 真的走 MediaRecorder）。本轮把用户手动发现的 B-72 也补成了回归用例。唯一盖不到的是 Safari（macOS 12 装不了 Playwright webkit）。
 - **B-71 祈福广场重构（2026-09-09，spec + 代码都已完成）**：用户点评把"祝福请求"重塑为社区式「祈福广场」（Topic + `responseCount`/`lastResponseAt` 聚合统计、列表只摘要、详情才看回应、"我的祈福"= `?filter=mine`）+ 导航精简（8→6 项，删「回响」，「收件箱」→「我的福袋」/`/pouch`，「写祝福」→「传递善意」/`/give` 并入发件箱，路由 `/wish-requests*`→`/plaza*`）。回响用"务实删"（删页面/服务/纯函数模块 + 个人空间显示"你已传递 N 份善意"；`blessing-transition` 的 `countedInStreak`/`streakDelta` + `streak_days` 表保留为 dormant——见 B-74）。`/opsx:update` 同步了 spec（`wish-request` 重写 + `blessing-records`/`user-profile` MODIFIED + `blessing-streak` REMOVED），`/opsx:apply` 落了 §9 代码。`pnpm verify` 196 / `pnpm test:e2e` 13 全绿。详见 tasks.md §9。
-- **下一步**：① 用户审阅 `add-p2-wish-request-audio`（前八节 P2 首版 + §9 祈福广场重构）→ 审阅通过后 `/opsx:archive`，再谈 P3。② Safari 录音（B-69）仍等真机复测。`add-moderation-rbac` 仍"先放着"（B-65）。B-66 待单独设计讨论。
+- **2026-09-13 用户走查 §9 后的 5 点反馈（B-76~B-79 已修，见下方 P2 走查反馈一节）**：拒绝时"成功"文案自相矛盾且不给理由（B-76，真 bug，`myFeedback` 改判别式返回 + `OutboxItem` 加 `rejectionCategories`）、审核台空队列仍显示默认处理理由（B-77）、个人空间密度太低缺免责声明（B-78）、传递善意页送给谁该排到正文前 + 范本默认折叠（B-79）。`pnpm verify` 196 / `pnpm test:e2e` 13 全绿，`audio-scoring` delta spec 补场景。B-81（编辑重发/申诉入口，P1 归档时就有的老缺口）记待讨论，未做。
+- **下一步**：① 用户审阅 `add-p2-wish-request-audio`（前八节 P2 首版 + §9 祈福广场重构 + §10 本轮 5 点修复）→ 审阅通过后 `/opsx:archive`，再谈 P3。② Safari 录音（B-69）仍等真机复测。③ B-81（申诉/编辑重发入口）要不要做、做成什么样，待讨论。`add-moderation-rbac` 仍"先放着"（B-65）。B-66 待单独设计讨论。
 
 <details>
 <summary>P1 存档（点开查看）</summary>
@@ -50,6 +51,14 @@
   - spec 同步：触及 `wish-request` / `blessing-records` / `blessing-streak` 等能力。**注意**：`wish-request` 等 P2 能力还只活在未归档的 `add-p2-wish-request-audio` 的 delta 里（见恢复点）——这个 change 的基线依赖 P2 先归档，或在提案里说明基线假设。
 - [x] **B-72 偶发：祝福请求点「回应」跳到写祝福页** — 根因不是偶发随机，是**未同意协议时**才触发：`RespondToWishRequest` / `PublishWishRequest` 未同意 → 跳 `/agreement`，而 `Agreement.tsx` 同意后**硬编码** `nav('/compose')`，不管来处。已同意过的会话不会触发，所以看着"偶发"。已修：`/agreement` 支持 `?returnTo=`（`safeReturnTo` 挡开放重定向），两个页面跳转时带上来处，同意后回到来处（默认仍 `/compose`）。加了 e2e 回归（wish-request.spec.ts #12：未同意用户点回应 → 协议页 → 同意后回到 `/respond`）。
 - [x] **B-73 个人资料每次测试都要重输** — `demo` 脚本用默认 `BW_DB=memory`，重启即清空。已改 `demo` 为 `BW_DB=pglite BW_PGDATA=.pgdata` 落盘持久化（`.pgdata/` 已在 `.gitignore`），会话 cookie 存 userId + 30 天有效期，重启仍登录。新增 `pnpm demo:fresh` 干净重来。`docs/DEMO.md` 已更新。
+
+## P2 Demo 走查反馈（2026-09-13，用户逐点提，B-71 落地后）—— 全部已修复
+
+- [x] **B-76（真 bug）拒绝时的误导性"成功"文案 + 缺失拒绝原因** — 回应祈福被内容审核判 `violation` 后，`AudioFeedback.tsx` 标题恒显示"已发出这段祝福 ✔"，下面却同时显示"这条内容没有通过安全审核，不会送达，也没有反馈"——两句话互相矛盾。根因：`audio-scoring-service.myFeedback()` 把"还没打完分"和"命中 violation 永远不会有分"都返回同一个 `null`（实际上打分管线全同步，压根不存在真的"评估中"态，`null` 的歧义纯粹是接口设计问题），前端没法区分，也从没把审核大类暴露给作者。`Sent.tsx`（P1 文本祝福）同款问题——`rejected` 时标题仍是"已发送 ✓"。已修：`myFeedback` 改判别式返回 `{status:'pending'|'rejected'+categories|'scored'}`；`OutboxItem` 加 `rejectionCategories`；两个页面按真实结果显示文案 + 原因；顺带修了 `OutboxSection` 把祈福回应误标成"群发 N 人"（改标"回应祈福"）。`blessing-delivery` 主 spec 早写了"作者侧看到大类原因"，这次才真正接到前端；`audio-scoring`（未归档 delta）补场景。详见 tasks.md §10.1。**明确不做**：给 `auto_violation` 建审核工单（矛盾于现有设计：工单只服务于需要人工判断的场景）。**遗留**：spec 里"大类原因**与修改/申诉入口**"的后半句——让作者能就地编辑重发或发起申诉——仍未实现（`edit_resubmit` 触发器在 domain 类型里存在但从未被任何 service 调用），是 P1 归档时就有的老缺口，不在本轮修，见 B-81。
+- [x] **B-77 审核台空队列仍显示默认"处理理由"输入框** — 已改成队列非空才渲染；顺带用新建的 `client/src/app/moderationCategories.ts`（镜像 domain 的 `categoryLabel`，client 不能依赖 domain）把队列项的审核大类代码换成中文。
+- [x] **B-78 个人空间信息密度太低 + 缺免责声明** — 顶部加"这些信息我们不会验证真伪，但会影响别人筛选到你"；昵称/城市/性别/出生年从三个大卡片压缩进一个卡片的两行布局。
+- [x] **B-79 传递善意页面重排** — 「送给谁」移到「场景/正文/范本」前面；「范本」默认折叠（链接按钮展开），不占开屏空间。按草稿推荐范本是用户提的未来方向，不在本轮做。
+- [ ] **B-81（新，B-76 过程中发现的遗留）祝福被拒后没有"编辑重发/申诉"入口** — `blessing-delivery` 主 spec 的"自动判定违规"场景要求"作者侧看到大类原因**与修改/申诉入口**"；B-76 把"看到大类原因"这半句做了，"修改/申诉入口"从 P1 归档起就没实现过（`LifecycleTrigger` 里的 `edit_resubmit` 从未被调用）。现状：作者知道被拒了、也知道为什么，但只能去"传递善意"重新写一条全新的，没有"基于这条改一改再发"的路径。是否要做、做成什么样（原地编辑复用 slug，还是同 B-63 的"复制以供编辑"模式）需要先讨论，不预先设计。
 
 ## 刚完成（下轮挪进 CHANGELOG）
 

@@ -61,6 +61,8 @@ export interface OutboxItem {
   body: string;
   renewCount: number;
   createdAt: string;
+  /** state='rejected' 时命中的审核大类；其它状态恒为 null。见 B-76：拒绝要给作者看得懂的原因。 */
+  rejectionCategories: string[] | null;
 }
 
 const REPLY_AUDIENCE: AudienceFilter = {
@@ -319,6 +321,7 @@ export function createBlessingService(deps: AppDeps) {
           body: b.body,
           renewCount: b.renewCount,
           createdAt: b.createdAt,
+          rejectionCategories: b.state === 'rejected' ? (b.moderation?.categories ?? []) : null,
         }));
     },
 

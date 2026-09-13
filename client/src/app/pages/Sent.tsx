@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api, type OutboxItem } from '../../api/client';
+import { moderationReasonText } from '../moderationCategories';
 import s from '../app.module.css';
 
 const STATE_LABEL: Record<string, string> = {
@@ -36,16 +37,23 @@ export function Sent() {
   const n = item.recipientCount;
   const target = item.scope === 'reply' ? '对方' : `${n} 位陌生人`;
 
+  const rejected = item.state === 'rejected';
+
   return (
     <div className={s.page}>
-      <h1>已发送 ✓</h1>
+      {/* 拒绝时不能再显示"已发送 ✓"——B-76：这两句话曾经同屏出现，自相矛盾。 */}
+      <h1>{rejected ? '这次没有通过审核 ✗' : '已发送 ✓'}</h1>
       <p className={s.lead}>
-        你的心意正在送往 <b>{target}</b>。
-        {item.state === 'published'
-          ? ' 校验已通过，已经进了 TA 们的福袋。'
-          : item.state === 'verifying'
-            ? ' 平台正在做一次内容校验（通常几分钟），通过后才会投递并通知对方。'
-            : ' 这次没有通过校验。'}
+        {rejected ? (
+          '不会送往任何人，请修改后再发一次。'
+        ) : (
+          <>
+            你的心意正在送往 <b>{target}</b>。
+            {item.state === 'published'
+              ? ' 校验已通过，已经进了 TA 们的福袋。'
+              : ' 平台正在做一次内容校验（通常几分钟），通过后才会投递并通知对方。'}
+          </>
+        )}
       </p>
 
       <div className={s.card}>
@@ -56,25 +64,32 @@ export function Sent() {
           {item.bodyPreview}
         </p>
         <p className={s.meta}>{item.scope === 'reply' ? '回复给一个人' : `群发 · ${n} 人`}</p>
+        {rejected && (
+          <p className={s.error} style={{ marginTop: 8 }}>
+            没有通过安全审核：{moderationReasonText(item.rejectionCategories ?? [])}。
+          </p>
+        )}
       </div>
 
-      <div className={s.card}>
-        <h2>把 BestWishes 讲给朋友</h2>
-        <p className={s.hint}>
-          这份祝福有一个公开链接，可以转发到微信，让更多人来这里给陌生人写祝福。
-          （祝福本身已经进了收件人的福袋，不需要靠链接送达。）
-        </p>
-        <button
-          onClick={() => {
-            void navigator.clipboard.writeText(`${location.origin}/p/${item.slug}`);
-          }}
-        >
-          复制公开链接
-        </button>{' '}
-        <a href={`/p/${item.slug}`} target="_blank" rel="noreferrer">
-          <button className="ghost">打开看看</button>
-        </a>
-      </div>
+      {!rejected && (
+        <div className={s.card}>
+          <h2>把 BestWishes 讲给朋友</h2>
+          <p className={s.hint}>
+            这份祝福有一个公开链接，可以转发到微信，让更多人来这里给陌生人写祝福。
+            （祝福本身已经进了收件人的福袋，不需要靠链接送达。）
+          </p>
+          <button
+            onClick={() => {
+              void navigator.clipboard.writeText(`${location.origin}/p/${item.slug}`);
+            }}
+          >
+            复制公开链接
+          </button>{' '}
+          <a href={`/p/${item.slug}`} target="_blank" rel="noreferrer">
+            <button className="ghost">打开看看</button>
+          </a>
+        </div>
+      )}
 
       <p>
         <Link to="/give">回「传递善意」</Link>
