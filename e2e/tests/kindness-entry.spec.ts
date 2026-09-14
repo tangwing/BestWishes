@@ -64,7 +64,7 @@ test('访客在首页读到一条真实祈福 + 真实回应，无需登录', as
   const guestCtx = await browser.newContext();
   const guestPage = await guestCtx.newPage();
   await guestPage.goto('/');
-  await expect(guestPage.getByText('BestWishes')).toBeVisible();
+  await expect(guestPage.getByRole('heading', { name: 'BestWishes' })).toBeVisible();
   await expect(guestPage.getByRole('button', { name: '回应这条祈福' })).toBeVisible();
   await expect(guestPage.getByRole('button', { name: '给附近的人写一段祝福' })).toBeVisible();
   await guestCtx.close();
@@ -72,15 +72,24 @@ test('访客在首页读到一条真实祈福 + 真实回应，无需登录', as
 
 test('未登录访客：从首页写祝福 → 提交 → 登录 → 同意协议 → 内容未丢 → 送出成功', async ({
   page,
+  browser,
 }) => {
   const nickname = 'ke1-访客';
-  const loc = region(67.0, 97.0).sender;
+  const r = region(67.0, 97.0);
+
+  // 附近得有一个候选人，默认受众条件（近距离）才能命中，提交才会真的成功
+  // （这条测试要证的是"内容不因登录/协议而丢"，不是受众匹配本身，所以候选人是测试夹具，不算主动操作）。
+  const nearbyCtx = await browser.newContext();
+  const nearbyPage = await nearbyCtx.newPage();
+  await login(nearbyPage, 'ke1-附近的人');
+  await setLocation(nearbyPage, r.recipient);
+  await nearbyCtx.close();
 
   // 这个账号"曾经"登录过、设好过位置——群发要求发送者有位置是既有的、本变更未触及的约束
   // （spec「不强制填画像」只覆盖回应祈福那条路径，见 redesign-kindness-entry 的实现笔记）。
   // 这里先以登录态把位置设好，再清 cookie 模拟"这次是未登录访客"。
   await login(page, nickname);
-  await setLocation(page, loc);
+  await setLocation(page, r.sender);
   await page.context().clearCookies();
 
   await page.goto('/');
@@ -112,11 +121,19 @@ test('未登录访客：从首页写祝福 → 提交 → 登录 → 同意协�
 
 test('两步路径：已登录 + 已设位置 + 已同意协议的用户，从首页出发只点两次就送出', async ({
   page,
+  browser,
 }) => {
   const nickname = 'ke2-老用户';
-  const loc = region(68.0, 98.0).sender;
+  const r = region(68.0, 98.0);
+
+  const nearbyCtx = await browser.newContext();
+  const nearbyPage = await nearbyCtx.newPage();
+  await login(nearbyPage, 'ke2-附近的人');
+  await setLocation(nearbyPage, r.recipient);
+  await nearbyCtx.close();
+
   await login(page, nickname);
-  await setLocation(page, loc);
+  await setLocation(page, r.sender);
   await agree(page);
 
   await page.goto('/');

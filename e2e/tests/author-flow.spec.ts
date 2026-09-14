@@ -1,9 +1,15 @@
 import { expect, test } from '@playwright/test';
 import { agree, broadcast, GOOD_BODY, login, region, setLocation } from './support';
 
-test('新用户没同意协议就进写祝福 → 被引导去协议页', async ({ page }) => {
+test('新用户没同意协议：进写祝福页不拦，写完点发送才引导去协议页（登录/协议延后到提交那一刻）', async ({
+  page,
+}) => {
   await login(page, 'af-新来的');
   await page.goto('/give');
+  // 进页不再是前置门槛——不弹协议墙，能直接开始写
+  await expect(page.getByRole('heading', { name: '传递善意' })).toBeVisible();
+  await page.getByPlaceholder('慢慢写，写给一个具体的人。').fill('愿你被这个世界温柔以待，一切安好顺遂。');
+  await page.getByRole('button', { name: '发送', exact: true }).click();
   await page.waitForURL('**/agreement**');
   await expect(page.getByRole('heading', { name: '《用户内容与授权协议》' })).toBeVisible();
 });
