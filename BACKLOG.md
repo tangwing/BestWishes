@@ -8,7 +8,12 @@
 
 ## 恢复点（先读这段）
 
-- **阶段**：**P1 已完成并归档**（详见下方"P1 存档"）。**P2 第一批（`add-p2-wish-request-audio`：祝福请求 + 匹配 + 音频录制打分）已全部实现完成**，`pnpm verify`（201 测试）/ `pnpm test:e2e`（12 个）/ `openspec validate --strict` 全绿，`docs/DEMO.md` 已补 P2 走查。**当前等用户审阅**——用户明确说过"审阅通过"由用户自己拍板，不能自行判定后就去动 P3 或扩大范围，所以这里先停下。
+- **阶段**：**P1 已完成并归档**（详见下方"P1 存档"），**P2 第一批已归档**。**三步走的第 1 步 `redesign-kindness-entry`（B-94）已全部实现完成**：`pnpm verify`（224 测试）/ `pnpm test:e2e`（17 个）/ `openspec validate --strict` 全绿，`docs/DEMO.md` 已补访客首次善意的走查。**当前等用户审阅**——同 P1/P2 的老规矩，审阅通过由用户自己拍板，通过前不自行动第 2 步（`add-shareable-blessing-card`）或扩大范围。
+- **B-94 实现笔记（供归档前复核）**：
+  - **范围调整（已跟用户确认，非擅自决定）**：实现中发现"回应祈福"当前只有**音频**一条路径（录音+验证码+提交，天然 ≥3 次交互），既装不进"≤2 次主动操作"的预算，录音 `Blob` 也没法像文字那样存进 `sessionStorage` 撑过登录跳转的往返。跟用户对齐后：`RespondToWishRequest.tsx`（音频回应页）维持登录前置不变；"访客可进页 / 登录延后到提交 / 内容不丢"这套机制只落在 `Compose.tsx`（文字：群发 + 回信）；e2e 的"内容不丢"与"两步路径"两条用例改用**群发文字**路径演示。首页仍然按 spec 展示一条真实祈福 + 最新回应摘录，只是"回应这条祈福"按钮走的是既有的登录前置录音页，不是新机制。
+  - **顺带发现并收口的既有权限缺口**：`wish-request-service.detail()` 对所有 viewer 下发 `audioUrl`，但 `audio-scoring-service.readAudio()` 只放行作者/收件人——广场上第三方登录用户点播放必然 403。已改为"该祝福是某条 `published` 祈福的公开回应时，任何登录用户可放行"，P1 群发音频的权限不变，补了权限矩阵测试。
+  - 新增 `wish_requests.anonymous` / `last_response_excerpt` 两列 + 一次性回填脚本（`pnpm --filter @bestwishes/server backfill:last-response-excerpt`，上线前对存量数据跑一次，见 design.md 迁移计划）。
+  - 涉及文件较多，逐条改动看 [tasks.md](openspec/changes/redesign-kindness-entry/tasks.md) 的勾选说明比这里复述准确。
 - **B-68 add-p2-wish-request-audio**：实现细节 + 过程中发现修复的问题（filler-word 误判、HMAC 分隔符冲突、`requestId` 表单冗余字段导致的 422、回应页缺 consent gate、以及一处真实安全缺口——`suspect` 内容曾能绕过人工复核直接进公开广场）全部记在 [tasks.md](openspec/changes/add-p2-wish-request-audio/tasks.md) 的勾选说明里，逐条读比这里复述准确。**未归档**——归档是用户审阅通过之后的动作，不预先做。
 - **B-69（2026-09-08 用户 Safari 走查）**：`AudioRecorder` 只在 Chrome 上验证过，Safari 上录音结束报错、且录音拿不到导致"发送"按钮永久禁用。已修：`webkitAudioContext` 兜底 + 波形初始化失败降级不阻断录音；按 `MediaRecorder.isTypeSupported` 选容器格式（Safari 出 mp4）、回放路由按文件头嗅探 `Content-Type`；`start(250)` timeslice + 空录音明确报错。详见 tasks.md §8.6。`blessing-audio` delta spec 已同步。**Safari 真机复测待用户做**。
 - **技术栈**（ADR 0003）：Web-first PWA + Node/TS（Fastify）+ PostgreSQL（Drizzle / PGlite）+ pnpm monorepo；音频新增 `@fastify/multipart` 依赖 + 本机文件落盘（生产换对象存储时同 PGlite→postgres-js 的"换驱动不换契约"模式）。
@@ -23,7 +28,7 @@
 - **2026-09-13 第六轮反馈（B-92/B-93，用户纠正 B-91 的理解后排查出的两个真 bug）**：排查过程中先在运行中的 demo 上用 curl 直接撞见一个**严重且无关的 bug**——发布带地理位置的祈福并命中候选人时 500（B-92，`matchAndNotify()` 在 `wishRequests.add()` 之前写外键，PGlite 真外键约束下必炸，内存仓储测试从没覆盖过）；然后用同样的 curl 直接验证链路确认"一次提交只投递一次，不存在重复"，锁定用户感受的真正根源是收件箱音频回应看不到播放器、只有裸文字（B-93，跟 B-85 同类疏漏，这次是收件箱端）。两个都已修 + 补回归测试。
 - **2026-09-13 阶段性复盘 → 三个 change（B-94/B-95/B-96）**：用户叫停功能迭代做了一轮全面复盘（分析与结论见 PROMPT_LOG.md 对应条目）。结论是断点在「理念 → 动线」而非领域模型——首次善意要 9 步跨 4 页且全程没有一个具体的人；**下一步不做原生 App、不先建视频打分**，改为三步：压缩首次善意路径 → 造可分享产物 → PWA 手机形态，再用三个数（打开→首次善意转化率、收到→24h 回赠率、外链带新占比）验证情绪回路。三个 change 的规划 artifact 已全部写完并 `validate --strict` 通过，**等实现**（用户说了会另开会话做）。
 - **P2 已归档**：`add-p2-wish-request-audio` 经用户确认后 `/opsx:archive`——4 个新能力（`audio-scoring` / `blessing-audio` / `wish-request` / `wish-request-matching`）落进主 specs，5 个 Requirement 替换、2 个新增，`blessing-streak` 整个能力退役（主 spec 文件已删）。主 specs 现在是 12 个能力。
-- **下一步**：① 实现三个 change，**按顺序**：`redesign-kindness-entry` → `add-shareable-blessing-card` → `add-mobile-shell-pwa`（顺序是硬的，见下方 B-94/B-95/B-96 的说明）。每个 change 做完尽快 `/opsx:archive`，别再让"已实现未归档"的中间态拖长（AGENTS.md §2 的教训）。② Safari 录音（B-69）仍等真机复测。③ B-81（申诉/编辑重发入口）、B-90（富文本/图片回复）要不要做、做成什么样，待讨论。`add-moderation-rbac` 仍"先放着"（B-65）。B-66 待单独设计讨论。B-87（trace/分析系统）是三步做完后量那三个数的前提，**需要先讨论出结论**。
+- **下一步**：① `redesign-kindness-entry`（B-94）**等用户审阅**，通过后 `/opsx:archive`，再按顺序实现 `add-shareable-blessing-card` → `add-mobile-shell-pwa`（顺序是硬的，见下方 B-94/B-95/B-96 的说明）。每个 change 做完尽快 `/opsx:archive`，别再让"已实现未归档"的中间态拖长（AGENTS.md §2 的教训）。② Safari 录音（B-69）仍等真机复测。③ B-81（申诉/编辑重发入口）、B-90（富文本/图片回复）要不要做、做成什么样，待讨论。`add-moderation-rbac` 仍"先放着"（B-65）。B-66 待单独设计讨论。B-87（trace/分析系统）是三步做完后量那三个数的前提，**需要先讨论出结论**。
 
 <details>
 <summary>P1 存档（点开查看）</summary>
@@ -44,7 +49,7 @@
 
 > 顺序是硬的：第 2 步的落地页音频播放器沿用第 1 步定下的三档权限；第 3 步的底部 tab 依赖第 1 步已把首页做成"一条真实祈福 + 就地回应"。跳着做会踩空。
 
-- [ ] **B-94 第 1 步：入口动线**（`redesign-kindness-entry`）— 把首次善意从 9 步压到 2 步。新增 `kindness-entry` 能力（首屏呈现真实善意、最短路径 ≤2 次主动操作、登录推迟到提交那一刻且内容不丢）；**撤销 B-71 的"广场列表 MUST NOT 含回应正文"**，改为列表必须展示最新一条回应摘录（论坛正确但情绪错误的决策，是本轮复盘的核心发现之一）；访客可读文字、音频需登录；祈福加匿名发布；受众预览从硬门槛降级为可选辅助 + 默认受众条件。**顺带收口一个既有真实缺口**：`detail()` 对所有人下发 `audioUrl`，但 `readAudio()` 只放行"作者或收件人"，第三方在广场点播放必然 403——权限模型改为"广场公开回应，任何登录用户可播放"。4 个 artifact 齐全，`validate --strict` 通过。
+- [x] **B-94 第 1 步：入口动线**（`redesign-kindness-entry`）— 把首次善意从 9 步压到 2 步。新增 `kindness-entry` 能力（首屏呈现真实善意、最短路径 ≤2 次主动操作、登录推迟到提交那一刻且内容不丢）；**撤销 B-71 的"广场列表 MUST NOT 含回应正文"**，改为列表必须展示最新一条回应摘录（论坛正确但情绪错误的决策，是本轮复盘的核心发现之一）；访客可读文字、音频需登录；祈福加匿名发布；受众预览从硬门槛降级为可选辅助 + 默认受众条件。**顺带收口一个既有真实缺口**：`detail()` 对所有人下发 `audioUrl`，但 `readAudio()` 只放行"作者或收件人"，第三方在广场点播放必然 403——权限模型改为"广场公开回应，任何登录用户可播放"。4 个 artifact 齐全，`validate --strict` 通过。**已实现**（范围调整见上方恢复点），等用户审阅后归档。
 - [ ] **B-95 第 2 步：可分享产物 + 即时回报**（`add-shareable-blessing-card`）— 新增 `blessing-card`（祝福卡：确定性生成、隐私约束、作为落地页 og:image）与 `blessing-feedback`（**文字祝福的用心反馈**，兑现 vision "始终提供"的承诺——管线早就建好了却只接在音频上）；落地页补 og 元信息 + **音频播放器**（B-93 明确遗留的缺口，在这里还账）。**唯一的重量级技术决策是"卡片图片怎么生成"**，design.md D1 给了四个候选与取舍（选中：手写 SVG + 一个光栅化依赖 + 服务端捆中文字体），实现前必须先定。**微信 JS-SDK 不在范围内**：需 appId + 已备案域名（B-42 未办），写了无法验证；og 那层在微信链接预览里已能成立。
 - [ ] **B-96 第 3 步：手机形态**（`add-mobile-shell-pwa`）— 底部 tab（广场 / 传递善意 / 我的福袋 / 个人空间，**首页并入广场 tab**，用户 2026-09-13 拍板）、390px 版面约束、PWA 可安装、Web Push。`notification` 的 Purpose 里"真实推送通道留到后续"的那个后续就是这里。**明确不做原生 / RN / 小程序**——多端方式仍是 AGENTS.md §6 未决项，要先有留存数据。审核台从主导航移除（只是不显眼，**不是**权限门禁，B-65 仍待评审）。iOS Web Push 需 16.4+ 且必须先装到主屏，真机验证只能人工做。
 
