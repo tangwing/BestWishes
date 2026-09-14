@@ -8,6 +8,7 @@ export * from './blessing-transition';
 export * from './visibility';
 export * from './audience';
 export * from './wish-request-lifecycle';
+export * from './response-excerpt';
 export * from './audio-signals';
 export * from './script-coverage';
 export * from './liveness';

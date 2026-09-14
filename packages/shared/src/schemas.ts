@@ -32,6 +32,17 @@ export const audienceFilterSchema = z.object({
 });
 export type AudienceFilterDto = z.infer<typeof audienceFilterSchema>;
 
+/** 撰写页 / 服务端在用户没给受众条件时都用这一份（唯一来源，避免前后端各写一份漂移）。
+ * 近距离 + 年龄 / 性别 / 标签全空——冷启动阶段用户画像普遍不全，默认带上任何一项
+ * 都会把画像不全的人排除掉，让新用户命中 0 人（见 redesign-kindness-entry design D5）。 */
+export const DEFAULT_AUDIENCE_FILTER: AudienceFilterDto = {
+  radiusKm: 5,
+  ageMin: null,
+  ageMax: null,
+  gender: 'any',
+  tags: [],
+};
+
 /** 个人空间。城市粒度只到城市 / 省级；位置存经纬度，用于受众距离筛选。 */
 export const profileUpdateSchema = z.object({
   senderName: z.string().trim().max(30).optional(),
@@ -77,5 +88,7 @@ export const submitWishRequestSchema = z.object({
   situationText: z.string(),
   scriptText: z.string().trim().max(2000).optional(),
   tags: z.array(z.string().trim().min(1).max(20)).max(10).default([]),
+  /** 匿名发布：广场 / 详情 / 匹配通知以"一位朋友"代替昵称、不带城市。发布后不可切换。 */
+  anonymous: z.boolean().default(false),
 });
 export type SubmitWishRequestDto = z.infer<typeof submitWishRequestSchema>;

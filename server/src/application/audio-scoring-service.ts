@@ -235,7 +235,15 @@ export function createAudioScoringService(deps: AppDeps) {
       if (!b || b.contentType !== 'audio') {
         return err(appError('not_found', 'audio not found', '找不到这段音频'));
       }
-      if (b.authorId !== userId && !b.recipientIds.includes(userId)) {
+      const isParty = b.authorId === userId || b.recipientIds.includes(userId);
+      // 一条音频祝福是某条 published 祈福的回应时，它已经作为公开内容出现在详情页——
+      // 回放权限必须与之一致，放宽到任何登录用户（design D2 第 3 条分支）。
+      // 其它场景（如 P1 群发的音频祝福）维持"仅作者与收件人"不变。
+      const isPublicWishResponse =
+        b.scope === 'wish_response' &&
+        b.requestId !== null &&
+        (await deps.repos.wishRequests.findById(b.requestId))?.state === 'published';
+      if (!isParty && !isPublicWishResponse) {
         return err(appError('forbidden', 'not a party to this blessing', '没有权限查看'));
       }
       const buf = await deps.audioStorage.read(blessingId);

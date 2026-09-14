@@ -163,6 +163,11 @@ export function WishRequestDetail() {
           {resp.audioUrl && (
             <audio controls src={resp.audioUrl} style={{ width: '100%', marginTop: 8 }} />
           )}
+          {resp.audioLocked && (
+            <p className={s.hint} style={{ marginTop: 8 }}>
+              <a onClick={() => nav('/login')}>登录后可收听</a>
+            </p>
+          )}
           {resp.transcript && (
             <p className={s.meta} style={{ marginTop: 6 }}>
               “{resp.transcript}”

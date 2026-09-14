@@ -11,6 +11,7 @@ import {
 import {
   AppException,
   appError,
+  DEFAULT_AUDIENCE_FILTER,
   err,
   ok,
   type AudienceFilterDto,
@@ -137,10 +138,9 @@ export function createBlessingService(deps: AppDeps) {
       });
     }
 
-    if (!input.audience) {
-      return err(appError('validation_failed', 'audience required', '先选一个送达范围'));
-    }
-    const filter = toAudienceFilter(input.audience);
+    // 受众预览降级为可选辅助之后，撰写页不再强制先选条件——缺省时用唯一来源的默认值
+    // （近距离 + 年龄/性别/标签全空，见 redesign-kindness-entry design D5），不再拒绝提交。
+    const filter = toAudienceFilter(input.audience ?? DEFAULT_AUDIENCE_FILTER);
     const resolved = await audience.resolveRecipients(userId, filter);
     if (!resolved.ok) return resolved;
     return ok({

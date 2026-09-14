@@ -3,6 +3,7 @@
 
 import {
   applyBlessingTransition,
+  truncateResponseExcerpt,
   type LifecycleActor,
   type LifecycleTrigger,
 } from '@bestwishes/domain';
@@ -28,12 +29,34 @@ async function maintainWishRequestCounter(
 
   const req = await deps.repos.wishRequests.findById(after.requestId);
   if (!req) return;
+
+  // 摘录随 responseCount / lastResponseAt 同一写入路径维护（design D3）。
+  // 新回应发布：直接取它的摘录，不用查表。回应下架/撤回：这条低频路径才去查剩余最新一条。
+  const lastResponseExcerpt = enteredPublished
+    ? truncateResponseExcerpt(after.media?.transcript ?? after.body)
+    : await remainingLatestExcerpt(deps, after.requestId);
+
   await deps.repos.wishRequests.save({
     ...req,
     responseCount: Math.max(0, req.responseCount + (enteredPublished ? 1 : -1)),
     // lastResponseAt 单调：只在有新回应发布时前移，回应下架不回拨
     lastResponseAt: enteredPublished ? now : req.lastResponseAt,
+    lastResponseExcerpt,
   });
+}
+
+/** 一条回应下架 / 撤回后，该祈福剩余最新一条 published 回应的摘录；没有剩余回应则为 null。 */
+async function remainingLatestExcerpt(
+  deps: AppDeps,
+  requestId: string,
+): Promise<string | null> {
+  const responses = await deps.repos.blessings.listByRequestId(requestId);
+  const stillPublished = responses
+    .filter((b) => b.state === 'published')
+    .sort((a, b) => ((a.publishedAt ?? a.createdAt) < (b.publishedAt ?? b.createdAt) ? 1 : -1));
+  const latest = stillPublished[0];
+  if (!latest) return null;
+  return truncateResponseExcerpt(latest.media?.transcript ?? latest.body);
 }
 
 /**

@@ -43,6 +43,13 @@
       "when": 1788962883264,
       "tag": "0005_past_revanche",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789309963377,
+      "tag": "0006_conscious_magma",
+      "breakpoints": true
     }
   ]
 }

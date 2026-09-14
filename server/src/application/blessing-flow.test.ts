@@ -105,6 +105,36 @@ describe('群发到陌生人 + 收件箱 + 通知', () => {
     if (!r.ok) expect(r.error.code).toBe('audience_empty');
   });
 
+  it('audience_empty 的文案含"命中 0 人"与具体的放宽建议，不是一句空泛的"放宽条件"', async () => {
+    const r = await ctx.app.blessings.submit(sender, {
+      contentType: 'text',
+      body: GOOD_BODY,
+      occasion: 'daily',
+      scope: 'broadcast',
+      audience: { radiusKm: 0.2, ageMin: 18, ageMax: 25, gender: 'female', tags: ['晚睡'] },
+    });
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.userHint).toContain('0 人');
+    expect(r.error.userHint).toContain('年龄');
+    expect(r.error.userHint).toContain('性别');
+    expect(r.error.userHint).toContain('标签');
+    expect(r.error.userHint).toContain('距离');
+  });
+
+  it('只带正文、不带任何受众条件的提交也能成功群发（受众预览不再是发送前置）', async () => {
+    const r = await ctx.app.blessings.submit(sender, {
+      contentType: 'text',
+      body: GOOD_BODY,
+      occasion: 'daily',
+      scope: 'broadcast',
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    // 默认近距离命中范围内的阿离 / 阿波，不命中远方那位
+    expect(r.value.recipientCount).toBe(2);
+  });
+
   it('命中人数超过上限 → audience_too_large', async () => {
     const small = makeApp({ maxAudienceSize: 1 });
     const s = await seedUser(small, {

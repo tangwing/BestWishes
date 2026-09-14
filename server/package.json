@@ -10,7 +10,8 @@
     "test": "vitest run",
     "build": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/infrastructure/db/migrate.ts"
+    "db:migrate": "tsx src/infrastructure/db/migrate.ts",
+    "backfill:last-response-excerpt": "tsx src/infrastructure/db/backfill-last-response-excerpt.ts"
   },
   "dependencies": {
     "@bestwishes/domain": "workspace:*",

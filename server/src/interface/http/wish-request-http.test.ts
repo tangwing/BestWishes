@@ -174,7 +174,7 @@ describe('HTTP 端到端：祝福请求 + 音频回应', () => {
     await ctx.server.close();
   });
 
-  it('不相关的第三方拉不到音频文件（403）', async () => {
+  it('不相关的第三方登录用户可以听（广场公开回应，任何登录用户可播放）；未登录访客仍被拒绝', async () => {
     const ctx = await makeServer();
     const author = await login(ctx.server, '求祝福的人2');
     await setProfile(ctx.server, author, CENTER);
@@ -194,12 +194,20 @@ describe('HTTP 端到端：祝福请求 + 音频回应', () => {
     const res = await respond(ctx, requestId, responder, '愿你被这个世界温柔以待，一切都会好起来的');
     const { id: blessingId } = res.json<{ id: string }>();
 
-    const forbidden = await ctx.server.inject({
+    // 第三方登录用户：这条回应已经作为公开内容出现在详情页，回放权限必须与之一致（design D2）
+    const allowed = await ctx.server.inject({
       method: 'GET',
       url: `/api/blessings/${blessingId}/audio`,
       headers: stranger,
     });
-    expect(forbidden.statusCode).toBe(403);
+    expect(allowed.statusCode).toBe(200);
+
+    // 未登录访客：路由层 requireUserId() 仍然挡住，不因权限放宽而失守
+    const guestDenied = await ctx.server.inject({
+      method: 'GET',
+      url: `/api/blessings/${blessingId}/audio`,
+    });
+    expect(guestDenied.statusCode).toBe(401);
 
     await ctx.server.close();
   });

@@ -714,6 +714,8 @@ function toWishRequest(row: typeof t.wishRequests.$inferSelect): WishRequestReco
     moderation: row.moderation,
     responseCount: row.responseCount,
     lastResponseAt: row.lastResponseAt ? iso(row.lastResponseAt) : null,
+    anonymous: row.anonymous,
+    lastResponseExcerpt: row.lastResponseExcerpt,
   };
 }
 
@@ -730,6 +732,8 @@ function wishRequestValues(r: WishRequestRecord): typeof t.wishRequests.$inferIn
     moderation: r.moderation,
     responseCount: r.responseCount,
     lastResponseAt: r.lastResponseAt ? new Date(r.lastResponseAt) : null,
+    anonymous: r.anonymous,
+    lastResponseExcerpt: r.lastResponseExcerpt,
   };
 }
 

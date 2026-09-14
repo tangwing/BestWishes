@@ -31,6 +31,17 @@ export interface AudiencePreview {
   sample: AudiencePreviewRow[];
 }
 
+/** audience_empty 的文案：直说"当前条件命中 0 人"，再按实际生效的条件给出具体的放宽建议——
+ * 不能只说"放宽条件"，要说清楚放宽哪一项（B-50 的教训：错误必须可执行）。 */
+function audienceEmptyMessage(filter: AudienceFilter): string {
+  const suggestions: string[] = [];
+  if (filter.ageMin !== null || filter.ageMax !== null) suggestions.push('取消年龄限制');
+  if (filter.gender !== 'any') suggestions.push('把性别改成"不限"');
+  if (filter.tags.length > 0) suggestions.push('去掉标签');
+  suggestions.push(`把距离从 ${String(filter.radiusKm)} 公里扩大`);
+  return `当前条件命中 0 人。试试：${suggestions.join(' / ')}。`;
+}
+
 export function createAudienceService(deps: AppDeps) {
   async function originFor(userId: string): Promise<GeoPoint | null> {
     const p = await deps.repos.profiles.get(userId);
@@ -87,9 +98,7 @@ export function createAudienceService(deps: AppDeps) {
       const cap = deps.config.maxAudienceSize;
       const matches = r.value.matches;
       if (matches.length === 0) {
-        return err(
-          appError('audience_empty', 'no match', '这个范围里还没有人。放宽条件或扩大距离试试。'),
-        );
+        return err(appError('audience_empty', 'no match', audienceEmptyMessage(filter)));
       }
       if (matches.length > cap) {
         return err(

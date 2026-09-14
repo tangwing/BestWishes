@@ -28,6 +28,8 @@ test('群发给附近的陌生人 → 对方收件箱收到 → 对方回一段�
   await page.keyboard.press('ControlOrMeta+V');
   await expect(page.getByText('用你自己的话写出来')).toBeVisible();
 
+  // 受众筛选器默认收起，展开后才有"预览收件人"（受众预览已降级为可选辅助，不再是发送前置）
+  await page.getByRole('button', { name: '调整范围' }).click();
   await page.getByRole('button', { name: '预览收件人' }).click();
   await expect(page.getByText(/将送达 1 人/)).toBeVisible();
   await page.getByRole('button', { name: '发送', exact: true }).click();
@@ -59,16 +61,19 @@ test('群发给附近的陌生人 → 对方收件箱收到 → 对方回一段�
   await recipientCtx.close();
 });
 
-test('范围里没有人 → 发送按钮不可用', async ({ page }) => {
+test('范围里没有人 → 提交后收到 audience_empty 提示（受众预览已降级，不再是发送前置门槛）', async ({
+  page,
+}) => {
   const r = region(60.0, 30.0); // 一个没有其他测试用户的偏远区域
   await login(page, 'af3-孤独');
   await setLocation(page, r.sender);
   await agree(page);
   await page.goto('/give');
   await page.getByPlaceholder('慢慢写，写给一个具体的人。').fill(GOOD_BODY);
-  await page.getByRole('button', { name: '预览收件人' }).click();
-  await expect(page.getByText('这个范围里还没有人。放宽条件或扩大距离。')).toBeVisible();
-  await expect(page.getByRole('button', { name: '发送', exact: true })).toBeDisabled();
+  // 不碰筛选器、不预览，直接发送——按钮不再因为没预览过而被禁用
+  await expect(page.getByRole('button', { name: '发送', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: '发送', exact: true }).click();
+  await expect(page.getByText(/命中 0 人/)).toBeVisible();
 });
 
 test('撤回后收件人看到占位', async ({ page, browser }) => {

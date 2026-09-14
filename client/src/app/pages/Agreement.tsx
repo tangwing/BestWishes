@@ -2,27 +2,25 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useSession } from '../session';
+import { loginUrl, safeReturnTo } from '../returnTo';
 import s from '../app.module.css';
-
-/** 只接受站内相对路径，挡掉 `//evil.com` 这类开放重定向。 */
-function safeReturnTo(raw: string | null): string {
-  if (raw && raw.startsWith('/') && !raw.startsWith('//')) return raw;
-  return '/give';
-}
 
 export function Agreement() {
   const { user, loading } = useSession();
   const nav = useNavigate();
   const [params] = useSearchParams();
-  const returnTo = safeReturnTo(params.get('returnTo'));
+  const returnTo = safeReturnTo(params.get('returnTo'), '/give');
+  const draftLost = params.get('draftLost') === '1';
   const [featured, setFeatured] = useState(true);
   const [version, setVersion] = useState('');
   const [err, setErr] = useState('');
   const [deliver, setDeliver] = useState(true);
 
   useEffect(() => {
-    if (!loading && !user) nav('/login');
-  }, [loading, user, nav]);
+    // 协议页本身也要求登录——同样带上 returnTo，登录后回到这里而不是丢回首页，
+    // 才能接上"登录 + 同意协议两步之后回到原位置"这条链（kindness-entry「登录后接着走协议」）。
+    if (!loading && !user) nav(loginUrl(`/agreement?returnTo=${encodeURIComponent(returnTo)}`));
+  }, [loading, user, nav, returnTo]);
 
   useEffect(() => {
     if (user)
@@ -36,6 +34,9 @@ export function Agreement() {
     <div className={s.page}>
       <h1>《用户内容与授权协议》</h1>
       <p className={s.lead}>协议版本 {version}。著作权仍归你。请选择你愿意授权的范围。</p>
+      {draftLost && (
+        <p className={s.error}>刚才写的内容这次没能暂存住，同意之后可能需要重新输入一下。</p>
+      )}
 
       <div className={s.card}>
         <label style={{ display: 'flex', gap: 8 }}>

@@ -195,6 +195,8 @@ export interface WishRequestSummary {
   tags: string[];
   responseCount: number;
   lastResponseAt: string | null;
+  /** 最新一条 published 回应的正文 / 转写摘录；尚无回应或无转写时为 null。 */
+  lastResponseExcerpt: string | null;
   state: string;
   createdAt: string;
   isMine: boolean;
@@ -216,6 +218,8 @@ export interface ResponseView {
   fromNickname: string;
   fromCity: string | null;
   audioUrl: string | null;
+  /** true = 这条回应有音频，但当前访客未登录看不到链接——显示"登录后可收听"而不是当成没有音频。 */
+  audioLocked: boolean;
   transcript: string | null;
   createdAt: string;
   replies: ReplyView[];
@@ -312,8 +316,12 @@ export const api = {
     call<{ ok: true }>('POST', `/api/moderation/${id}/resolve`, { action, reason }),
 
   // ---- 祈福广场 + 音频回应 ----
-  publishWishRequest: (input: { situationText: string; scriptText?: string | undefined; tags: string[] }) =>
-    call<WishRequestSummary>('POST', '/api/plaza', input),
+  publishWishRequest: (input: {
+    situationText: string;
+    scriptText?: string | undefined;
+    tags: string[];
+    anonymous?: boolean | undefined;
+  }) => call<WishRequestSummary>('POST', '/api/plaza', input),
   plaza: (filter: 'all' | 'mine' = 'all') =>
     call<WishRequestSummary[]>('GET', `/api/plaza?filter=${filter}`),
   wishRequestDetail: (id: string) => call<WishRequestDetail>('GET', `/api/plaza/${id}`),

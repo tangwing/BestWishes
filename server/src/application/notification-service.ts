@@ -19,10 +19,15 @@ export function createNotificationService(deps: AppDeps) {
       const records = await deps.repos.notifications.listForUser(userId);
       const items: NotificationView[] = [];
       for (const n of records) {
-        const [user, profile] = await Promise.all([
-          deps.repos.users.findById(n.fromUserId),
-          deps.repos.profiles.get(n.fromUserId),
-        ]);
+        // 匹配通知来自一条匿名祈福时，同样不能把真实昵称发给候选响应人（design D4）。
+        const request = n.requestId ? await deps.repos.wishRequests.findById(n.requestId) : null;
+        const anonymous = request?.anonymous ?? false;
+        const [user, profile] = anonymous
+          ? [null, null]
+          : await Promise.all([
+              deps.repos.users.findById(n.fromUserId),
+              deps.repos.profiles.get(n.fromUserId),
+            ]);
         items.push({
           id: n.id,
           kind: n.kind,
@@ -30,7 +35,7 @@ export function createNotificationService(deps: AppDeps) {
           requestId: n.requestId,
           from: {
             userId: n.fromUserId,
-            nickname: profile?.senderName ?? user?.nickname ?? '一位朋友',
+            nickname: anonymous ? '一位朋友' : (profile?.senderName ?? user?.nickname ?? '一位朋友'),
           },
           createdAt: n.createdAt,
           read: n.readAt !== null,

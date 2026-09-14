@@ -13,6 +13,7 @@ export function PublishWishRequest() {
   const [situationText, setSituationText] = useState('');
   const [scriptText, setScriptText] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [anonymous, setAnonymous] = useState(false);
   const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
   const [customTag, setCustomTag] = useState('');
   const [err, setErr] = useState('');
@@ -49,6 +50,7 @@ export function PublishWishRequest() {
         situationText,
         scriptText: scriptText.trim() || undefined,
         tags,
+        anonymous,
       })
       .then((r) => {
         nav(`/plaza/${r.id}`);
@@ -128,6 +130,22 @@ export function PublishWishRequest() {
         <button type="button" onClick={addCustomTag} disabled={!customTag.trim() || tags.length >= MAX_TAGS}>
           添加
         </button>
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <input
+            type="checkbox"
+            checked={anonymous}
+            onChange={(e) => {
+              setAnonymous(e.target.checked);
+            }}
+          />
+          匿名发布
+        </label>
+        <p className={s.hint} style={{ marginTop: 4 }}>
+          匿名只对外——广场和详情会显示"一位朋友"，不影响你收到回应，发布后不能再更改。
+        </p>
       </div>
 
       {err && <div className={s.error}>{err}</div>}

@@ -111,6 +111,13 @@ export function WishRequests() {
           <p className={s.meta} style={{ marginTop: 8 }}>
             已收到 <b>{r.responseCount}</b> 条回应 · {lastActivity(r.lastResponseAt)}
           </p>
+          {r.lastResponseExcerpt ? (
+            <p className={s.blessing} style={{ marginTop: 6, fontSize: 14 }}>
+              “{r.lastResponseExcerpt}”
+            </p>
+          ) : (
+            <p className={s.hint} style={{ marginTop: 6 }}>还没有回应</p>
+          )}
           {filter === 'mine' && r.state === 'published' && (
             <div style={{ marginTop: 8 }}>
               <button

@@ -181,4 +181,33 @@ describe('PG 仓储：核心流程', () => {
     const notifications = await app.notifications.list(candidate);
     expect(notifications.items.some((n) => n.kind === 'wish_request_matched')).toBe(true);
   });
+
+  it('wish_requests.anonymous / last_response_excerpt 随记录读写（PG 仓储契约同内存仓储）', async () => {
+    const author = await seedUser('求祝福的人', { ...CENTER, consent: true });
+    const id = 'wrq_excerpt_test';
+    await repos.wishRequests.add({
+      id,
+      authorId: author,
+      situationText: '测试处境描述',
+      scriptText: null,
+      tags: [],
+      state: 'published',
+      createdAt: clock.now().toISOString(),
+      recipientCandidateIds: [],
+      moderation: null,
+      responseCount: 0,
+      lastResponseAt: null,
+      anonymous: true,
+      lastResponseExcerpt: null,
+    });
+
+    let found = await repos.wishRequests.findById(id);
+    expect(found?.anonymous).toBe(true);
+    expect(found?.lastResponseExcerpt).toBeNull();
+
+    if (!found) throw new Error('not found');
+    await repos.wishRequests.save({ ...found, lastResponseExcerpt: '一段摘录' });
+    found = await repos.wishRequests.findById(id);
+    expect(found?.lastResponseExcerpt).toBe('一段摘录');
+  });
 });

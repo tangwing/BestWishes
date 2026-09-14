@@ -200,6 +200,13 @@ export interface WishRequest {
   responseCount: number;
   /** 最近一条回应发布的时间（ISO）。单调：回应下架不回拨（"最后活跃"是软信号）。 */
   lastResponseAt: string | null;
+  /** 勾选后广场 / 详情 / 匹配通知以"一位朋友"代替昵称、不带城市；仅展示层遮蔽，
+   * authorId 照常关联（审核、撤回、收回应不受影响，见 redesign-kindness-entry design D4）。
+   * 发布后不可切换。 */
+  anonymous: boolean;
+  /** 最新一条 `published` 回应的正文 / 转写摘录，与 responseCount / lastResponseAt 同一写入路径维护，
+   * 不在列表渲染时扫回应表。尚无回应或最新回应无转写时为 null。 */
+  lastResponseExcerpt: string | null;
 }
 
 /** 音频打分的输出：多维标签 + 置信度，恒不产出单一可比较分数（vision.md 硬约束）。 */

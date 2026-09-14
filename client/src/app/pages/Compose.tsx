@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import type { Occasion } from '@bestwishes/shared';
+import { DEFAULT_AUDIENCE_FILTER, type Occasion } from '@bestwishes/shared';
 import {
   api,
   ApiCallError,
@@ -12,6 +12,7 @@ import {
 import { useSession } from '../session';
 import { OutboxSection } from '../components/OutboxSection';
 import { RangeSlider } from '../components/RangeSlider';
+import { agreementUrl, loginUrl } from '../returnTo';
 import s from '../app.module.css';
 
 const OCCASIONS: [Occasion, string][] = [
@@ -36,18 +37,40 @@ const GENDER_OPTIONS: [AudienceGender, string][] = [
   ['other', '其他'],
 ];
 
-const DEFAULT_FILTER: AudienceFilter = {
-  radiusKm: 5,
-  ageMin: null,
-  ageMax: null,
-  gender: 'any',
-  tags: [],
-};
-
 const MAX_FILTER_TAGS = 10;
 const MAX_TAG_LEN = 20;
 const AGE_SLIDER_MIN = 0;
 const AGE_SLIDER_MAX = 100;
+
+/** 未登录用户写完内容点提交时的暂存 key——按页面固定一个槽位就够，不需要按会话再拆分
+ * （见 design D1：sessionStorage 暂存 + 复用 ?returnTo= 回跳，不做后端草稿）。 */
+const DRAFT_KEY = 'bw-draft-compose';
+
+interface ComposeDraft {
+  body: string;
+  occasion: Occasion;
+  filter: AudienceFilter;
+}
+
+function saveDraft(draft: ComposeDraft): boolean {
+  try {
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function takeDraft(): ComposeDraft | null {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    sessionStorage.removeItem(DRAFT_KEY);
+    return JSON.parse(raw) as ComposeDraft;
+  } catch {
+    return null;
+  }
+}
 
 interface ComposeNavState {
   copyBody?: string;
@@ -55,7 +78,7 @@ interface ComposeNavState {
 }
 
 export function Compose() {
-  const { user, loading } = useSession();
+  const { user } = useSession();
   const nav = useNavigate();
   const location = useLocation();
   const [params] = useSearchParams();
@@ -69,7 +92,8 @@ export function Compose() {
   const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
   const [occasion, setOccasion] = useState<Occasion>(copyState?.copyOccasion ?? 'daily');
   const [body, setBody] = useState(copyState?.copyBody ?? '');
-  const [filter, setFilter] = useState<AudienceFilter>(DEFAULT_FILTER);
+  const [filter, setFilter] = useState<AudienceFilter>(DEFAULT_AUDIENCE_FILTER);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [preview, setPreview] = useState<AudiencePreview | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
   const [pasteBlocked, setPasteBlocked] = useState(false);
@@ -79,9 +103,16 @@ export function Compose() {
   const [canBroadcast, setCanBroadcast] = useState(true);
   const [showTemplates, setShowTemplates] = useState(false);
 
+  // 未登录 / 未同意协议时提交被打断（跳登录或协议页）后回到这里——按同一个 key 取回刚才写的内容。
+  // 访客第一次打开这个页面时 sessionStorage 里没有暂存，取回是 no-op，不影响正常渲染。
   useEffect(() => {
-    if (!loading && !user) nav('/login');
-  }, [loading, user, nav]);
+    const draft = takeDraft();
+    if (!draft) return;
+    setBody(draft.body);
+    setOccasion(draft.occasion);
+    setFilter(draft.filter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -95,10 +126,7 @@ export function Compose() {
     void api.profile().then((prof) => {
       setCanBroadcast(prof.canBroadcast);
     });
-    void api.agreement().then((a) => {
-      if (!a.alreadyConsented) nav('/agreement?returnTo=%2Fgive');
-    });
-  }, [user, nav]);
+  }, [user]);
 
   const bodyLen = useMemo(() => Array.from(body.trim()).length, [body]);
   const byOccasion = templates.filter((t) => t.category === occasion);
@@ -138,7 +166,21 @@ export function Compose() {
       });
   }
 
+  const currentPath = `${location.pathname}${location.search}`;
+
+  /** 跳登录 / 协议页之前，把刚写的内容存起来；存不上也不阻断跳转，只是带一个标记，
+   * 让登录页提示"登录后可能需要重新输入"（design D1）。 */
+  function pauseAndGo(makeUrl: (returnTo: string) => string) {
+    const saved = saveDraft({ body, occasion, filter });
+    const url = makeUrl(currentPath);
+    nav(saved ? url : `${url}&draftLost=1`);
+  }
+
   function submit() {
+    if (!user) {
+      pauseAndGo(loginUrl);
+      return;
+    }
     setErr('');
     setBusy(true);
     void api
@@ -159,7 +201,7 @@ export function Compose() {
       })
       .catch((e: unknown) => {
         if (e instanceof ApiCallError && e.code === 'consent_required') {
-          nav('/agreement?returnTo=%2Fgive');
+          pauseAndGo(agreementUrl);
           return;
         }
         setErr(e instanceof ApiCallError ? e.message : '出错了');
@@ -169,7 +211,7 @@ export function Compose() {
       });
   }
 
-  const canSubmit = bodyLen >= 5 && (isReply || (preview?.canSend ?? false));
+  const canSubmit = bodyLen >= 5;
 
   return (
     <div className={s.page}>
@@ -190,7 +232,22 @@ export function Compose() {
             </p>
           )}
           <div className={s.card}>
-            <label>距离范围：{filter.radiusKm} 公里内</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className={s.hint}>默认送到 {filter.radiusKm} 公里内，不碰这里也能直接发</span>
+              <button
+                type="button"
+                className="link"
+                onClick={() => {
+                  setFiltersExpanded(!filtersExpanded);
+                }}
+              >
+                {filtersExpanded ? '收起' : '调整范围'}
+              </button>
+            </div>
+
+            {filtersExpanded && (
+              <>
+            <label style={{ marginTop: 10 }}>距离范围：{filter.radiusKm} 公里内</label>
             <input
               type="range"
               min={0.5}
@@ -314,6 +371,8 @@ export function Compose() {
                   </div>
                 )}
               </div>
+            )}
+              </>
             )}
           </div>
         </>

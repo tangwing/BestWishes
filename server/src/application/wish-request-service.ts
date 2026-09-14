@@ -12,6 +12,7 @@ export interface SubmitWishRequestInput {
   situationText: string;
   scriptText?: string | undefined;
   tags: string[];
+  anonymous?: boolean | undefined;
 }
 
 const EXCERPT_LEN = 80;
@@ -25,6 +26,8 @@ export interface WishRequestSummary {
   tags: string[];
   responseCount: number;
   lastResponseAt: string | null;
+  /** 最新一条 published 回应的正文 / 转写摘录；尚无回应或无转写时为 null。 */
+  lastResponseExcerpt: string | null;
   state: string;
   createdAt: string;
   isMine: boolean;
@@ -46,6 +49,9 @@ export interface ResponseView {
   fromNickname: string;
   fromCity: string | null;
   audioUrl: string | null;
+  /** true = 这条回应有音频，但当前访客未登录，看不到 audioUrl——用于前端显示"登录后可收听"
+   * 而不是把它和"这条回应本来就没有音频"混为一谈。 */
+  audioLocked: boolean;
   transcript: string | null;
   createdAt: string;
   replies: ReplyView[];
@@ -106,7 +112,13 @@ export function createWishRequestService(deps: AppDeps) {
     return out.sort((x, y) => (x.createdAt < y.createdAt ? -1 : 1));
   }
 
-  async function authorInfo(authorId: string): Promise<{ nickname: string; city: string | null }> {
+  /** 匿名祈福在广场 / 详情 / 匹配通知里 MUST 以"一位朋友"代替昵称、不带城市——
+   * 遮蔽在这里（服务端组装视图时）完成，不能把真实昵称发给前端再让前端选择不显示（design D4）。 */
+  async function authorInfo(
+    authorId: string,
+    anonymous: boolean,
+  ): Promise<{ nickname: string; city: string | null }> {
+    if (anonymous) return { nickname: '一位朋友', city: null };
     const [user, profile] = await Promise.all([
       deps.repos.users.findById(authorId),
       deps.repos.profiles.get(authorId),
@@ -118,7 +130,7 @@ export function createWishRequestService(deps: AppDeps) {
   }
 
   async function toSummary(r: WishRequestRecord, viewerId: string | null): Promise<WishRequestSummary> {
-    const a = await authorInfo(r.authorId);
+    const a = await authorInfo(r.authorId, r.anonymous);
     return {
       id: r.id,
       authorNickname: a.nickname,
@@ -127,6 +139,7 @@ export function createWishRequestService(deps: AppDeps) {
       tags: r.tags,
       responseCount: r.responseCount,
       lastResponseAt: r.lastResponseAt,
+      lastResponseExcerpt: r.lastResponseExcerpt,
       state: r.state,
       createdAt: r.createdAt,
       isMine: viewerId !== null && r.authorId === viewerId,
@@ -221,6 +234,8 @@ export function createWishRequestService(deps: AppDeps) {
         moderation,
         responseCount: 0,
         lastResponseAt: null,
+        anonymous: input.anonymous ?? false,
+        lastResponseExcerpt: null,
       };
 
       // 先落库再匹配推送——matchAndNotify() 会写 notifications.request_id 外键指回
@@ -307,7 +322,7 @@ export function createWishRequestService(deps: AppDeps) {
       // 未公开的祈福：只有作者本人能看（用于"我的祈福"里点进 pending_review / withdrawn 的那条）
       if (r.state !== 'published' && r.authorId !== viewerId) return null;
 
-      const a = await authorInfo(r.authorId);
+      const a = await authorInfo(r.authorId, r.anonymous);
       const blessings = await deps.repos.blessings.listByRequestId(id);
       const responses: ResponseView[] = [];
       for (const b of blessings) {
@@ -316,12 +331,16 @@ export function createWishRequestService(deps: AppDeps) {
           deps.repos.users.findById(b.authorId),
           deps.repos.profiles.get(b.authorId),
         ]);
+        const hasAudio = b.media !== null;
         responses.push({
           id: b.id,
           fromUserId: b.authorId,
           fromNickname: senderProfile?.senderName ?? sender?.nickname ?? '一位朋友',
           fromCity: senderProfile?.regionCity ?? null,
-          audioUrl: b.media?.url ?? null,
+          // 未登录访客可读文字，但音频要登录——这里只负责不下发链接，路由层的 requireUserId()
+          // 挡住真正的访问（见 audio-scoring-service.readAudio 的 design D2）。
+          audioUrl: viewerId && hasAudio ? (b.media?.url ?? null) : null,
+          audioLocked: !viewerId && hasAudio,
           transcript: b.media?.transcript ?? null,
           createdAt: b.publishedAt ?? b.createdAt,
           replies: await collectReplyChain(b.id),
