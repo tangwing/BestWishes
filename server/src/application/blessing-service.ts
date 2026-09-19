@@ -68,6 +68,10 @@ export interface OutboxItem {
   createdAt: string;
   /** state='rejected' 时命中的审核大类；其它状态恒为 null。见 B-76：拒绝要给作者看得懂的原因。 */
   rejectionCategories: string[] | null;
+  /** 公开落地页（/p/:slug）被打开的次数，纯聚合计数，只对作者本人（这里恒是）展示。 */
+  viewCount: number;
+  /** 收到的回信条数（scope='reply' 指回这条的 published 记录数）。 */
+  replyCount: number;
 }
 
 const REPLY_AUDIENCE: AudienceFilter = {
@@ -310,25 +314,39 @@ export function createBlessingService(deps: AppDeps) {
       };
     },
 
+    /** 记一次公开落地页浏览：客户端在页面打开时调一次，不是每次轮询都调——PublicPage.tsx
+     * 每 3s 轮询等待 hold/送达完成，不能把轮询次数当成浏览量。作者本人查看不计数。 */
+    async recordPublicView(slug: string, viewerId: string | null): Promise<void> {
+      const b = await deps.repos.blessings.findBySlug(slug);
+      if (!b || b.authorId === viewerId) return;
+      await deps.repos.blessings.save({ ...b, viewCount: (b.viewCount ?? 0) + 1 });
+    },
+
     async outbox(userId: string): Promise<OutboxItem[]> {
       const list = await deps.repos.blessings.listByAuthor(userId);
-      return list
-        .filter((b) => b.state !== 'deleted')
-        .map((b) => ({
-          id: b.id,
-          slug: b.slug,
-          state: b.state,
-          occasion: b.occasion,
-          scope: b.scope,
-          contentType: b.contentType,
-          mediaUrl: b.media?.url ?? null,
-          recipientCount: b.recipientIds.length,
-          bodyPreview: b.body.slice(0, 40),
-          body: b.body,
-          renewCount: b.renewCount,
-          createdAt: b.createdAt,
-          rejectionCategories: b.state === 'rejected' ? (b.moderation?.categories ?? []) : null,
-        }));
+      const active = list.filter((b) => b.state !== 'deleted');
+      return Promise.all(
+        active.map(async (b) => {
+          const replies = await deps.repos.blessings.listRepliesTo(b.id);
+          return {
+            id: b.id,
+            slug: b.slug,
+            state: b.state,
+            occasion: b.occasion,
+            scope: b.scope,
+            contentType: b.contentType,
+            mediaUrl: b.media?.url ?? null,
+            recipientCount: b.recipientIds.length,
+            bodyPreview: b.body.slice(0, 40),
+            body: b.body,
+            renewCount: b.renewCount,
+            createdAt: b.createdAt,
+            rejectionCategories: b.state === 'rejected' ? (b.moderation?.categories ?? []) : null,
+            viewCount: b.viewCount ?? 0,
+            replyCount: replies.filter((r) => r.state === 'published').length,
+          };
+        }),
+      );
     },
 
     withdraw: (userId: string, id: string) =>

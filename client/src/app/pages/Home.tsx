@@ -27,7 +27,7 @@ export function Home() {
   return (
     <div className={s.page}>
       <h1>BestWishes</h1>
-      <p className={s.lead}>练习专注，传递善意。这里没有聊天，只有一来一回、认真写给具体的人的祝福。</p>
+      <p className={s.lead}>练习专注，传播善意。这里没有聊天，只有一来一回、认真写给具体的人的祝福。</p>
 
       {featured ? (
         <div className={s.card}>

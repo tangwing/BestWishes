@@ -1,5 +1,5 @@
 // "我的善意"——当前用户发出的祝福 + 状态 + 管理操作。
-// 原「发件箱」页（Records.tsx），B-71 后并入「传递善意」页（/give）作为下半部分。
+// 原「发件箱」页（Records.tsx），B-71 后并入「传播善意」页（/give）作为下半部分。
 
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -68,8 +68,12 @@ export function OutboxSection() {
                     <a href={`/p/${b.slug}`} target="_blank" rel="noreferrer">
                       公开链接
                     </a>
+                    {b.state === 'published' && ` · 被浏览 ${String(b.viewCount)} 次`}
                   </>
                 )}
+                {b.state === 'published' &&
+                  b.replyCount > 0 &&
+                  ` · 收到 ${String(b.replyCount)} 条回信`}
                 {b.renewCount > 0 && ` · 已续期 ${String(b.renewCount)} 次`}
               </div>
               {b.state === 'rejected' && (

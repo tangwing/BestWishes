@@ -46,6 +46,7 @@ describe('祝福请求 + 音频回应', () => {
 
   it('发布请求 → 进广场 → 按标签匹配到候选人并收到通知', async () => {
     const r = await ctx.app.wishRequests.publish(author, {
+      beneficiaryLabel: 'TA',
       situationText: SITUATION,
       scriptText: SCRIPT,
       tags: ['考研'],
@@ -63,6 +64,7 @@ describe('祝福请求 + 音频回应', () => {
   it('不匹配标签、距离太远的人不会被匹配推送，但仍能在广场看到', async () => {
     await seedUser(ctx, { nickname: '路人', lat: FAR.lat, lng: FAR.lng, tags: ['考研'] });
     const r = await ctx.app.wishRequests.publish(author, {
+      beneficiaryLabel: 'TA',
       situationText: SITUATION,
       tags: ['考研'],
     });
@@ -72,7 +74,7 @@ describe('祝福请求 + 音频回应', () => {
   });
 
   it('不能回应自己发布的请求', async () => {
-    const r = await ctx.app.wishRequests.publish(author, { situationText: SITUATION, tags: [] });
+    const r = await ctx.app.wishRequests.publish(author, { beneficiaryLabel: 'TA', situationText: SITUATION, tags: [] });
     if (!r.ok) throw new Error('publish failed');
 
     const challenge = ctx.app.audioScoring.issueLivenessChallenge();
@@ -89,6 +91,7 @@ describe('祝福请求 + 音频回应', () => {
 
   it('完整链路：录音回应 → 打分 → hold 后送达请求人 → 回应者能看到自己的反馈', async () => {
     const r = await ctx.app.wishRequests.publish(author, {
+      beneficiaryLabel: 'TA',
       situationText: SITUATION,
       scriptText: SCRIPT,
       tags: [],
@@ -146,6 +149,7 @@ describe('祝福请求 + 音频回应', () => {
 
   it('B-89：请求人能回复一条音频回应，回复出现在祈福详情的连续回复里，回应者也能回过去', async () => {
     const r = await ctx.app.wishRequests.publish(author, {
+      beneficiaryLabel: 'TA',
       situationText: SITUATION,
       scriptText: SCRIPT,
       tags: [],
@@ -206,7 +210,7 @@ describe('祝福请求 + 音频回应', () => {
   });
 
   it('录音时长超出范围 → 拒绝', async () => {
-    const r = await ctx.app.wishRequests.publish(author, { situationText: SITUATION, tags: [] });
+    const r = await ctx.app.wishRequests.publish(author, { beneficiaryLabel: 'TA', situationText: SITUATION, tags: [] });
     if (!r.ok) throw new Error('publish failed');
     const challenge = ctx.app.audioScoring.issueLivenessChallenge();
 
@@ -232,7 +236,7 @@ describe('祝福请求 + 音频回应', () => {
   });
 
   it('不填补充文字 → 转人工复核，不会被误判违规驳回（B-88：文字不再强制）', async () => {
-    const r = await ctx.app.wishRequests.publish(author, { situationText: SITUATION, tags: [] });
+    const r = await ctx.app.wishRequests.publish(author, { beneficiaryLabel: 'TA', situationText: SITUATION, tags: [] });
     if (!r.ok) throw new Error('publish failed');
     const challenge = ctx.app.audioScoring.issueLivenessChallenge();
 
@@ -255,7 +259,7 @@ describe('祝福请求 + 音频回应', () => {
   });
 
   it('转写命中违禁词 → 驳回，不产生打分反馈', async () => {
-    const r = await ctx.app.wishRequests.publish(author, { situationText: SITUATION, tags: [] });
+    const r = await ctx.app.wishRequests.publish(author, { beneficiaryLabel: 'TA', situationText: SITUATION, tags: [] });
     if (!r.ok) throw new Error('publish failed');
     const challenge = ctx.app.audioScoring.issueLivenessChallenge();
 
@@ -286,7 +290,7 @@ describe('祝福请求 + 音频回应', () => {
   });
 
   it('转写命中拉客护栏词 → suspect，进人工队列，不立即送达', async () => {
-    const r = await ctx.app.wishRequests.publish(author, { situationText: SITUATION, tags: [] });
+    const r = await ctx.app.wishRequests.publish(author, { beneficiaryLabel: 'TA', situationText: SITUATION, tags: [] });
     if (!r.ok) throw new Error('publish failed');
     const challenge = ctx.app.audioScoring.issueLivenessChallenge();
 
@@ -312,7 +316,7 @@ describe('祝福请求 + 音频回应', () => {
   });
 
   it('真人校验未通过（转写里没有验证词）→ 转人工复核，不直接送达', async () => {
-    const r = await ctx.app.wishRequests.publish(author, { situationText: SITUATION, tags: [] });
+    const r = await ctx.app.wishRequests.publish(author, { beneficiaryLabel: 'TA', situationText: SITUATION, tags: [] });
     if (!r.ok) throw new Error('publish failed');
     const challenge = ctx.app.audioScoring.issueLivenessChallenge();
 
@@ -337,7 +341,7 @@ describe('祝福请求 + 音频回应', () => {
   });
 
   it('验证 token 过期 → 拒绝提交', async () => {
-    const r = await ctx.app.wishRequests.publish(author, { situationText: SITUATION, tags: [] });
+    const r = await ctx.app.wishRequests.publish(author, { beneficiaryLabel: 'TA', situationText: SITUATION, tags: [] });
     if (!r.ok) throw new Error('publish failed');
     const challenge = ctx.app.audioScoring.issueLivenessChallenge();
 
@@ -355,7 +359,7 @@ describe('祝福请求 + 音频回应', () => {
   });
 
   it('撤回请求后不能再回应，广场里也看不到', async () => {
-    const r = await ctx.app.wishRequests.publish(author, { situationText: SITUATION, tags: [] });
+    const r = await ctx.app.wishRequests.publish(author, { beneficiaryLabel: 'TA', situationText: SITUATION, tags: [] });
     if (!r.ok) throw new Error('publish failed');
 
     const withdrawn = await ctx.app.wishRequests.withdraw(author, r.value.id);
@@ -376,7 +380,7 @@ describe('祝福请求 + 音频回应', () => {
   });
 
   it('只能撤回，不能重新发布（终态，同 blessing-delivery 的规则）', async () => {
-    const r = await ctx.app.wishRequests.publish(author, { situationText: SITUATION, tags: [] });
+    const r = await ctx.app.wishRequests.publish(author, { beneficiaryLabel: 'TA', situationText: SITUATION, tags: [] });
     if (!r.ok) throw new Error('publish failed');
     await ctx.app.wishRequests.withdraw(author, r.value.id);
 
@@ -386,6 +390,7 @@ describe('祝福请求 + 音频回应', () => {
 
   it('处境描述命中违禁词 → 拒绝发布', async () => {
     const r = await ctx.app.wishRequests.publish(author, {
+      beneficiaryLabel: 'TA',
       situationText: '刷单返利，加入我们就能赚钱，最近压力很大希望有人鼓励我。',
       tags: [],
     });
@@ -394,6 +399,7 @@ describe('祝福请求 + 音频回应', () => {
 
   it('处境描述命中拉客护栏词 → 广场看不到、不触发匹配，进人工队列；人工通过后才公开 + 匹配推送', async () => {
     const r = await ctx.app.wishRequests.publish(author, {
+      beneficiaryLabel: 'TA',
       situationText: '最近很焦虑，加我微信详细聊聊，希望有人能鼓励我一下。',
       tags: ['考研'],
     });
@@ -420,6 +426,7 @@ describe('祝福请求 + 音频回应', () => {
 
   it('祈福广场列表只给摘要 + 统计，不含任何回应内容', async () => {
     const r = await ctx.app.wishRequests.publish(author, {
+      beneficiaryLabel: 'TA',
       situationText: SITUATION,
       scriptText: SCRIPT,
       tags: [],
@@ -450,7 +457,7 @@ describe('祝福请求 + 音频回应', () => {
   });
 
   it('回应撤回后 responseCount 回落，且与实际 published 回应数一致', async () => {
-    const r = await ctx.app.wishRequests.publish(author, { situationText: SITUATION, tags: [] });
+    const r = await ctx.app.wishRequests.publish(author, { beneficiaryLabel: 'TA', situationText: SITUATION, tags: [] });
     if (!r.ok) throw new Error('publish failed');
     const challenge = ctx.app.audioScoring.issueLivenessChallenge();
     const submitted = await ctx.app.audioScoring.submit(responder, {
@@ -480,7 +487,7 @@ describe('祝福请求 + 音频回应', () => {
   });
 
   it('plaza() 不遍历回应表——摘录来自 wishRequests 记录本身，读放大不随回应数增长', async () => {
-    const r = await ctx.app.wishRequests.publish(author, { situationText: SITUATION, tags: [] });
+    const r = await ctx.app.wishRequests.publish(author, { beneficiaryLabel: 'TA', situationText: SITUATION, tags: [] });
     if (!r.ok) throw new Error('publish failed');
     const challenge = ctx.app.audioScoring.issueLivenessChallenge();
     const submitted = await ctx.app.audioScoring.submit(responder, {
@@ -504,7 +511,7 @@ describe('祝福请求 + 音频回应', () => {
   });
 
   it('回应发布后，广场列表项的 lastResponseExcerpt 等于这条回应的摘录', async () => {
-    const r = await ctx.app.wishRequests.publish(author, { situationText: SITUATION, tags: [] });
+    const r = await ctx.app.wishRequests.publish(author, { beneficiaryLabel: 'TA', situationText: SITUATION, tags: [] });
     if (!r.ok) throw new Error('publish failed');
 
     const challenge = ctx.app.audioScoring.issueLivenessChallenge();
@@ -529,7 +536,7 @@ describe('祝福请求 + 音频回应', () => {
   });
 
   it('两条回应，撤回最新那条后摘录退回到第二新的那条；再撤回后摘录为 null 且 responseCount 为 0', async () => {
-    const r = await ctx.app.wishRequests.publish(author, { situationText: SITUATION, tags: [] });
+    const r = await ctx.app.wishRequests.publish(author, { beneficiaryLabel: 'TA', situationText: SITUATION, tags: [] });
     if (!r.ok) throw new Error('publish failed');
     const requestId = r.value.id;
 
@@ -578,6 +585,7 @@ describe('祝福请求 + 音频回应', () => {
 
   it('匿名发布：广场与详情显示"一位朋友"、不带城市，响应体不含真实昵称', async () => {
     const r = await ctx.app.wishRequests.publish(author, {
+      beneficiaryLabel: 'TA',
       situationText: SITUATION,
       tags: [],
       anonymous: true,
@@ -601,6 +609,7 @@ describe('祝福请求 + 音频回应', () => {
 
   it('匿名发布：匹配通知的文案也不带真实昵称', async () => {
     const r = await ctx.app.wishRequests.publish(author, {
+      beneficiaryLabel: 'TA',
       situationText: SITUATION,
       tags: ['考研'],
       anonymous: true,
@@ -615,6 +624,7 @@ describe('祝福请求 + 音频回应', () => {
 
   it('匿名不影响：作者自己仍能在 mine 筛选里看到、仍可撤回', async () => {
     const r = await ctx.app.wishRequests.publish(author, {
+      beneficiaryLabel: 'TA',
       situationText: SITUATION,
       tags: [],
       anonymous: true,
@@ -635,6 +645,7 @@ describe('祝福请求 + 音频回应', () => {
 
   it('匿名不影响审核追责：命中疑似的匿名请求，工单仍指向真实作者', async () => {
     const r = await ctx.app.wishRequests.publish(author, {
+      beneficiaryLabel: 'TA',
       situationText: '最近很焦虑，加我微信详细聊聊，希望有人能鼓励我一下。',
       tags: [],
       anonymous: true,
@@ -651,7 +662,7 @@ describe('祝福请求 + 音频回应', () => {
   });
 
   it('第三方登录用户可回放一条 published 祈福的音频回应（既有权限缺口收口）', async () => {
-    const r = await ctx.app.wishRequests.publish(author, { situationText: SITUATION, tags: [] });
+    const r = await ctx.app.wishRequests.publish(author, { beneficiaryLabel: 'TA', situationText: SITUATION, tags: [] });
     if (!r.ok) throw new Error('publish failed');
     const challenge = ctx.app.audioScoring.issueLivenessChallenge();
     const submitted = await ctx.app.audioScoring.submit(responder, {
@@ -709,7 +720,7 @@ describe('祝福请求 + 音频回应', () => {
   });
 
   it('详情：访客读得到文字，读不到音频链接；登录后同一条含音频链接', async () => {
-    const r = await ctx.app.wishRequests.publish(author, { situationText: SITUATION, tags: [] });
+    const r = await ctx.app.wishRequests.publish(author, { beneficiaryLabel: 'TA', situationText: SITUATION, tags: [] });
     if (!r.ok) throw new Error('publish failed');
     const challenge = ctx.app.audioScoring.issueLivenessChallenge();
     const transcript = goodTranscript(challenge.phrase);
@@ -739,7 +750,7 @@ describe('祝福请求 + 音频回应', () => {
   });
 
   it('权限矩阵：{访客/第三方/收件人/作者} × {祈福回应音频/群发音频} × {详情文字/音频回放}', async () => {
-    const r = await ctx.app.wishRequests.publish(author, { situationText: SITUATION, tags: [] });
+    const r = await ctx.app.wishRequests.publish(author, { beneficiaryLabel: 'TA', situationText: SITUATION, tags: [] });
     if (!r.ok) throw new Error('publish failed');
     const challenge = ctx.app.audioScoring.issueLivenessChallenge();
     const submitted = await ctx.app.audioScoring.submit(responder, {
@@ -802,16 +813,19 @@ describe('祝福请求 + 音频回应', () => {
 
   it('"我的祈福"筛选：只列自己的，含 pending_review / withdrawn', async () => {
     const mine = await ctx.app.wishRequests.publish(author, {
+      beneficiaryLabel: 'TA',
       situationText: SITUATION,
       tags: [],
     });
     if (!mine.ok) throw new Error('publish failed');
     const suspect = await ctx.app.wishRequests.publish(author, {
+      beneficiaryLabel: 'TA',
       situationText: '最近很焦虑，加我微信详细聊聊，希望有人能鼓励我一下。',
       tags: [],
     });
     if (!suspect.ok) throw new Error('publish failed');
     const others = await ctx.app.wishRequests.publish(responder, {
+      beneficiaryLabel: 'TA',
       situationText: SITUATION,
       tags: [],
     });
@@ -829,6 +843,7 @@ describe('祝福请求 + 音频回应', () => {
 
   it('人工驳回一条待审的请求 → 直接进终态，不公开', async () => {
     const r = await ctx.app.wishRequests.publish(author, {
+      beneficiaryLabel: 'TA',
       situationText: '最近很焦虑，加我微信详细聊聊，希望有人能鼓励我一下。',
       tags: [],
     });

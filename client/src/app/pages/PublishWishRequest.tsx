@@ -10,6 +10,7 @@ const MAX_TAG_LEN = 20;
 export function PublishWishRequest() {
   const { user, loading } = useSession();
   const nav = useNavigate();
+  const [beneficiaryLabel, setBeneficiaryLabel] = useState('');
   const [situationText, setSituationText] = useState('');
   const [scriptText, setScriptText] = useState('');
   const [tags, setTags] = useState<string[]>([]);
@@ -47,6 +48,7 @@ export function PublishWishRequest() {
     setBusy(true);
     void api
       .publishWishRequest({
+        beneficiaryLabel: beneficiaryLabel.trim(),
         situationText,
         scriptText: scriptText.trim() || undefined,
         tags,
@@ -71,16 +73,29 @@ export function PublishWishRequest() {
     <div className={s.page}>
       <h1>发一条祈福</h1>
       <div className={s.intention}>
-        写下你此刻的处境或心事，让愿意帮你的人知道该往哪个方向送祝福。可以附一段具体的话让对方念，也可以完全交给对方自由发挥。
+        祈福广场是为你牵挂的人而开的地方——把TA放在心上，写下你想为TA送出的祝福，而不是为自己求安慰。
       </div>
 
-      <h2>你的处境 / 心事</h2>
+      <h2>TA是谁</h2>
+      <p className={s.hint}>一句话说清这条祈福是为谁写的，比如"我生病的奶奶"「刚经历分手的朋友」「一位素不相识但需要鼓励的人」。</p>
+      <input
+        type="text"
+        value={beneficiaryLabel}
+        onChange={(e) => {
+          setBeneficiaryLabel(e.target.value.slice(0, 40));
+        }}
+        placeholder="TA是……"
+        maxLength={40}
+        style={{ fontFamily: 'var(--serif)', fontSize: 16 }}
+      />
+
+      <h2>TA的处境，你想对TA说的话</h2>
       <textarea
         value={situationText}
         onChange={(e) => {
           setSituationText(e.target.value);
         }}
-        placeholder="最近遇到了什么，心情怎么样，希望被怎么祝福……"
+        placeholder="TA最近经历了什么，你希望TA被怎样祝福……"
         style={{ minHeight: 120, fontFamily: 'var(--serif)', fontSize: 16 }}
       />
       <div className={s.count}>{len} 字 · 建议 5–500</div>

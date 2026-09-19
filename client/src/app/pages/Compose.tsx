@@ -215,7 +215,7 @@ export function Compose() {
 
   return (
     <div className={s.page}>
-      <h1>{isReply ? `回一段祝福给 ${replyToName}` : '传递善意'}</h1>
+      <h1>{isReply ? `回一段祝福给 ${replyToName}` : '传播善意'}</h1>
       <div className="breathe" />
       <div className={s.intention}>
         {isReply

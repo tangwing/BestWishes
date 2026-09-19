@@ -21,7 +21,8 @@ test('祝福请求：发布 → 广场浏览 → 录音回应（真麦克风假�
   await agree(page);
 
   await page.goto('/plaza/new');
-  await page.getByPlaceholder('最近遇到了什么，心情怎么样，希望被怎么祝福……').fill(SITUATION);
+  await page.getByPlaceholder('TA是……').fill('我的朋友');
+  await page.getByPlaceholder('TA最近经历了什么，你希望TA被怎样祝福……').fill(SITUATION);
   await page.getByPlaceholder('例如：愿你放下焦虑，一步一步来……').fill(SCRIPT);
   await page.getByRole('button', { name: '发布', exact: true }).click();
   await page.waitForURL('**/plaza/wrq_**');
@@ -83,7 +84,8 @@ test('未同意协议的用户点「回应」→ 跳协议页 → 同意后回�
   await setLocation(page, r.sender);
   await agree(page);
   await page.goto('/plaza/new');
-  await page.getByPlaceholder('最近遇到了什么，心情怎么样，希望被怎么祝福……').fill(SITUATION);
+  await page.getByPlaceholder('TA是……').fill('我的朋友');
+  await page.getByPlaceholder('TA最近经历了什么，你希望TA被怎样祝福……').fill(SITUATION);
   await page.getByRole('button', { name: '发布', exact: true }).click();
   await page.waitForURL('**/plaza/wrq_**');
   const requestId = page.url().split('/plaza/').pop() ?? '';
@@ -112,7 +114,8 @@ test('撤回请求后，广场看不到，也不能再回应', async ({ page }) 
   await agree(page);
 
   await page.goto('/plaza/new');
-  await page.getByPlaceholder('最近遇到了什么，心情怎么样，希望被怎么祝福……').fill(SITUATION);
+  await page.getByPlaceholder('TA是……').fill('我的朋友');
+  await page.getByPlaceholder('TA最近经历了什么，你希望TA被怎样祝福……').fill(SITUATION);
   await page.getByRole('button', { name: '发布', exact: true }).click();
   await page.waitForURL('**/plaza/wrq_**');
   const requestId = page.url().split('/plaza/').pop() ?? '';

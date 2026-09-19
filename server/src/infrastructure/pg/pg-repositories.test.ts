@@ -171,6 +171,7 @@ describe('PG 仓储：核心流程', () => {
     const candidate = await seedUser('可能感兴趣的人', NEAR_A);
 
     const r = await app.wishRequests.publish(author, {
+      beneficiaryLabel: 'TA',
       situationText: '最近压力很大，希望有人能鼓励我一下。',
       tags: [],
     });
@@ -188,6 +189,7 @@ describe('PG 仓储：核心流程', () => {
     await repos.wishRequests.add({
       id,
       authorId: author,
+      beneficiaryLabel: 'TA',
       situationText: '测试处境描述',
       scriptText: null,
       tags: [],

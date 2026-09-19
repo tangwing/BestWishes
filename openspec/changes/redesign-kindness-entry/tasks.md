@@ -63,3 +63,16 @@
 - [x] 9.3 e2e：访客在详情页点音频 → 提示登录；登录后同一条可播放
 - [x] 9.4 `pnpm verify` + `pnpm test:e2e` + `openspec validate --strict` 全绿
 - [x] 9.5 手动走查一遍 `docs/DEMO.md`，把新的访客动线补进去；BACKLOG 恢复点更新
+
+## 10. 追加（2026-09-19，B-98/B-100）：祈福必须为他人 + 浏览/回复计数
+
+用户看过 demo 后提的两点：① 祈福广场的祈福必须是为别人写的，不是自己为自己求安慰；② 用浏览次数 / 回复次数让"善意被关注到"更有体感。都在同一个未归档的 change 里追加，见 spec 新增的"撰写祈福"字段、"祈福广场列表"/"查看祈福详情"字段、新 Requirement「祈福详情浏览计数」。
+
+- [x] 10.1 `beneficiaryLabel`（受祝福人称呼）：`packages/shared` schema 必填校验、`packages/domain` `WishRequest` 类型、DB 列（可空，兼容旧数据，展示层退回"一位朋友"）、`wish-request-service.publish()` 校验 + 持久化、`toSummary()`/`detail()` 带出
+- [x] 10.2 `PublishWishRequest.tsx` 加"TA是谁"必填输入框，处境描述文案改写为"TA的处境"；理念声明加到发起祈福页与广场列表页顶部
+- [x] 10.3 广场列表 / 详情页把 `beneficiaryLabel` 作为标题呈现（"为 TA 祈福"）
+- [x] 10.4 `vision.md`"为谁创造价值"的"祝福请求方"персона改写：从"收到祝福感受被善待"改为"为牵挂的人发起祈福，促成善意"
+- [x] 10.5 祈福详情浏览计数（`viewCount`）：**发现并修正一个自我设计缺陷**——最初实现把计数放进 `detail()`，但详情页本身每 3 秒轮询等回应出现，会把轮询次数当成浏览量刷高，数字失去意义；改为客户端首次打开时单独调一次 `POST /api/plaza/:id/view`（`recordView()`），与轮询的 `GET detail` 彻底分离。作者查看自己的不计数；只对作者暴露真实数字。
+- [x] 10.6 同样的轮询计数问题在公开落地页（`PublicPage.tsx` 每 3 秒轮询）也存在，一并修：`blessing-service.recordPublicView()` + `POST /api/p/:slug/view`，`OutboxItem` 加 `viewCount`
+- [x] 10.7 `OutboxItem` 加 `replyCount`（复用既有 `listRepliesTo()`，原本只给祈福回复链用），"我的善意"列表展示"被浏览 N 次 · 收到 N 条回信"
+- [ ] 10.8 既有测试补齐 `beneficiaryLabel` fixture（`wish-request-flow.test.ts` 等）、e2e 表单流程补新字段——**验证中**，见本轮 `pnpm verify` / `pnpm test:e2e` 结果

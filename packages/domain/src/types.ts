@@ -169,6 +169,10 @@ export interface Blessing {
   /** 当前是否计入作者的坚持记录。首次 published 时置 true；作者撤回 / 删除 / 平台下架时置 false（链接过期不动）。 */
   countedInStreak: boolean;
   events: BlessingEvent[];
+  /** 公开落地页（/p/:slug）被打开的次数，纯聚合计数，不记录访客身份，只对作者本人展示。
+   * 可选：只有过 getPublicPage() 的记录才有意义，与生命周期状态机测试的裸 fixture 无关，
+   * 不强制所有既有 Blessing 字面量都带上这个字段。 */
+  viewCount?: number;
 }
 
 // ---- P2：祝福请求 + 匹配（见 add-p2-wish-request-audio） ----
@@ -184,6 +188,8 @@ export type WishRequestTrigger = 'withdraw' | 'delete' | 'review_pass' | 'review
 export interface WishRequest {
   id: string;
   authorId: string;
+  /** 这条祈福是为谁写的（关系/称呼），必填——祈福广场的祈福 MUST 是为他人而写，不是自己为自己求安慰。 */
+  beneficiaryLabel: string;
   /** 处境 / 心事描述，必填。 */
   situationText: string;
   /** 希望回应者朗读的具体稿子；可不填，不填则回应者自由发挥。 */
@@ -207,6 +213,10 @@ export interface WishRequest {
   /** 最新一条 `published` 回应的正文 / 转写摘录，与 responseCount / lastResponseAt 同一写入路径维护，
    * 不在列表渲染时扫回应表。尚无回应或最新回应无转写时为 null。 */
   lastResponseExcerpt: string | null;
+  /** 详情页被打开的次数，纯聚合计数，不记录访客身份，只对作者本人展示。
+   * 可选：只有过 detail() 的记录才有意义，与生命周期状态机测试的裸 fixture 无关，
+   * 不强制所有既有 WishRequest 字面量都带上这个字段。 */
+  viewCount?: number;
 }
 
 /** 音频打分的输出：多维标签 + 置信度，恒不产出单一可比较分数（vision.md 硬约束）。 */

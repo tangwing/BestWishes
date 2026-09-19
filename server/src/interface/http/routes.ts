@@ -167,6 +167,12 @@ export function registerRoutes(app: FastifyInstance, application: Application): 
     return application.blessings.getPublicPage(slug);
   });
 
+  app.post('/api/p/:slug/view', async (request) => {
+    const { slug } = parse(z.object({ slug: z.string() }), request.params);
+    await application.blessings.recordPublicView(slug, getUserId(request));
+    return { ok: true };
+  });
+
   app.post('/api/p/:slug/report', async (request) => {
     const { slug } = parse(z.object({ slug: z.string() }), request.params);
     const { category, note } = parse(
@@ -196,6 +202,12 @@ export function registerRoutes(app: FastifyInstance, application: Application): 
     const view = await application.wishRequests.detail(id, getUserId(request));
     if (!view) throw new AppException('not_found', 'wish request not found', '找不到这条祈福');
     return view;
+  });
+
+  app.post('/api/plaza/:id/view', async (request) => {
+    const { id } = parse(idParam, request.params);
+    await application.wishRequests.recordView(id, getUserId(request));
+    return { ok: true };
   });
 
   app.post('/api/plaza/:id/withdraw', async (request) => {

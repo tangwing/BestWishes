@@ -42,6 +42,12 @@ export function WishRequestDetail() {
     };
   }, [load]);
 
+  useEffect(() => {
+    // 只在页面打开时记一次浏览，不能挂在上面的轮询里——那样每 3 秒就会自己把自己的
+    // 浏览量刷上去，数字就没意义了。
+    if (id) void api.recordWishRequestView(id);
+  }, [id]);
+
   /** 一条回应下面往返回复的"该回给谁"：固定是这条回应涉及的两个人之一——
    * 我是请求人就回给回应者，我是回应者（或后面接话的那个人）就回给请求人。 */
   function otherParty(resp: ResponseView): string | null {
@@ -96,6 +102,10 @@ export function WishRequestDetail() {
         <p className={s.hint}>
           来自 {r.authorNickname}
           {r.authorCity ? ` · ${r.authorCity}` : ''} · {formatTimestamp(r.createdAt)}
+          {r.isMine && r.viewCount !== null && ` · 被浏览 ${String(r.viewCount)} 次`}
+        </p>
+        <p className={s.blessing} style={{ fontWeight: 600 }}>
+          为 {r.beneficiaryLabel} 祈福
         </p>
         <p className={s.blessing}>{r.situationText}</p>
         {r.scriptText && (

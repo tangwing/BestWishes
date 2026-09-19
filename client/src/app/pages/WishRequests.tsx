@@ -40,7 +40,7 @@ export function WishRequests() {
     <div className={s.page}>
       <h1>祈福广场</h1>
       <p className={s.lead}>
-        有人正处在某种心情里，写下了自己的处境，盼着有人送一段祝福回去。点进去看回应，或者自己录一段。
+        祈福广场是为你牵挂的人而开的地方——每一条祈福都是有人把TA放在心上，写下想为TA送出的祝福，而不是为自己求安慰。点进去看看大家怎么回应，或者也送一段祝福。
       </p>
 
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 16 }}>
@@ -97,6 +97,9 @@ export function WishRequests() {
                 <span className={s.tag}>{STATE_LABEL[r.state] ?? r.state}</span>
               </>
             )}
+          </p>
+          <p className={s.blessing} style={{ fontWeight: 600 }}>
+            为 {r.beneficiaryLabel} 祈福
           </p>
           <p className={s.blessing}>{r.situationExcerpt}</p>
           {r.tags.length > 0 && (

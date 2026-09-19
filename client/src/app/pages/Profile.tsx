@@ -258,7 +258,7 @@ export function Profile() {
       </div>
       <div className={s.card}>
         <button className="ghost" onClick={() => nav('/give')}>
-          去传递善意
+          去传播善意
         </button>
       </div>
       {saved && <p className={s.hint}>已保存。</p>}

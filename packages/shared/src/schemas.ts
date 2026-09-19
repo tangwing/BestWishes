@@ -85,6 +85,8 @@ export type DraftDto = z.infer<typeof draftSchema>;
 /** 祝福请求：处境描述 + 可选稿子 + 可选标签（供 wish-request-matching 按标签推荐候选响应人）。
  * 字数约束与祝福正文一致，运行时用同一套 bodyMinLen/MaxLen 配置校验。 */
 export const submitWishRequestSchema = z.object({
+  /** 这条祈福是为谁写的（关系/称呼），必填——祈福广场只为他人而写，不接受自己为自己求安慰。 */
+  beneficiaryLabel: z.string().trim().min(1).max(40),
   situationText: z.string(),
   scriptText: z.string().trim().max(2000).optional(),
   tags: z.array(z.string().trim().min(1).max(20)).max(10).default([]),

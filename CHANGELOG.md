@@ -4,6 +4,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Changed — 祈福广场只为他人而写；「传递善意」改「传播善意」；发件箱加浏览/回复计数（2026-09-19，B-97~B-100）
+
+用户看过 `redesign-kindness-entry`（B-94）的最新 demo 后逐点提的四条优化，在同一个未归档的 change 里追加落地（spec 见 `redesign-kindness-entry/specs/wish-request/spec.md` §10、`openspec/specs/blessing-records/spec.md` 新 Requirement）。
+
+- **B-97「传递善意」改「传播善意」**：「传递」有一对一手递手的意味，跟 P1 群发广播的模型不符，改用更有广播感的「传播」。全量改名：导航 / 相关页面文案 / `docs/DEMO.md` / `vision.md`、`concept.md` 的定位表述 / 已归档的 `blessing-records` 主 spec / e2e 断言，以及尚未实现的 `add-mobile-shell-pwa` 规划文档。历史文档（`docs/design/p1/` 的旧走查画布、`redesign-kindness-entry/proposal.md` 里描述改造前用户旅程的引用）按 B-75 先例不回溯修改。
+- **B-98（理念落地）祈福广场的祈福必须是为他人而写，不是自己为自己求安慰**：`concept.md` 的首发切入点原文就是"为他人/逝者的祈福"，但 `PublishWishRequest.tsx` 现状一直在引导"为自己求安慰"（标题"你的处境/心事"、占位符"希望被怎么祝福"）——两者一直没对上。改法是结构化引导而非语义判断（对"是不是在为自己诉苦"做 NLP 识别不可靠、也是过度设计）：撰写祈福表单新增必填的 `beneficiaryLabel`（"TA是谁"，1–40 字），处境描述改写为围绕"TA"展开；广场列表与详情页把这句称呼当标题呈现（"为 TA 祈福"）；祈福广场入口与发起祈福页各加一句理念声明。`vision.md`"为谁创造价值"的「祝福请求方」persona 同步改写：从"收到祝福、感受被善待"改为"为牵挂的人发起祈福、促成善意"。DB 新增 `beneficiary_label`（可空，兼容旧数据，展示层退回"一位朋友"）。
+- **B-100 发件箱 / 祈福详情加浏览次数与回复次数**：用户希望"传播的善意有人在看"更有体感。祈福详情页与祝福公开落地页（`/p/:slug`）各加 `viewCount`；发件箱（"我的善意"）每条祝福加 `replyCount`（复用既有的 `listRepliesTo()`，原本只给祈福回复链用）。**实现中发现并修正一个自我设计缺陷**：最初把 `viewCount` 自增直接放进 `detail()`/`getPublicPage()`，但这两个页面本身都按 3 秒轮询等待新内容出现——若轮询本身也计数，数字会被无意义刷高，体感数字反而失真。改为客户端在页面首次打开时单独调一次 `POST /api/plaza/:id/view` / `POST /api/p/:slug/view`，与轮询的 GET 请求彻底分离；作者查看自己的内容不计数；`viewCount` 只对内容作者本人暴露真实数字，其他任何访客恒为空。纯聚合计数，不记录访客身份、不做去重——刻意的简化，避免和待讨论的 B-87（用户行为 trace 系统）的隐私范畴混为一谈。
+- **B-99（建议，未实现）移动端专项 UI 设计要不要现在做**：建议先不做——三步路线（2026-09-13 定）本身就是"先入口动线 → 再可分享产物 → 最后手机形态（B-96）"，顺序是刻意定的，B-95（可分享卡片）还没做，它的落地页/卡片形态会反过来影响移动端布局决策，现在插队会两次返工。当前维持"网页在手机浏览器里能正常用"的响应式底线即可，专项设计留到 `add-mobile-shell-pwa`（B-96）按计划做。
+
+`pnpm verify`（224 测试）/ `pnpm test:e2e`（17 个）/ `openspec validate --all --strict`（17 项）全绿。
+
 ### Planned — 2026-09-13 阶段性复盘：三步路线的 spec change（B-94, B-95, B-96）
 
 用户叫停功能迭代，要求先复盘两件事：现在的 Demo 是否符合最初的理念；下一步是先做移动端 App 还是先把视频打分建完。完整分析见 PROMPT_LOG.md。

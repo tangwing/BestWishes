@@ -92,7 +92,7 @@ export function Sent() {
       )}
 
       <p>
-        <Link to="/give">回「传递善意」</Link>
+        <Link to="/give">回「传播善意」</Link>
       </p>
     </div>
   );

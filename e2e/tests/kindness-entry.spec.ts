@@ -18,8 +18,9 @@ async function seedPublishedWishRequestWithResponse(
   await setLocation(authorPage, opts.r.sender);
   await agree(authorPage);
   await authorPage.goto('/plaza/new');
+  await authorPage.getByPlaceholder('TA是……').fill('我的朋友');
   await authorPage
-    .getByPlaceholder('最近遇到了什么，心情怎么样，希望被怎么祝福……')
+    .getByPlaceholder('TA最近经历了什么，你希望TA被怎样祝福……')
     .fill(opts.situation);
   await authorPage.getByRole('button', { name: '发布', exact: true }).click();
   await authorPage.waitForURL('**/plaza/wrq_**');

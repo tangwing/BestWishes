@@ -115,6 +115,10 @@ export interface OutboxItem {
   createdAt: string;
   /** state='rejected' 时命中的审核大类；其它状态恒为 null。 */
   rejectionCategories: string[] | null;
+  /** 公开落地页被打开的次数，纯聚合计数。 */
+  viewCount: number;
+  /** 收到的回信条数。 */
+  replyCount: number;
 }
 
 export type BlessingStatus =
@@ -191,6 +195,7 @@ export interface WishRequestSummary {
   id: string;
   authorNickname: string;
   authorCity: string | null;
+  beneficiaryLabel: string;
   situationExcerpt: string;
   tags: string[];
   responseCount: number;
@@ -231,6 +236,7 @@ export interface WishRequestDetail {
   authorId: string;
   authorNickname: string;
   authorCity: string | null;
+  beneficiaryLabel: string;
   situationText: string;
   scriptText: string | null;
   tags: string[];
@@ -239,6 +245,8 @@ export interface WishRequestDetail {
   state: string;
   createdAt: string;
   isMine: boolean;
+  /** 详情被打开的次数；只有 isMine 时是真实数字，否则为 null。 */
+  viewCount: number | null;
   responses: ResponseView[];
 }
 
@@ -308,6 +316,7 @@ export const api = {
   renew: (id: string) => call<{ state: string }>('POST', `/api/blessings/${id}/renew`),
 
   publicPage: (slug: string) => call<PublicPage>('GET', `/api/p/${slug}`),
+  recordPublicView: (slug: string) => call<{ ok: true }>('POST', `/api/p/${slug}/view`),
   report: (slug: string, category: string, note: string) =>
     call<{ ok: true }>('POST', `/api/p/${slug}/report`, { category, note }),
 
@@ -317,6 +326,7 @@ export const api = {
 
   // ---- 祈福广场 + 音频回应 ----
   publishWishRequest: (input: {
+    beneficiaryLabel: string;
     situationText: string;
     scriptText?: string | undefined;
     tags: string[];
@@ -325,6 +335,7 @@ export const api = {
   plaza: (filter: 'all' | 'mine' = 'all') =>
     call<WishRequestSummary[]>('GET', `/api/plaza?filter=${filter}`),
   wishRequestDetail: (id: string) => call<WishRequestDetail>('GET', `/api/plaza/${id}`),
+  recordWishRequestView: (id: string) => call<{ ok: true }>('POST', `/api/plaza/${id}/view`),
   withdrawWishRequest: (id: string) => call<{ ok: true }>('POST', `/api/plaza/${id}/withdraw`),
   deleteWishRequest: (id: string) => call<{ ok: true }>('DELETE', `/api/plaza/${id}`),
 

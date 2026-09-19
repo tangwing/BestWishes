@@ -13,12 +13,17 @@ describe('DEFAULT_AUDIENCE_FILTER', () => {
 
 describe('submitWishRequestSchema', () => {
   it('anonymous 可选，默认 false', () => {
-    const parsed = submitWishRequestSchema.parse({ situationText: '一段处境描述', tags: [] });
+    const parsed = submitWishRequestSchema.parse({
+      beneficiaryLabel: 'TA',
+      situationText: '一段处境描述',
+      tags: [],
+    });
     expect(parsed.anonymous).toBe(false);
   });
 
   it('可显式传 anonymous: true', () => {
     const parsed = submitWishRequestSchema.parse({
+      beneficiaryLabel: 'TA',
       situationText: '一段处境描述',
       tags: [],
       anonymous: true,

@@ -112,6 +112,7 @@ function toBlessing(row: BlessingRow, events: BlessingEventRecord[]): BlessingRe
     moderation: row.moderation,
     renewCount: row.renewCount,
     countedInStreak: row.countedInStreak,
+    viewCount: row.viewCount,
     holdUntil: isoOrNull(row.holdUntil),
     events: events.map(({ id: _id, blessingId: _bid, ...e }) => e),
   };
@@ -141,6 +142,7 @@ function blessingValues(r: BlessingRecord): typeof t.blessings.$inferInsert {
     moderation: r.moderation,
     renewCount: r.renewCount,
     countedInStreak: r.countedInStreak,
+    viewCount: r.viewCount ?? 0,
   };
 }
 
@@ -705,6 +707,8 @@ function toWishRequest(row: typeof t.wishRequests.$inferSelect): WishRequestReco
   return {
     id: row.id,
     authorId: row.authorId,
+    // 旧数据（B-98 之前发布）没有这个字段，展示层退回中性称呼；新祈福发布时 service 层已强制必填。
+    beneficiaryLabel: row.beneficiaryLabel ?? '一位朋友',
     situationText: row.situationText,
     scriptText: row.scriptText,
     tags: row.tags,
@@ -716,6 +720,7 @@ function toWishRequest(row: typeof t.wishRequests.$inferSelect): WishRequestReco
     lastResponseAt: row.lastResponseAt ? iso(row.lastResponseAt) : null,
     anonymous: row.anonymous,
     lastResponseExcerpt: row.lastResponseExcerpt,
+    viewCount: row.viewCount,
   };
 }
 
@@ -723,6 +728,7 @@ function wishRequestValues(r: WishRequestRecord): typeof t.wishRequests.$inferIn
   return {
     id: r.id,
     authorId: r.authorId,
+    beneficiaryLabel: r.beneficiaryLabel,
     situationText: r.situationText,
     scriptText: r.scriptText,
     tags: r.tags,
@@ -734,6 +740,7 @@ function wishRequestValues(r: WishRequestRecord): typeof t.wishRequests.$inferIn
     lastResponseAt: r.lastResponseAt ? new Date(r.lastResponseAt) : null,
     anonymous: r.anonymous,
     lastResponseExcerpt: r.lastResponseExcerpt,
+    viewCount: r.viewCount ?? 0,
   };
 }
 

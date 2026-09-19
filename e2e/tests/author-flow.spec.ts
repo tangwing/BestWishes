@@ -7,7 +7,7 @@ test('新用户没同意协议：进写祝福页不拦，写完点发送才引�
   await login(page, 'af-新来的');
   await page.goto('/give');
   // 进页不再是前置门槛——不弹协议墙，能直接开始写
-  await expect(page.getByRole('heading', { name: '传递善意' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '传播善意' })).toBeVisible();
   await page.getByPlaceholder('慢慢写，写给一个具体的人。').fill('愿你被这个世界温柔以待，一切安好顺遂。');
   await page.getByRole('button', { name: '发送', exact: true }).click();
   await page.waitForURL('**/agreement**');

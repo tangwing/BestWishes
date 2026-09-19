@@ -99,6 +99,8 @@ export const wishRequests = pgTable('wish_requests', {
   authorId: text('author_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
+  // 这条祈福是为谁写的（关系/称呼）；新祈福必填，旧数据允许为空（无需回填）。
+  beneficiaryLabel: text('beneficiary_label'),
   situationText: text('situation_text').notNull(),
   scriptText: text('script_text'),
   tags: jsonb('tags').$type<string[]>().notNull().default([]),
@@ -111,6 +113,8 @@ export const wishRequests = pgTable('wish_requests', {
   lastResponseAt: ts('last_response_at'),
   anonymous: boolean('anonymous').notNull().default(false),
   lastResponseExcerpt: text('last_response_excerpt'),
+  // 详情页打开次数，纯聚合计数，见 wish-request spec「祈福详情浏览计数」。
+  viewCount: integer('view_count').notNull().default(0),
 });
 
 export const blessings = pgTable('blessings', {
@@ -138,6 +142,8 @@ export const blessings = pgTable('blessings', {
   moderation: jsonb('moderation').$type<ModerationResult>(),
   renewCount: integer('renew_count').notNull().default(0),
   countedInStreak: boolean('counted_in_streak').notNull().default(false),
+  // 公开落地页（/p/:slug）打开次数，纯聚合计数，见 blessing-records spec「发件箱浏览与回复计数」。
+  viewCount: integer('view_count').notNull().default(0),
 });
 
 /** 音频打分结果——独立于 blessings.moderation：moderation 判"能不能过审"，

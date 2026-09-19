@@ -79,7 +79,7 @@ describe('HTTP 端到端：祝福请求 + 音频回应', () => {
     const noAuthPost = await ctx.server.inject({
       method: 'POST',
       url: '/api/plaza',
-      payload: { situationText: '最近压力很大，想要一句鼓励。', tags: [] },
+      payload: { beneficiaryLabel: 'TA', situationText: '最近压力很大，想要一句鼓励。', tags: [] },
     });
     expect(noAuthPost.statusCode).toBe(401);
 
@@ -87,7 +87,7 @@ describe('HTTP 端到端：祝福请求 + 音频回应', () => {
       method: 'POST',
       url: '/api/plaza',
       headers: author,
-      payload: { situationText: '最近压力很大，想要一句鼓励。', tags: [] },
+      payload: { beneficiaryLabel: 'TA', situationText: '最近压力很大，想要一句鼓励。', tags: [] },
     });
     expect(submit.statusCode).toBe(200);
 
@@ -113,6 +113,7 @@ describe('HTTP 端到端：祝福请求 + 音频回应', () => {
       url: '/api/plaza',
       headers: author,
       payload: {
+        beneficiaryLabel: 'TA',
         situationText: '最近考研压力很大，每天都很焦虑，希望有人能鼓励我一下。',
         scriptText: '愿你放下焦虑，一步一步来。',
         tags: [],
@@ -188,7 +189,7 @@ describe('HTTP 端到端：祝福请求 + 音频回应', () => {
       method: 'POST',
       url: '/api/plaza',
       headers: author,
-      payload: { situationText: '希望有人能鼓励我一下，最近很低落。', tags: [] },
+      payload: { beneficiaryLabel: 'TA', situationText: '希望有人能鼓励我一下，最近很低落。', tags: [] },
     });
     const { id: requestId } = submit.json<{ id: string }>();
     const res = await respond(ctx, requestId, responder, '愿你被这个世界温柔以待，一切都会好起来的');

@@ -42,6 +42,12 @@ export function PublicPage() {
     };
   }, [slug]);
 
+  useEffect(() => {
+    // 只在页面打开时记一次浏览，不能挂在上面的轮询里——那样每 3 秒就会自己把自己的
+    // 浏览量刷上去，数字就没意义了。
+    if (slug) void api.recordPublicView(slug);
+  }, [slug]);
+
   if (!page) return <div className={s.placeholder}>…</div>;
 
   return (

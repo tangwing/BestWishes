@@ -9,6 +9,8 @@ import { createAudienceService } from './audience-service';
 import type { WishRequestRecord } from '../ports/records';
 
 export interface SubmitWishRequestInput {
+  /** 这条祈福是为谁写的（关系/称呼），必填——祈福广场只为他人而写。 */
+  beneficiaryLabel: string;
   situationText: string;
   scriptText?: string | undefined;
   tags: string[];
@@ -22,6 +24,7 @@ export interface WishRequestSummary {
   id: string;
   authorNickname: string;
   authorCity: string | null;
+  beneficiaryLabel: string;
   situationExcerpt: string;
   tags: string[];
   responseCount: number;
@@ -63,6 +66,7 @@ export interface WishRequestDetail {
   authorId: string;
   authorNickname: string;
   authorCity: string | null;
+  beneficiaryLabel: string;
   situationText: string;
   scriptText: string | null;
   tags: string[];
@@ -71,6 +75,8 @@ export interface WishRequestDetail {
   state: string;
   createdAt: string;
   isMine: boolean;
+  /** 详情被打开的次数；只对作者本人（isMine）暴露真实数字，其他访客恒 null。 */
+  viewCount: number | null;
   responses: ResponseView[];
 }
 
@@ -135,6 +141,7 @@ export function createWishRequestService(deps: AppDeps) {
       id: r.id,
       authorNickname: a.nickname,
       authorCity: a.city,
+      beneficiaryLabel: r.beneficiaryLabel,
       situationExcerpt: excerpt(r.situationText),
       tags: r.tags,
       responseCount: r.responseCount,
@@ -186,6 +193,16 @@ export function createWishRequestService(deps: AppDeps) {
         return err(appError('consent_required', 'no consent', '请先同意《用户内容与授权协议》'));
       }
 
+      if (charCount(input.beneficiaryLabel) < 1) {
+        return err(
+          appError(
+            'validation_failed',
+            'beneficiary label required',
+            '祈福广场只为他人而写，先说说这条祈福是为谁写的',
+          ),
+        );
+      }
+
       const len = charCount(input.situationText);
       if (len < deps.config.bodyMinLen) {
         return err(
@@ -225,6 +242,7 @@ export function createWishRequestService(deps: AppDeps) {
       const record: WishRequestRecord = {
         id: deps.ids.next('wrq'),
         authorId: userId,
+        beneficiaryLabel: input.beneficiaryLabel.trim(),
         situationText: input.situationText.trim(),
         scriptText: input.scriptText?.trim() || null,
         tags: input.tags,
@@ -236,6 +254,7 @@ export function createWishRequestService(deps: AppDeps) {
         lastResponseAt: null,
         anonymous: input.anonymous ?? false,
         lastResponseExcerpt: null,
+        viewCount: 0,
       };
 
       // 先落库再匹配推送——matchAndNotify() 会写 notifications.request_id 外键指回
@@ -322,6 +341,9 @@ export function createWishRequestService(deps: AppDeps) {
       // 未公开的祈福：只有作者本人能看（用于"我的祈福"里点进 pending_review / withdrawn 的那条）
       if (r.state !== 'published' && r.authorId !== viewerId) return null;
 
+      const isMine = viewerId !== null && r.authorId === viewerId;
+      const viewCount = r.viewCount ?? 0;
+
       const a = await authorInfo(r.authorId, r.anonymous);
       const blessings = await deps.repos.blessings.listByRequestId(id);
       const responses: ResponseView[] = [];
@@ -353,6 +375,7 @@ export function createWishRequestService(deps: AppDeps) {
         authorId: r.authorId,
         authorNickname: a.nickname,
         authorCity: a.city,
+        beneficiaryLabel: r.beneficiaryLabel,
         situationText: r.situationText,
         scriptText: r.scriptText,
         tags: r.tags,
@@ -360,9 +383,19 @@ export function createWishRequestService(deps: AppDeps) {
         lastResponseAt: r.lastResponseAt,
         state: r.state,
         createdAt: r.createdAt,
-        isMine: viewerId !== null && r.authorId === viewerId,
+        isMine,
+        viewCount: isMine ? viewCount : null,
         responses,
       };
+    },
+
+    /** 记一次详情浏览：客户端在页面打开时调一次（不是每次轮询都调，见 blessing-records
+     * spec「发件箱浏览与回复计数」的教训——详情页本身按 3s 轮询等回应，不能把轮询当浏览量）。
+     * 作者查看自己这条不计数。纯聚合自增，不去重同一访客的多次访问。 */
+    async recordView(id: string, viewerId: string | null): Promise<void> {
+      const r = await deps.repos.wishRequests.findById(id);
+      if (!r || r.authorId === viewerId) return;
+      await deps.repos.wishRequests.save({ ...r, viewCount: (r.viewCount ?? 0) + 1 });
     },
 
     async withdraw(userId: string, id: string): Promise<Result<null>> {
