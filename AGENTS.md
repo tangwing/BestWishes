@@ -79,6 +79,7 @@ P2 及以后的技术决策（音视频管线、AI/ML 服务、祝福请求 / �
 ## 7. Git 工作流
 
 - 单开发者仓库。**每轮对话结束自动 `commit` + `push` 到 `main`**（`.claude/hooks/auto-commit-push.sh`，Stop hook），保证工作实时同步到远端。
+- 同一个 Stop 事件还会跑 `.claude/hooks/restart-demo.sh`（2026-09-19 起）：代码有变化（含未提交）就自动重启 `pnpm demo`，方便用户随时在浏览器测最新代码；没变化的轮次跳过，见 [docs/DEMO.md](docs/DEMO.md)。
 - Claude 在每轮结束前应先自己用清晰、准确、符合 Conventional Commits 的信息提交；hook 是兜底（漏提交时用概要信息补一笔）。
 - commit message 规范：`<type>(<scope>): <subject>`，type ∈ feat/fix/docs/refactor/test/chore/build，正文说明「为什么」，结尾带 `Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>`。
 

@@ -12,6 +12,11 @@ pnpm install
 pnpm demo        # 单进程，http://127.0.0.1:3000（hold 8 秒，方便看"校验中"）
 ```
 
+**用 Claude Code 协作时不用手动跑这条命令**：`.claude/hooks/restart-demo.sh`（Stop hook，
+2026-09-19 起）每轮对话结束后，如果代码有变化（含未提交的），会自动杀掉旧的 demo 进程、
+重新构建 client、重启 server，几秒后 `http://127.0.0.1:3000` 就是最新代码。没有变化的
+轮次会跳过，不会打断正在测试的 demo。日志在 `.claude/.demo-state/demo.log`（gitignored）。
+
 `pnpm demo` 现在用 PGlite 落盘到 `server/.pgdata`、音频落盘到 `server/.audio-data`，
 **重启不丢数据**（个人资料、请求、录音都还在，登录态 30 天有效）。要干净重来：
 

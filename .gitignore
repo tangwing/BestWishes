@@ -27,3 +27,6 @@ build/
 # 本地音频文件落盘目录
 .audio-data/
 *.audio-data/
+
+# demo 自动重启 hook 的状态目录（签名标记 + 日志，机器本地，不进版本库）
+.claude/.demo-state/
